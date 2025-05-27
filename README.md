@@ -8,7 +8,7 @@ The Stream Cart backend is built with a modern microservice architecture, using 
 
 ### System Overview
 
-![Architecture Diagram](architecture-diagram.png)
+![Architecture Diagram](/image/architecture-diagram.png)
 
 Our stream-cart-be system consists of several interconnected microservices, each responsible for specific business functionality. The architecture follows a domain-driven design approach, allowing for scalable, maintainable, and independently deployable services.
 
