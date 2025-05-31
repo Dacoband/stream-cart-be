@@ -1,17 +1,18 @@
-
 using dotenv.net;
+using AccountService.Infrastructure.Extensions;
+using Shared.Messaging.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Read .env file
+// Read .env file
 DotEnv.Load();
 var envConfig = Environment.GetEnvironmentVariables();
-// Add services to the container.
 
-
+// Add services to the container
+builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddMessaging(builder.Configuration);
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -25,10 +26,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 
 app.Run();

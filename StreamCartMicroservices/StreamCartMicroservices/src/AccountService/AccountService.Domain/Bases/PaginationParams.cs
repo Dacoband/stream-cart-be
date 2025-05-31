@@ -19,7 +19,7 @@ namespace AccountService.Domain.Bases
             set => _pageSize = value > MaxPageSize ? MaxPageSize : value;
         }
     }
-    public class PagedResult<T>
+    public class PagedResult<T> where T : class
     {
         public int CurrentPage { get; set; }
         public int PageSize { get; set; }
@@ -27,11 +27,17 @@ namespace AccountService.Domain.Bases
         public int TotalPages { get; set; }
         public bool HasPrevious => CurrentPage > 1;
         public bool HasNext => CurrentPage < TotalPages;
-        public IEnumerable<T> Items { get; set; }
+        public IEnumerable<T> Items { get; set; } = new List<T>();
 
-        public PagedResult()
+        public PagedResult() { }
+
+        public PagedResult(IEnumerable<T> items, int count, int pageNumber, int pageSize)
         {
-            Items = new List<T>();
+            TotalCount = count;
+            PageSize = pageSize;
+            CurrentPage = pageNumber;
+            TotalPages = (int)Math.Ceiling(count / (double)pageSize);
+            Items = items;
         }
     }
 }

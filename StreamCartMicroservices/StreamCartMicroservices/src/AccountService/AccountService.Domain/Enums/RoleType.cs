@@ -6,7 +6,13 @@ using System.Threading.Tasks;
 
 namespace AccountService.Domain.Enums
 {
-    internal class RoleType
+    public enum RoleType
     {
+        Admin,
+        Customer,
+        Seller,
+        Partner,
+        Guest,
+        ITAdmin,
     }
 }
