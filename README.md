@@ -172,7 +172,7 @@ public class AccountRegistered
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/stream-cart-be.git
+   git clone https://github.com/Dacoband/stream-cart-be.git
    cd stream-cart-be
    ```
 
@@ -180,7 +180,7 @@ public class AccountRegistered
    Create `.env` file in the AccountService.Api directory:
    ```env
    # Database Configuration
-   POSTGRES_CONNECTION=Host=localhost;Database=streamcart_accounts;Username=postgres;Password=yourpassword
+   POSTGRES_CONNECTION=Host=localhost;Database=streamcart_accounts;Username=postgres;Password=********
    
    # JWT Configuration
    JWT_SECRET_KEY=your-super-secret-jwt-key-here
