@@ -22,10 +22,9 @@ namespace Shared.Messaging.Extensions
 
                 x.UsingRabbitMq((context, cfg) =>
                 {
-                    var rabbitMqHost = configuration["RabbitMQ:Host"];
-                    var rabbitMqUsername = configuration["RabbitMQ:Username"];
-                    var rabbitMqPassword = configuration["RabbitMQ:Password"];
-
+                    var rabbitMqHost = configuration["RabbitMQ:Host"] ?? configuration["RABBITMQ_HOST"];
+                    var rabbitMqUsername = configuration["RabbitMQ:Username"] ?? configuration["RABBITMQ_USERNAME"];
+                    var rabbitMqPassword = configuration["RabbitMQ:Password"] ?? configuration["RABBITMQ_PASSWORD"];
                     cfg.Host(rabbitMqHost, h =>
                     {
                         h.Username(rabbitMqUsername);

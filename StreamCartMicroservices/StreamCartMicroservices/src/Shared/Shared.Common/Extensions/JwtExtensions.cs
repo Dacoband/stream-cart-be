@@ -13,9 +13,14 @@ namespace Shared.Common.Extensions
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var jwtSettings = configuration
-                .GetSection($"{nameof(AppSettings.JwtSettings)}")
-                .Get<JwtSettings>() ?? new JwtSettings();
+            var jwtSection = configuration.GetSection($"{nameof(AppSettings.JwtSettings)}");
+            var jwtSettings = new JwtSettings
+            {
+                SecretKey = jwtSection.GetValue<string>("SecretKey") ?? string.Empty,
+                Issuer = jwtSection.GetValue<string>("Issuer") ?? string.Empty,
+                Audience = jwtSection.GetValue<string>("Audience") ?? string.Empty,
+                ExpiryMinutes = int.TryParse(jwtSection.GetValue<string>("ExpiryMinutes"), out int minutes) ? minutes : 60
+            };
 
             services.AddAuthentication(options =>
             {
