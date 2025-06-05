@@ -4,6 +4,30 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	<Version>1.0.0</Version>
+	<Authors>YourName</Authors>
+	<Company>YourCompany</Company>
   </PropertyGroup>
+
+  <ItemGroup>
+	  <!-- Core dependencies -->
+	  <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+
+	  <!-- For CORS extensions -->
+	  <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
+
+	  <!-- For JWT extensions -->
+	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
+
+	  <!-- Optional but recommended -->
+	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+	  
+	  <!-- Add Entity Framework Core -->
+	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+  </ItemGroup>
 
 </Project>

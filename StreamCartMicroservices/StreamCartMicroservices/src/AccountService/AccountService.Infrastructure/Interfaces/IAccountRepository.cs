@@ -1,8 +1,6 @@
 using AccountService.Domain.Entities;
 using AccountService.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Shared.Common.Data.Interfaces;
 
 namespace AccountService.Infrastructure.Interfaces
 {

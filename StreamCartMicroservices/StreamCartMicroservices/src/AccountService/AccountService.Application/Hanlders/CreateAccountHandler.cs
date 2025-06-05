@@ -10,7 +10,9 @@ using AccountService.Infrastructure.Interfaces;
 using AccountService.Infrastructure.Messaging.Events;
 using MassTransit;
 using MediatR;
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AccountService.Application.Hanlders
 {

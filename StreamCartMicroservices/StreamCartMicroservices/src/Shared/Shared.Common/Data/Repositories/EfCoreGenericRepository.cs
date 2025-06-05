@@ -1,22 +1,19 @@
-﻿using System;
+using Microsoft.EntityFrameworkCore;
+using Shared.Common.Data.Interfaces;
+using Shared.Common.Domain.Bases;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AccountService.Domain.Bases;
-using AccountService.Infrastructure.Data;
-using AccountService.Infrastructure.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-
-namespace AccountService.Infrastructure.Repositories
+using System.Threading.Tasks;
+namespace Shared.Common.Data.Repositories
 {
-    public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
+    public class EfCoreGenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     {
-        protected readonly AccountContext _dbContext;
+        protected readonly DbContext _dbContext;
         protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(AccountContext dbContext)
+        public EfCoreGenericRepository(DbContext dbContext)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _dbSet = _dbContext.Set<T>();

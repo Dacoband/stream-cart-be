@@ -4,6 +4,7 @@ using AccountService.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Common.Extensions;
 
 namespace AccountService.Infrastructure.Extensions
 {
@@ -21,11 +22,12 @@ namespace AccountService.Infrastructure.Extensions
                     npgsqlOptions => npgsqlOptions.MigrationsAssembly(
                         typeof(AccountContext).Assembly.FullName));
             });
-            
-            // Register repositories
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
+            // Register generic repositories from shared library
+            services.AddGenericRepositories<AccountContext>();
+
+            // Register service-specific repositories
             services.AddScoped<IAccountRepository, AccountRepository>();
-            
             return services;
         }
     }

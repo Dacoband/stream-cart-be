@@ -1,5 +1,5 @@
-﻿using AccountService.Domain.Bases;
-using AccountService.Domain.Enums;
+﻿using AccountService.Domain.Enums;
+using Shared.Common.Domain.Bases;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

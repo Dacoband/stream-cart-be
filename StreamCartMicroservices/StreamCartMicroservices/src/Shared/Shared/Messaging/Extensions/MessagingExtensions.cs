@@ -22,9 +22,15 @@ namespace Shared.Messaging.Extensions
 
                 x.UsingRabbitMq((context, cfg) =>
                 {
-                    var rabbitMqHost = configuration["RabbitMQ:Host"];
-                    var rabbitMqUsername = configuration["RabbitMQ:Username"];
-                    var rabbitMqPassword = configuration["RabbitMQ:Password"];
+                    var rabbitMqHost = configuration["RabbitMQSettings:Host"];
+                    var rabbitMqUsername = configuration["RabbitMQSettings:Username"];
+                    var rabbitMqPassword = configuration["RabbitMQSettings:Password"];
+
+                    // Check if the host is null and provide proper error handling
+                    if (string.IsNullOrEmpty(rabbitMqHost))
+                    {
+                        throw new InvalidOperationException("RabbitMQ host configuration is missing. Check 'RabbitMQSettings:Host' in configuration.");
+                    }
 
                     cfg.Host(rabbitMqHost, h =>
                     {

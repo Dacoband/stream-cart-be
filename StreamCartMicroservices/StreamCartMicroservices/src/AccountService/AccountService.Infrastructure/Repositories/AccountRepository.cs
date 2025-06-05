@@ -3,6 +3,7 @@ using AccountService.Domain.Enums;
 using AccountService.Infrastructure.Data;
 using AccountService.Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Shared.Common.Data.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AccountService.Infrastructure.Repositories
 {
-    public class AccountRepository : GenericRepository<Account>, IAccountRepository
+    public class AccountRepository : EfCoreGenericRepository<Account>, IAccountRepository
     {
         public AccountRepository(AccountContext dbContext) : base(dbContext)
         {

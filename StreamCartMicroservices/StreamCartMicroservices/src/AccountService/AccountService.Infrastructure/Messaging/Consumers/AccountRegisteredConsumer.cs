@@ -1,12 +1,13 @@
 using AccountService.Infrastructure.Messaging.Events;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using Shared.Messaging.Consumers;
 using System;
 using System.Threading.Tasks;
 
 namespace AccountService.Infrastructure.Messaging.Consumers
 {
-    public class AccountRegisteredConsumer : IConsumer<AccountRegistered>
+    public class AccountRegisteredConsumer : IConsumer<AccountRegistered>, IBaseConsumer
     {
         private readonly ILogger<AccountRegisteredConsumer> _logger;
 
@@ -23,9 +24,9 @@ namespace AccountService.Infrastructure.Messaging.Consumers
                 context.Message.Username,
                 context.Message.Email,
                 context.Message.Role);
-                
+
             // Add your business logic here, like sending welcome email
-            
+
             return Task.CompletedTask;
         }
     }

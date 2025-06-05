@@ -1,10 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace AccountService.Domain.Bases
+namespace Shared.Common.Domain.Bases
 {
     public class PaginationParams
     {
@@ -19,6 +16,7 @@ namespace AccountService.Domain.Bases
             set => _pageSize = value > MaxPageSize ? MaxPageSize : value;
         }
     }
+    
     public class PagedResult<T> where T : class
     {
         public int CurrentPage { get; set; }

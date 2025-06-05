@@ -1,12 +1,10 @@
-﻿using AccountService.Domain.Bases;
+using Shared.Common.Domain.Bases;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace AccountService.Infrastructure.Interfaces
+namespace Shared.Common.Data.Interfaces
 {
     public interface IGenericRepository<T> where T : class
     {

@@ -34,5 +34,8 @@ namespace AccountService.Application.Commands
         public string? AvatarURL { get; set; }
 
         public RoleType Role { get; set; } = RoleType.Customer;
+
+        public bool IsActive { get; set; } = true;
+        public bool IsVerified { get; set; } = false;
     }
 }

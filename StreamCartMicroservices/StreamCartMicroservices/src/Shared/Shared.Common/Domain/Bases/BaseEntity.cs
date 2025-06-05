@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AccountService.Domain.Bases
+namespace Shared.Common.Domain.Bases
 {
     public abstract class BaseEntity
     {
@@ -21,12 +21,12 @@ namespace AccountService.Domain.Bases
             CreatedAt = DateTime.UtcNow;
         }
 
-        protected BaseEntity(Guid id) 
+        protected BaseEntity(Guid id)
         {
-            Id = id != Guid.Empty 
-                ? id 
+            Id = id != Guid.Empty
+                ? id
                 : throw new ArgumentException("Entity ID cannot be empty", nameof(id));
-                
+
             CreatedAt = DateTime.UtcNow;
         }
 
@@ -39,10 +39,10 @@ namespace AccountService.Domain.Bases
         {
             if (creator == null)
                 throw new ArgumentNullException(nameof(creator), "Creator cannot be null");
-                
+
             if (string.IsNullOrWhiteSpace(creator))
                 throw new ArgumentException("Creator cannot be empty", nameof(creator));
-                
+
             if (string.IsNullOrWhiteSpace(CreatedBy))
             {
                 CreatedBy = creator;
@@ -58,10 +58,10 @@ namespace AccountService.Domain.Bases
         {
             if (modifier == null)
                 throw new ArgumentNullException(nameof(modifier), "Modifier cannot be null");
-                
+
             if (string.IsNullOrWhiteSpace(modifier))
                 throw new ArgumentException("Modifier cannot be empty", nameof(modifier));
-                
+
             LastModifiedBy = modifier;
             LastModifiedAt = DateTime.UtcNow;
         }
@@ -76,7 +76,7 @@ namespace AccountService.Domain.Bases
             {
                 IsDeleted = true;
                 LastModifiedAt = DateTime.UtcNow;
-                
+
                 if (!string.IsNullOrWhiteSpace(modifier))
                 {
                     LastModifiedBy = modifier;
@@ -94,7 +94,7 @@ namespace AccountService.Domain.Bases
             {
                 IsDeleted = false;
                 LastModifiedAt = DateTime.UtcNow;
-                
+
                 if (!string.IsNullOrWhiteSpace(modifier))
                 {
                     LastModifiedBy = modifier;
@@ -111,10 +111,10 @@ namespace AccountService.Domain.Bases
             // Base validation rules
             if (Id == Guid.Empty)
                 return false;
-                
+
             if (CreatedAt == default)
                 return false;
-                
+
             return true;
         }
 
