@@ -64,7 +64,7 @@ namespace AccountService.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,ITAdmin")]
+        //[Authorize(Roles = "Admin,ITAdmin")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
         public async Task<IActionResult> GetAll()
         {

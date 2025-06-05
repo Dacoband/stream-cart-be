@@ -1,4 +1,6 @@
-﻿using AccountService.Infrastructure.Data;
+﻿using AccountService.Api.Services;
+using AccountService.Application.Extensions;
+using AccountService.Infrastructure.Data;
 using AccountService.Infrastructure.Extensions;
 using AccountService.Infrastructure.Messaging.Consumers;
 using dotenv.net;
@@ -22,8 +24,13 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
+
+
+
 // Add services to the container
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddHostedService<DatabaseInitializer>();
+builder.Services.AddApplicationServices(); 
 builder.Services.AddMessaging(builder.Configuration, x => {
     // Đăng ký consumers ở đây
     x.AddConsumer<AccountRegisteredConsumer>();

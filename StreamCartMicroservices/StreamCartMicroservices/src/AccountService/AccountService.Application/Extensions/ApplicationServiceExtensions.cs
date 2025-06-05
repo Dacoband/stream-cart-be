@@ -1,4 +1,5 @@
-﻿using AccountService.Application.Services;
+﻿using AccountService.Application.Hanlders;
+using AccountService.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -14,6 +15,7 @@ namespace AccountService.Application.Extensions
             {
                 cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
             });
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateAccountHandler).Assembly));
 
             // Register application services
             services.AddScoped<AccountManagementService>();
