@@ -1,6 +1,4 @@
-Dacoband: Hãy đọc lại tất cả các cấu trúc file viết lại readme giúp tôi cho chuẩn và viết từ tổng quát đến chi tiết cấu trúc, cũng như những class nào quan trọng, code nào quan trọng, hướng dẫn sử dụng,.....
-
-Workspace: Collecting workspace information# Stream Cart Backend
+# 🖥️ Stream Cart - Livestream-base Ecom AI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/)
