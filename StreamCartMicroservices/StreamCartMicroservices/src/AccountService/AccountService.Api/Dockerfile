@@ -1,26 +1,30 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-# Copy csproj files and restore as distinct layers
-COPY ["AccountService.Api.csproj", "AccountService.Api/"]
-COPY ["../AccountService.Application/AccountService.Application.csproj", "AccountService.Application/"]
-COPY ["../AccountService.Domain/AccountService.Domain.csproj", "AccountService.Domain/"]
-COPY ["../AccountService.Infrastructure/AccountService.Infrastructure.csproj", "AccountService.Infrastructure/"]
-RUN dotnet restore "AccountService.Api/AccountService.Api.csproj"
 
-# Copy everything else and build
-COPY . ./AccountService.Api/
-WORKDIR "/src/AccountService.Api"
+# Copy csproj và phục hồi dependencies
+COPY ["AccountService/AccountService.Api/AccountService.Api.csproj", "AccountService/AccountService.Api/"]
+COPY ["AccountService/AccountService.Application/AccountService.Application.csproj", "AccountService/AccountService.Application/"]
+COPY ["AccountService/AccountService.Domain/AccountService.Domain.csproj", "AccountService/AccountService.Domain/"]
+COPY ["AccountService/AccountService.Infrastructure/AccountService.Infrastructure.csproj", "AccountService/AccountService.Infrastructure/"]
+COPY ["Shared/Shared.Common/Shared.Common.csproj", "Shared/Shared.Common/"]
+COPY ["Shared/Shared.Messaging/Shared.Messaging.csproj", "Shared/Shared.Messaging/"]
+
+RUN dotnet restore "AccountService/AccountService.Api/AccountService.Api.csproj"
+
+# Copy toàn bộ code
+COPY . .
+WORKDIR "/src/AccountService/AccountService.Api"
+
+# Build và publish
 RUN dotnet build "AccountService.Api.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "AccountService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "AccountService.Api.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "AccountService.Api.dll"]

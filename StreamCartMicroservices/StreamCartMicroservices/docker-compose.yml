@@ -1,4 +1,4 @@
-version: '3.8'
+﻿version: '3.8'
 services:
   postgres:
     image: postgres:latest
@@ -34,8 +34,8 @@ services:
       
   account-service:
     build: 
-      context: ./src/AccountService/AccountService.Api
-      dockerfile: Dockerfile
+     context: ./src  
+     dockerfile: ./AccountService/AccountService.Api/Dockerfile 
     ports:
       - "5001:80"
     environment:
