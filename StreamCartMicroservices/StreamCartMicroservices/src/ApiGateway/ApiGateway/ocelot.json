@@ -24,7 +24,13 @@
       ],
       "UpstreamPathTemplate": "/api/auth/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-      "SwaggerKey": "account"
+      "SwaggerKey": "account",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      },
+      "AddHeadersToRequest": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",

@@ -1,8 +1,9 @@
-﻿using AccountService.Application.Hanlders;
+﻿using AccountService.Application.Commands;
+using AccountService.Application.Interfaces;
 using AccountService.Application.Services;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-
 
 namespace AccountService.Application.Extensions
 {
@@ -11,14 +12,14 @@ namespace AccountService.Application.Extensions
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
             // Register MediatR
-            services.AddMediatR(cfg =>
+            services.AddMediatR(config =>
             {
-                cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+                config.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
             });
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateAccountHandler).Assembly));
 
-            // Register application services
-            services.AddScoped<AccountManagementService>();
+            // Register services
+            services.AddScoped<IAccountManagementService, AccountManagementService>();
+            services.AddScoped<IAuthService, AuthService>();
 
             return services;
         }
