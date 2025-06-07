@@ -3,9 +3,11 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_DB=admin 
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    # command: postgres -c 'postgres=postgres'
     ports:
       - "5432:5432"
     volumes:
@@ -38,18 +40,19 @@ services:
      dockerfile: ./AccountService/AccountService.Api/Dockerfile 
     ports:
       - "7022:80"
+      - "7023:443"
     environment:
-        - ASPNETCORE_URLS=http://+:80
+        - ASPNETCORE_URLS=https://+:443;http://+:80
         - ASPNETCORE_ENVIRONMENT=Development 
-        # - ASPNETCORE_HTTPS_PORT=7022
-        # - ASPNETCORE_Kestrel__Certificates__Default__Password=12345
-        # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx 
+        - ASPNETCORE_HTTPS_PORT=7023
+        - ASPNETCORE_Kestrel__Certificates__Default__Password=12345
+        - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx 
         - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
         - RabbitMQ__Host=rabbitmq
         - RabbitMQ__Username=${RABBITMQ_USERNAME}
         - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-    # volumes:
-    #    - ${USERPROFILE}/.aspnet/https:/https:ro 
+    volumes:
+        - ${USERPROFILE}/.aspnet/https:/https:ro 
     depends_on:
       postgres:
         condition: service_healthy
