@@ -90,11 +90,15 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// SwaggerUI for Ocelot
+// Replace the line causing the error:  
+// opt.RoutePrefix = "swagger";  
+
+// Correct implementation:  
 app.UseSwaggerForOcelotUI(opt =>
 {
     opt.PathToSwaggerGenerator = "/swagger/docs";
     opt.ReConfigureUpstreamSwaggerJson = AlterUpstreamSwaggerJson;
+    opt.DownstreamSwaggerEndPointBasePath = "swagger"; 
 });
 
 app.MapHealthChecks("/health");
