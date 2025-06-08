@@ -2,10 +2,10 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/account/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
+          "Host": "account-service",
           "Port": 7022
         }
       ],
@@ -15,10 +15,10 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
+          "Host": "account-service",
           "Port": 7022
         }
       ],
@@ -34,10 +34,10 @@
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
+          "Host": "account-service",
           "Port": 7022
         }
       ],
@@ -52,12 +52,12 @@
         {
           "Name": "Account API",
           "Version": "v1",
-          "Url": "https://localhost:7022/swagger/v1/swagger.json"
+          "Url": "http://account-service/swagger/v1/swagger.json"
         }
       ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://localhost:5000"
+    "BaseUrl": "http://localhost:5000"
   }
 }
