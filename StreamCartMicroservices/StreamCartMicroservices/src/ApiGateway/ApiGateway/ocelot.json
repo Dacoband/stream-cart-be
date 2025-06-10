@@ -5,21 +5,24 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-      "SwaggerKey": "account"
+      "SwaggerKey": "account",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
     },
     {
       "DownstreamPathTemplate": "/api/auth/login",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/auth/login",
@@ -31,8 +34,8 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/auth/register",
@@ -44,11 +47,24 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/auth/reset-password-request",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/reset-password",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/reset-password",
       "UpstreamHttpMethod": [ "POST" ],
       "SwaggerKey": "account"
     },
@@ -57,8 +73,8 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/auth/verify",
@@ -66,16 +82,45 @@
       "SwaggerKey": "account"
     },
     {
-      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamPathTemplate": "/api/auth/refresh-token",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamPathTemplate": "/api/auth/refresh-token",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/me",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/me",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/change-password",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/change-password",
+      "UpstreamHttpMethod": [ "POST" ],
       "SwaggerKey": "account",
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
@@ -86,8 +131,8 @@
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "brightpa.me",
-          "Port": 443
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/swagger/account/{everything}",
@@ -101,12 +146,12 @@
         {
           "Name": "Account API",
           "Version": "v1",
-          "Url": "https://brightpa.me/swagger/v1/swagger.json"
+          "Url": "https://account-service/swagger/v1/swagger.json"
         }
       ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://brightpa.me"
+    "BaseUrl": "https://api-gateway"
   }
 }
