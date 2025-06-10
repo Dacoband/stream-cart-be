@@ -5,6 +5,7 @@ using Ocelot.Cache.CacheManager;
 using Shared.Common.Extensions;
 using MMLib.SwaggerForOcelot.DependencyInjection;
 using System.Text.Json.Serialization;
+using ApiGateway.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -102,6 +103,7 @@ else
 app.UseConfiguredCors();
 app.UseExceptionHandler("/error");
 app.UseRouting();
+app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 
