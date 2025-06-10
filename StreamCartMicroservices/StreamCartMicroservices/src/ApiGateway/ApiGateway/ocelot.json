@@ -2,11 +2,11 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/accounts/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
@@ -15,11 +15,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/login",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/auth/login",
@@ -28,11 +28,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/register",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/auth/register",
@@ -41,11 +41,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/reset-password-request",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/auth/reset-password-request",
@@ -54,11 +54,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/verify",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/auth/verify",
@@ -67,11 +67,11 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/api/auth/{everything}",
@@ -83,11 +83,11 @@
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "account-service",
-          "Port": 80
+          "Host": "brightpa.me",
+          "Port": 443
         }
       ],
       "UpstreamPathTemplate": "/swagger/account/{everything}",
@@ -101,12 +101,12 @@
         {
           "Name": "Account API",
           "Version": "v1",
-          "Url": "http://account-service/swagger/v1/swagger.json"
+          "Url": "https://brightpa.me/swagger/v1/swagger.json"
         }
       ]
     }
   ],
-  "globalconfiguration": {
-    "baseurl": "https://brightpa.me"
+  "GlobalConfiguration": {
+    "BaseUrl": "https://brightpa.me"
   }
 }

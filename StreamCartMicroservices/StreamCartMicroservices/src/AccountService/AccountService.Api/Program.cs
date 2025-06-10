@@ -87,15 +87,18 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account Service API v1");
-        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        c.DefaultModelsExpandDepth(0); 
-    });
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account Service API v1");
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    c.DefaultModelsExpandDepth(0);
+});
+
+// Bỏ hoặc điều kiện hóa HTTPS Redirection nếu bạn sử dụng proxy ở trước
+if (!builder.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
 }
 
 app.UseHttpsRedirection();
