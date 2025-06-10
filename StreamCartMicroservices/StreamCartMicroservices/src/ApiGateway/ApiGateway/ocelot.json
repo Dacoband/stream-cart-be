@@ -1,7 +1,7 @@
 {
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/account/{everything}",
+      "DownstreamPathTemplate": "/api/accounts/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -11,6 +11,58 @@
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/login",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/login",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/register",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/register",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/reset-password-request",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/reset-password-request",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/verify",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/verify",
+      "UpstreamHttpMethod": [ "GET" ],
       "SwaggerKey": "account"
     },
     {
@@ -28,9 +80,6 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
-      //"AddHeadersToRequest": {
-      //  "Authorization": "{Request.Headers.Authorization}"
-      //}
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
@@ -41,7 +90,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/swagger/account/{everything}",
+      "UpstreamPathTemplate": "/swagger/swagger/v1/account/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
     }
   ],
@@ -57,7 +106,7 @@
       ]
     }
   ],
-  "GlobalConfiguration": {
-    "BaseUrl": "http://brightpa.me"
+  "globalconfiguration": {
+    //"baseurl": "http://brightpa.me"
   }
 }

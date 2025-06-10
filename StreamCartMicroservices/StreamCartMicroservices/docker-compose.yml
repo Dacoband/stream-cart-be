@@ -44,7 +44,7 @@ services:
         # - ASPNETCORE_HTTPS_PORT=7022
         # - ASPNETCORE_Kestrel__Certificates__Default__Password=12345
         # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx 
-        - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+        - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
         - RabbitMQ__Host=rabbitmq
         - RabbitMQ__Username=${RABBITMQ_USERNAME}
         - RabbitMQ__Password=${RABBITMQ_PASSWORD}

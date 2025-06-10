@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Models;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Ocelot.Cache.CacheManager;
@@ -9,13 +9,23 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var env = builder.Environment.EnvironmentName;
+Console.WriteLine($"Current environment: {env}");
+
+string ocelotConfigFile = File.Exists($"ocelot.{env}.json")
+    ? $"ocelot.{env}.json"
+    : "ocelot.json";
+Console.WriteLine($"Using Ocelot configuration: {ocelotConfigFile}");
+
+
 // Add configuration sources
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddJsonFile("ocelot.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile(ocelotConfigFile, optional: false, reloadOnChange: true)  // Chỉ load một file Ocelot
     .AddEnvironmentVariables();
+
 
 builder.Services.AddConfiguredCors(builder.Configuration);
 
@@ -79,10 +89,15 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-   // app.UseSwagger();
+    app.UseSwagger();
+    Console.WriteLine("Running in Development mode");
+}
+else
+{
+    Console.WriteLine($"Running in {app.Environment.EnvironmentName} mode");
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseConfiguredCors();
 app.UseExceptionHandler("/error");
@@ -90,15 +105,11 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Replace the line causing the error:  
-// opt.RoutePrefix = "swagger";  
-
-// Correct implementation:  
+// SwaggerUI for Ocelot
 app.UseSwaggerForOcelotUI(opt =>
 {
     opt.PathToSwaggerGenerator = "/swagger/docs";
     opt.ReConfigureUpstreamSwaggerJson = AlterUpstreamSwaggerJson;
-    opt.DownstreamSwaggerEndPointBasePath = "swagger"; 
 });
 
 app.MapHealthChecks("/health");
