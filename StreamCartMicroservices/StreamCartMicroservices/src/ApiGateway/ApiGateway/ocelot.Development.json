@@ -135,7 +135,7 @@
           "Port": 7022
         }
       ],
-      "UpstreamPathTemplate": "/swagger/swagger/v1/account/{everything}",
+      "UpstreamPathTemplate": "/swagger/account/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
     }
   ],
