@@ -2,7 +2,7 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/accounts/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -18,7 +18,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/login",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -31,7 +31,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/register",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -44,7 +44,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/reset-password-request",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -57,7 +57,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/reset-password",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -70,7 +70,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/verify",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -83,7 +83,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/refresh-token",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -96,7 +96,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/me",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -112,7 +112,7 @@
     },
     {
       "DownstreamPathTemplate": "/api/auth/change-password",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -128,7 +128,7 @@
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-service",
@@ -146,12 +146,12 @@
         {
           "Name": "Account API",
           "Version": "v1",
-          "Url": "https://account-service/swagger/v1/swagger.json"
+          "Url": "http://account-service/swagger/v1/swagger.json"
         }
       ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://api-gateway"
+    //"BaseUrl": "http://api-gateway"
   }
 }
