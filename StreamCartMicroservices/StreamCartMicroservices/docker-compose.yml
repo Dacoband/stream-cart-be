@@ -62,10 +62,14 @@ services:
       context: ./src
       dockerfile: ./ApiGateway/ApiGateway/Dockerfile
     ports:
-      - "8000:80"
+      - "80:80"
+      - "443:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft=Warning
+      - Logging__LogLevel__Ocelot=Debug
     depends_on:
       - account-service
     restart: unless-stopped
