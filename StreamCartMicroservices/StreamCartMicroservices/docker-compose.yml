@@ -48,6 +48,9 @@ services:
         - RabbitMQ__Host=rabbitmq
         - RabbitMQ__Username=${RABBITMQ_USERNAME}
         - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+        - JWT__SECRET=${JWT_SECRET_KEY}
+        - JWT__ISSUER=${JWT_ISSUER}
+        - JWT__AUDIENCE=${JWT_AUDIENCE}
     # volumes:
     #    - ${USERPROFILE}/.aspnet/https:/https:ro 
     depends_on:
