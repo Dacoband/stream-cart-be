@@ -2,11 +2,11 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/accounts/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 7022
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
@@ -14,12 +14,64 @@
       "SwaggerKey": "account"
     },
     {
-      "DownstreamPathTemplate": "/api/auth/{everything}",
-      "DownstreamScheme": "https",
+      "DownstreamPathTemplate": "/api/auth/login",
+      "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 7022
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/login",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/register",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/register",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/reset-password-request",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/reset-password-request",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/verify",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/verify",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/auth/{everything}",
@@ -28,20 +80,17 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
-      //"AddHeadersToRequest": {
-      //  "Authorization": "{Request.Headers.Authorization}"
-      //}
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 7022
+          "Host": "account-service",
+          "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/swagger/account/{everything}",
+      "UpstreamPathTemplate": "/swagger/swagger/v1/account/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
     }
   ],
@@ -52,12 +101,12 @@
         {
           "Name": "Account API",
           "Version": "v1",
-          "Url": "https://localhost:7022/swagger/v1/swagger.json"
+          "Url": "http://account-service/swagger/v1/swagger.json"
         }
       ]
     }
   ],
-  "GlobalConfiguration": {
-    "BaseUrl": "https://localhost:5000"
+  "globalconfiguration": {
+    //"baseurl": "http://brightpa.me"
   }
 }
