@@ -9,7 +9,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/account/{everything}",
+      "UpstreamPathTemplate": "/api/accounts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "SwaggerKey": "account"
     },
@@ -27,10 +27,10 @@
       "SwaggerKey": "account",
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
-      },
-      "AddHeadersToRequest": {
-        "Authorization": "{Request.Headers.Authorization}"
       }
+      //"AddHeadersToRequest": {
+      //  "Authorization": "{Request.Headers.Authorization}"
+      //}
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",

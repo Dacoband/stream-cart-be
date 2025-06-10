@@ -107,8 +107,7 @@ app.UseEndpoints(endpoints =>
     endpoints.MapControllers();
 });
 
-await app.UseOcelot();
-
+app.UseOcelot().Wait();
 app.Run();
 
 //Custom method to alter upstream Swagger JSON
