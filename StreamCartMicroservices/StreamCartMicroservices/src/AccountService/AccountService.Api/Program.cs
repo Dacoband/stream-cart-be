@@ -101,7 +101,7 @@ if (!builder.Environment.IsEnvironment("Docker"))
     app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseConfiguredCors();
 app.UseAuthentication();
 app.UseAuthorization();
