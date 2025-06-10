@@ -63,7 +63,7 @@ services:
       dockerfile: ./ApiGateway/ApiGateway/Dockerfile
     ports:
       - "8000:80"
-      - "443:80"
+     # - "443:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
