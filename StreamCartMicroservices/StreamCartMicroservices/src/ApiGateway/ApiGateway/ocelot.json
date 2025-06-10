@@ -107,6 +107,6 @@
     }
   ],
   "globalconfiguration": {
-    //"baseurl": "http://brightpa.me"
+    "baseurl": "https://brightpa.me"
   }
 }
