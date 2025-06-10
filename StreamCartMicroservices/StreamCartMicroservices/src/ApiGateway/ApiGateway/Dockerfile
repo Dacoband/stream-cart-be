@@ -17,11 +17,12 @@ WORKDIR "/src/ApiGateway/ApiGateway"
 
 # Build và publish
 RUN dotnet build "ApiGateway.csproj" -c Release -o /app/build
+FROM build AS publish
 RUN dotnet publish "ApiGateway.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-COPY --from=build /app/publish .
+COPY --from=publish /app/publish .
 # Copy config files into the final image (relative to build context)
 COPY ["ApiGateway/ApiGateway/ocelot.json", "./ocelot.json"]
 COPY ["ApiGateway/ApiGateway/ocelot.Development.json", "./ocelot.Development.json"] 

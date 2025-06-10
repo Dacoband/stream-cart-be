@@ -89,7 +89,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseSwagger();
+    //app.UseSwagger();
     Console.WriteLine("Running in Development mode");
 }
 else
@@ -97,7 +97,7 @@ else
     Console.WriteLine($"Running in {app.Environment.EnvironmentName} mode");
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseConfiguredCors();
 app.UseExceptionHandler("/error");
