@@ -74,6 +74,10 @@ services:
       - Logging__LogLevel__Default=Debug
       - Logging__LogLevel__Microsoft=Warning
       - Logging__LogLevel__Ocelot=Debug
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
     depends_on:
       - account-service
     restart: unless-stopped
