@@ -126,6 +126,31 @@ app.Run();
 //Custom method to alter upstream Swagger JSON
 string AlterUpstreamSwaggerJson(HttpContext context, string swaggerJson)
 {
-    // You can modify the swagger JSON here if needed
-    return swaggerJson;
+    var swagger =  System.Text.Json.JsonDocument.Parse(swaggerJson);
+    var root = swagger.RootElement;
+
+    using var jsonDoc = System.Text.Json.JsonDocument.Parse(swaggerJson);
+    var output = new System.Text.Json.Nodes.JsonObject();
+    foreach(var property in root.EnumerateObject())
+    {
+        if (property.Name == "info")
+        {
+            var infoObject = new System.Text.Json.Nodes.JsonObject
+            {
+                ["title"] = "StreamCart API Gateway",
+                ["version"] = "v1",
+                ["description"] = "API Gateway for StreamCart microservices"
+            };
+            output["info"] = infoObject;
+        }
+        else
+        {
+            output[property.Name] = System.Text.Json.Nodes.JsonNode.Parse(property.Value.GetRawText());
+        }
+    }
+    return output.ToJsonString(new System.Text.Json.JsonSerializerOptions
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    });
 }
