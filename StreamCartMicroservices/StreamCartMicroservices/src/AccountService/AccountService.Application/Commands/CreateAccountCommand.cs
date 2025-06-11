@@ -18,5 +18,6 @@ namespace AccountService.Application.Commands
         public RoleType Role { get; set; } = RoleType.Customer;
         public bool IsActive { get; set; } = true;
         public bool IsVerified { get; set; } = false;
+        public decimal CompleteRate { get; set; } = 1.0m;
     }
 }

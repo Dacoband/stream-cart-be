@@ -43,8 +43,15 @@ namespace AccountService.Domain.Entities
         
         [Column(TypeName = "decimal(5,2)")]
         public decimal? CompleteRate { get; private set; }
-        
+        [ForeignKey("Shop")]
         public Guid? ShopId { get; private set; }
+
+        // public virtual Shop? Shop { get; private set; }
+
+        // Thêm các thuộc tính cho xác thực OTP
+        public string? VerificationToken { get; private set; }
+        
+        public DateTime? VerificationTokenExpiry { get; private set; }
         
         // Private constructor for EF Core
         private Account() { }
@@ -69,13 +76,12 @@ namespace AccountService.Domain.Entities
                 throw new ArgumentException("Role cannot be empty", nameof(role));
             
             Username = username;
-            Password = password; // Note: In real app, store hashed password
+            Password = password; 
             Email = email;
             Role = role;
             RegistrationDate = DateTime.UtcNow;
         }
         
-        // Methods for updating entity
         public void UpdateProfile(string? fullname, string? phoneNumber, string? avatarURL)
         {
             if (fullname != null)
@@ -93,7 +99,7 @@ namespace AccountService.Domain.Entities
             if (string.IsNullOrWhiteSpace(newPassword))
                 throw new ArgumentException("Password cannot be empty", nameof(newPassword));
                 
-            Password = newPassword; // Note: In real app, store hashed password
+            Password = newPassword; 
         }
         
         public void ChangeRole(RoleType newRole)
@@ -133,7 +139,43 @@ namespace AccountService.Domain.Entities
         {
             IsActive = false;
         }
-        
+
+        public void SetVerificationToken(string token)
+        {
+            VerificationToken = token;
+        }
+
+        public void SetVerificationTokenExpiry(DateTime expiry)
+        {
+            VerificationTokenExpiry = expiry;
+        }
+
+        public void ClearVerificationToken()
+        {
+            VerificationToken = null;
+            VerificationTokenExpiry = null;
+        }
+
+        public void SetUnverified()
+        {
+            IsVerified = false;
+        }
+
+        public void UpdateRole(RoleType role)
+        {
+            Role = role;
+        }
+
+        public void UpdateShopId(Guid shopId)
+        {
+            ShopId = shopId;
+        }
+
+        public void SetUpdatedBy(string updatedBy)
+        {
+            this.SetModifier(updatedBy);
+        }
+
         public override bool IsValid()
         {
             if (!base.IsValid())

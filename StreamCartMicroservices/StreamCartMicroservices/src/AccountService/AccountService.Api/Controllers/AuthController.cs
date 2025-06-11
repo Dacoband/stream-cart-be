@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Models;
 using System.Security.Claims;
+using MediatR;
 
 namespace AccountService.Api.Controllers
 {
@@ -14,11 +15,16 @@ namespace AccountService.Api.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IAccountManagementService _accountService;
+        private readonly IMediator _mediator;
 
-        public AuthController(IAuthService authService, IAccountManagementService accountService)
+        public AuthController(
+            IAuthService authService,
+            IAccountManagementService accountService,
+            IMediator mediator) 
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
+            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
 
         [HttpPost("login")]
@@ -63,16 +69,20 @@ namespace AccountService.Api.Controllers
                 Password = createAccountDto.Password,
                 PhoneNumber = createAccountDto.PhoneNumber,
                 Fullname = createAccountDto.Fullname,
-                AvatarURL = createAccountDto.AvatarURL
+                AvatarURL = createAccountDto.AvatarURL,
+                IsVerified = false, // Tài khoản chưa được xác minh
+                CompleteRate = 1.0m // CompleteRate mặc định là 1.0 (100%)
             };
 
             var createdAccount = await _authService.RegisterAsync(command);
 
+            // Trả về thông báo thành công kèm thông tin tài khoản
+            var responseMessage = "Account registered successfully. Please check your email for verification OTP.";
             return CreatedAtAction(
-                "GetAccountById",       
-                "Account",        
+                "GetAccountById",
+                "Account",
                 new { id = createdAccount.Id },
-                ApiResponse<AccountDto>.SuccessResult(createdAccount, "Account registered successfully")
+                ApiResponse<AccountDto>.SuccessResult(createdAccount, responseMessage)
             );
         }
 
@@ -172,6 +182,45 @@ namespace AccountService.Api.Controllers
             {
                 return StatusCode(500, ApiResponse<object>.ErrorResult($"Error: {ex.Message}"));
             }
+        }
+        [HttpPost("verify-otp")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> VerifyOTP([FromBody] VerifyOTPDto verifyOTPDto)
+        {
+            if (string.IsNullOrWhiteSpace(verifyOTPDto.OTP))
+                return BadRequest(ApiResponse<object>.ErrorResult("OTP is required"));
+
+            var result = await _mediator.Send(new VerifyOTPCommand
+            {
+                AccountId = verifyOTPDto.AccountId,
+                OTP = verifyOTPDto.OTP
+            });
+
+            if (!result)
+                return BadRequest(ApiResponse<object>.ErrorResult("Invalid or expired OTP"));
+
+            return Ok(ApiResponse<bool>.SuccessResult(true, "Account verified successfully"));
+        }
+
+        [HttpPost("resend-otp")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ResendOTP([FromBody] ResendOTPDto resendOTPDto)
+        {
+            var account = await _accountService.GetAccountByIdAsync(resendOTPDto.AccountId);
+
+            if (account == null)
+                return NotFound(ApiResponse<object>.ErrorResult("Account not found"));
+
+            // Tạo OTP mới
+            await _mediator.Send(new GenerateOTPCommand
+            {
+                AccountId = resendOTPDto.AccountId,
+                Email = account.Email
+            });
+
+            return Ok(ApiResponse<bool>.SuccessResult(true, "OTP has been resent"));
         }
     }
 }

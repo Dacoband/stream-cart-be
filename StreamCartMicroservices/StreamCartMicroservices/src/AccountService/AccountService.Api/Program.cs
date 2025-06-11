@@ -1,4 +1,5 @@
 ﻿using AccountService.Api.Services;
+using AccountService.Application.Commands;
 using AccountService.Application.Extensions;
 using AccountService.Infrastructure.Data;
 using AccountService.Infrastructure.Extensions;
@@ -24,7 +25,10 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
-
+builder.Services.AddMediatR(config =>
+{
+    config.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
+});
 
 
 // Add services to the container
@@ -42,12 +46,9 @@ builder.Services.AddMessaging(builder.Configuration, x => {
 
 // Add shared settings configuration
 builder.Services.AddAppSettings(builder.Configuration);
-
-// Add CORS from shared library
 builder.Services.AddConfiguredCors(builder.Configuration);
-
-// Add JWT Authentication from shared library
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddEmailServices(builder.Configuration);
 
 
 builder.Services.AddControllers();
@@ -101,7 +102,7 @@ if (!builder.Environment.IsEnvironment("Docker"))
     app.UseHttpsRedirection();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 app.UseConfiguredCors();
 app.UseAuthentication();
 app.UseAuthorization();

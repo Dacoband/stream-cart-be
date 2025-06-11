@@ -11,5 +11,6 @@ namespace Shared.Common.Settings
         public ConnectionStrings ConnectionStrings { get; set; }
         public JwtSettings JwtSettings { get; set; }
         public CorsSettings CorsSettings { get; set; }
+        public EmailSettings EmailSettings { get; set; } = new EmailSettings();
     }
 }

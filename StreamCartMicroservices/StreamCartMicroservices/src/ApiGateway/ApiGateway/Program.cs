@@ -98,7 +98,7 @@ else
     Console.WriteLine($"Running in {app.Environment.EnvironmentName} mode");
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseConfiguredCors();
 app.UseExceptionHandler("/error");
