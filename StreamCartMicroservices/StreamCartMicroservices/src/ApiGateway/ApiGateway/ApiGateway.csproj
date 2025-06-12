@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<PackageReference Include="dotenv.net" Version="3.2.1" />
     <PackageReference Include="MMLib.SwaggerForOcelot" Version="9.0.0" />
     <PackageReference Include="Ocelot" Version="24.0.0" />
     <PackageReference Include="Ocelot.Cache.CacheManager" Version="24.0.0" />
@@ -19,6 +20,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update=".env">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -19,6 +19,7 @@ namespace AccountService.Application.Extensions
 
             // Register services
             services.AddScoped<IAccountManagementService, AccountManagementService>();
+            services.AddScoped<IAddressManagementService, AddressManagementService>();
             services.AddScoped<IAuthService, AuthService>();
 
             return services;

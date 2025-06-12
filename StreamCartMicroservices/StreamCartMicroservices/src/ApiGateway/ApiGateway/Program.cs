@@ -6,10 +6,15 @@ using Shared.Common.Extensions;
 using MMLib.SwaggerForOcelot.DependencyInjection;
 using System.Text.Json.Serialization;
 using ApiGateway.Middleware;
-
+using dotenv.net;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsDevelopment())
+{
+    DotEnv.Load(); // Đọc file .env nếu có
+    Console.WriteLine("JWT Secret Key: " + Environment.GetEnvironmentVariable("JWT_SECRET_KEY"));
+}
 var env = builder.Environment.EnvironmentName;
 Console.WriteLine($"Current environment: {env}");
 
