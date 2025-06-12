@@ -138,6 +138,11 @@ namespace AccountService.Domain.Entities
             Latitude = latitude;
             Longitude = longitude;
         }
+        public void SetUpdatedBy(string updatedBy)
+        {
+            LastModifiedBy = updatedBy;
+            LastModifiedAt = DateTime.UtcNow;
+        }
         public void Activate()
         {
             IsActive = true;

@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetTopologySuite" Version="2.6.0" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />
   </ItemGroup>
 
