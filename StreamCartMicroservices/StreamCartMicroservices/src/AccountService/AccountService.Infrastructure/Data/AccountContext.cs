@@ -13,7 +13,8 @@ namespace AccountService.Infrastructure.Data
     public class AccountContext : DbContext
     {
         public DbSet<Account> Accounts { get; set; }
-        
+        public DbSet<Address> Addresses { get; set; }
+
         public AccountContext(DbContextOptions<AccountContext> options) : base(options)
         {
         }
@@ -92,7 +93,12 @@ namespace AccountService.Infrastructure.Data
                     
                 entity.Property(e => e.ShopId)
                     .HasColumnName("shop_id");
-                    
+                entity.Property(e => e.VerificationToken)
+                    .HasColumnName("verification_token")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.VerificationTokenExpiry)
+                    .HasColumnName("verification_token_expiry");
                 // Base entity properties
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("created_at")
@@ -112,8 +118,111 @@ namespace AccountService.Infrastructure.Data
                 entity.Property(e => e.IsDeleted)
                     .HasColumnName("is_deleted")
                     .IsRequired();
-                    
-                // Query filter for soft delete
+
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // Address entity configuration
+            modelBuilder.Entity<Address>(entity =>
+            {
+                entity.ToTable("addresses");
+
+                entity.HasKey(e => e.Id);
+
+                entity.HasIndex(e => e.AccountId);
+                entity.HasIndex(e => e.ShopId);
+                entity.HasIndex(e => new { e.AccountId, e.IsDefaultShipping });
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id");
+
+                entity.Property(e => e.RecipientName)
+                    .HasColumnName("recipient_name")
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Street)
+                    .HasColumnName("street")
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Ward)
+                    .HasColumnName("ward")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.District)
+                    .HasColumnName("district")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.City)
+                    .HasColumnName("city")
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Country)
+                    .HasColumnName("country")
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.PostalCode)
+                    .HasColumnName("postal_code")
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.PhoneNumber)
+                    .HasColumnName("phone_number")
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.IsDefaultShipping)
+                    .HasColumnName("is_default_shipping")
+                    .IsRequired();
+
+                entity.Property(e => e.Latitude)
+                   .HasColumnName("latitude");
+
+                entity.Property(e => e.Longitude)
+                   .HasColumnName("longitude");
+
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .IsRequired()
+                    .HasConversion<string>(); 
+
+                entity.Property(e => e.IsActive)
+                    .HasColumnName("is_active")
+                    .IsRequired();
+
+                entity.Property(e => e.AccountId)
+                    .HasColumnName("account_id")
+                    .IsRequired();
+
+                entity.Property(e => e.ShopId)
+                    .HasColumnName("shop_id");
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at")
+                    .IsRequired();
+
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.IsDeleted)
+                    .HasColumnName("is_deleted")
+                    .IsRequired();
+
+                entity.HasOne<Account>()
+                    .WithMany() 
+                    .HasForeignKey(a => a.AccountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });
         }
