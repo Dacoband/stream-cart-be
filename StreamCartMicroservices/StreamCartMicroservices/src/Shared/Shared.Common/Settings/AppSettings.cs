@@ -12,5 +12,7 @@ namespace Shared.Common.Settings
         public JwtSettings JwtSettings { get; set; }
         public CorsSettings CorsSettings { get; set; }
         public EmailSettings EmailSettings { get; set; } = new EmailSettings();
+
+        public AppwriteSetting AppwriteSetting { get; set; }= new AppwriteSetting();
     }
 }

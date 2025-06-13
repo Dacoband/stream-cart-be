@@ -1,6 +1,7 @@
 ﻿using AccountService.Api.Services;
 using AccountService.Application.Commands;
 using AccountService.Application.Extensions;
+using AccountService.Application.Handlers.ImageHandler;
 using AccountService.Infrastructure.Data;
 using AccountService.Infrastructure.Extensions;
 using AccountService.Infrastructure.Messaging.Consumers;
@@ -29,6 +30,10 @@ builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
 });
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddConsumersFromNamespaceContaining<UploadImageHandler>();
+});
 
 
 // Add services to the container
@@ -49,6 +54,7 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddEmailServices(builder.Configuration);
+builder.Services.AddAppwriteServices(builder.Configuration);
 
 
 builder.Services.AddControllers();

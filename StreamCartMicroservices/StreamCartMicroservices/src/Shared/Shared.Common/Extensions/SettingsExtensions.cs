@@ -43,6 +43,20 @@ namespace Shared.Common.Extensions
                 options.DefaultFromName = emailSettings.DefaultFromName;
                 options.Provider = emailSettings.Provider;
             });
+            var appwriteSettings = new AppwriteSetting
+            {
+                APIKey = GetEnvironmentVariableOrConfig(configuration, "APPWRITE_API_KEY", $"{nameof(AppSettings.AppwriteSetting)}:{nameof(AppwriteSetting.APIKey)}"),
+                ProjectID = GetEnvironmentVariableOrConfig(configuration, "APPWRITE_PROJECT_ID", $"{nameof(AppSettings.AppwriteSetting)}:{nameof(AppwriteSetting.ProjectID)}"),
+                BucketID = GetEnvironmentVariableOrConfig(configuration, "APPWRITE_BUCKET_ID", $"{nameof(AppSettings.AppwriteSetting)}:{nameof(AppwriteSetting.BucketID)}"),
+                Endpoint = GetEnvironmentVariableOrConfig(configuration, "APPWRITE_ENDPOINT", $"{nameof(AppSettings.AppwriteSetting)}:{nameof(AppwriteSetting.Endpoint)}"),
+            };
+            services.Configure<AppwriteSetting>(options =>
+            {
+                options.ProjectID = appwriteSettings.ProjectID;
+                options.BucketID = appwriteSettings.BucketID;
+                options.Endpoint = appwriteSettings.Endpoint;
+                options.APIKey = appwriteSettings.APIKey;
+            });
 
             return services;
         }
