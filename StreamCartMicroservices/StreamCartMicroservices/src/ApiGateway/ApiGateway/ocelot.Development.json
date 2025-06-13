@@ -27,10 +27,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses",
       "UpstreamHttpMethod": [ "GET", "POST" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"   
     },
     {
       "DownstreamPathTemplate": "/api/addresses/{id}",
@@ -43,10 +40,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/{id}",
       "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/default-shipping",
@@ -59,10 +53,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/default-shipping",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/by-type/{type}",
@@ -75,10 +66,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/by-type/{type}",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/shops/{shopId}",
@@ -91,10 +79,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/shops/{shopId}",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
@@ -107,10 +92,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
       "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
@@ -123,10 +105,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
       "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
@@ -139,10 +118,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
       "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/auth/login",
@@ -233,10 +209,7 @@
       ],
       "UpstreamPathTemplate": "/api/auth/me",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/auth/change-password",
@@ -249,10 +222,7 @@
       ],
       "UpstreamPathTemplate": "/api/auth/change-password",
       "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
