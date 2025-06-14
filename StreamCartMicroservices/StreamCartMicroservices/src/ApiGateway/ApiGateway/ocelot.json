@@ -11,10 +11,7 @@
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/image/upload",
@@ -222,10 +219,7 @@
       ],
       "UpstreamPathTemplate": "/api/auth/me",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/auth/change-password",
@@ -238,10 +232,7 @@
       ],
       "UpstreamPathTemplate": "/api/auth/change-password",
       "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
