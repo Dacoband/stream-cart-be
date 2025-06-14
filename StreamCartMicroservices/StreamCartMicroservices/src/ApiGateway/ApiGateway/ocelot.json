@@ -17,6 +17,123 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/image/upload",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/image/upload",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/{id}",
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/default-shipping",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/default-shipping",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/by-type/{type}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/by-type/{type}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/shops/{shopId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/shops/{shopId}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
+      "UpstreamHttpMethod": [ "PUT" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
+      "UpstreamHttpMethod": [ "PUT" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
+      "UpstreamHttpMethod": [ "PUT" ],
+      "SwaggerKey": "account"
+    },
+    {
       "DownstreamPathTemplate": "/api/auth/login",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

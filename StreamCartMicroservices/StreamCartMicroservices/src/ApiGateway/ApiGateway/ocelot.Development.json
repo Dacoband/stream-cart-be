@@ -17,6 +17,19 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/image/upload",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/image/upload",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
       "DownstreamPathTemplate": "/api/addresses",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
@@ -27,7 +40,7 @@
       ],
       "UpstreamPathTemplate": "/api/addresses",
       "UpstreamHttpMethod": [ "GET", "POST" ],
-      "SwaggerKey": "account"   
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/addresses/{id}",
@@ -145,97 +158,97 @@
       "UpstreamPathTemplate": "/api/auth/register",
       "UpstreamHttpMethod": [ "POST" ],
       "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/reset-password-request",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/reset-password-request",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/reset-password",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/reset-password",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/verify",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/verify",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/refresh-token",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/refresh-token",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/me",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/me",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/change-password",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/change-password",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/swagger/{everything}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/swagger/account/{everything}",
-      "UpstreamHttpMethod": [ "GET" ]
-    }
+     },
+      {
+        "DownstreamPathTemplate": "/api/auth/reset-password-request",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/reset-password-request",
+        "UpstreamHttpMethod": [ "POST" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/api/auth/reset-password",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/reset-password",
+        "UpstreamHttpMethod": [ "POST" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/api/auth/verify",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/verify",
+        "UpstreamHttpMethod": [ "GET" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/api/auth/refresh-token",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/refresh-token",
+        "UpstreamHttpMethod": [ "POST" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/api/auth/me",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/me",
+        "UpstreamHttpMethod": [ "GET" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/api/auth/change-password",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/api/auth/change-password",
+        "UpstreamHttpMethod": [ "POST" ],
+        "SwaggerKey": "account"
+      },
+      {
+        "DownstreamPathTemplate": "/swagger/{everything}",
+        "DownstreamScheme": "https",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "localhost",
+            "Port": 7022
+          }
+        ],
+        "UpstreamPathTemplate": "/swagger/account/{everything}",
+        "UpstreamHttpMethod": [ "GET" ]
+      }
   ],
   "SwaggerEndPoints": [
     {
