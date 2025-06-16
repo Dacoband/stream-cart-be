@@ -93,7 +93,7 @@ services:
       context: ./src
       dockerfile: ./ProductService/ProductService.Api/Dockerfile
     ports:
-      - "7023:80"
+      - "7005:80"
     environment:
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_ENVIRONMENT=Production
