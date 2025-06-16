@@ -6,7 +6,13 @@ namespace ProductService.Infrastructure.Data
 {
     public class ProductContext : DbContext
     {
+        // Add all required DbSet properties
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<ProductVariant> ProductVariants { get; set; }
+        public DbSet<ProductAttribute> ProductAttributes { get; set; }
+        public DbSet<AttributeValue> AttributeValues { get; set; }
+        public DbSet<ProductCombination> ProductCombinations { get; set; }
 
         public ProductContext(DbContextOptions<ProductContext> options) : base(options)
         {
@@ -75,9 +81,6 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.QuantitySold)
                     .HasColumnName("quantity_sold");
 
-                entity.Property(e => e.LivestreamId)
-                    .HasColumnName("livestream_id");
-
                 // Base entity properties
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("created_at");
@@ -112,11 +115,166 @@ namespace ProductService.Infrastructure.Data
                 entity.HasIndex(e => e.IsActive)
                     .HasDatabaseName("ix_products_is_active");
 
-                entity.HasIndex(e => e.LivestreamId)
-                    .HasDatabaseName("ix_products_livestream_id");
-
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // Inside OnModelCreating method
+            modelBuilder.Entity<ProductVariant>(entity =>
+            {
+                entity.ToTable("ProductVariants");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.SKU)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Price)
+                    .HasColumnType("decimal(18, 2)")
+                    .IsRequired();
+
+                entity.Property(e => e.FlashSalePrice)
+                    .HasColumnType("decimal(18, 2)");
+
+                entity.Property(e => e.Stock)
+                    .IsRequired();
+
+                entity.HasOne<Product>()
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsDeleted);
+
+                // Add soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            modelBuilder.Entity<ProductAttribute>(entity =>
+            {
+                entity.ToTable("ProductAttributes");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Name)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.Name).IsUnique();
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsDeleted);
+
+                // Add soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            modelBuilder.Entity<AttributeValue>(entity =>
+            {
+                entity.ToTable("AttributeValues");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.ValueName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.HasOne<ProductAttribute>()
+                    .WithMany()
+                    .HasForeignKey(e => e.AttributeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.AttributeId, e.ValueName }).IsUnique();
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsDeleted);
+
+                // Add soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            modelBuilder.Entity<ProductCombination>(entity =>
+            {
+                entity.ToTable("ProductCombinations");
+
+                entity.HasKey(e => new { e.VariantId, e.AttributeValueId });
+
+                entity.HasOne<ProductVariant>()
+                    .WithMany()
+                    .HasForeignKey(e => e.VariantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<AttributeValue>()
+                    .WithMany()
+                    .HasForeignKey(e => e.AttributeValueId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsDeleted);
+
+                // Add soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // Configure ProductImage entity
+            modelBuilder.Entity<ProductImage>(entity =>
+            {
+                entity.ToTable("ProductImages");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.ImageUrl).IsRequired();
+                entity.Property(e => e.DisplayOrder).HasDefaultValue(0);
+                entity.Property(e => e.IsPrimary).HasDefaultValue(false);
+                entity.Property(e => e.AltText).HasMaxLength(200);
+
+                // Add relationship with Product
+                entity.HasOne<Product>()
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Add relationship with ProductVariant if applicable
+                entity.HasOne<ProductVariant>()
+                      .WithMany()
+                      .HasForeignKey(e => e.VariantId)
+                      .OnDelete(DeleteBehavior.SetNull)
+                      .IsRequired(false);
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsDeleted);
+
+                // Add soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                // Add index for faster queries
+                entity.HasIndex(e => e.ProductId);
+                entity.HasIndex(e => e.VariantId);
+                entity.HasIndex(e => e.IsPrimary);
             });
         }
     }

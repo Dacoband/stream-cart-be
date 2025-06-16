@@ -1,11 +1,25 @@
-﻿using dotenv.net;
+﻿using Appwrite;
+using dotenv.net;
 using MassTransit;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductService.Api.Services;
 using ProductService.Application.Commands;
+using ProductService.Application.Commands.AttributeCommands;
+using ProductService.Application.Commands.AttributeValueCommands;
+using ProductService.Application.Commands.CombinationCommands;
+using ProductService.Application.Commands.VariantCommands;
+using ProductService.Application.DTOs.Attributes;
+using ProductService.Application.DTOs.Combinations;
+using ProductService.Application.DTOs.Variants;
 using ProductService.Application.Extensions;
+using ProductService.Application.Handlers.AttributeHandlers;
+using ProductService.Application.Handlers.AttributeValueHandlers;
+using ProductService.Application.Handlers.CombinationHandlers;
+using ProductService.Application.Handlers.VariantHandlers;
+using ProductService.Application.Queries.AttributeValueQueries;
 using ProductService.Infrastructure.Extensions;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
@@ -28,6 +42,8 @@ ReplaceConfigurationPlaceholders(builder.Configuration);
 builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(CreateProductCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetAllAttributeValuesQuery).Assembly);
+
 });
 //builder.Services.AddMediator(cfg =>
 //{
@@ -43,7 +59,8 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
-
+// Add this line to Program.cs services registration
+builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -54,6 +71,10 @@ builder.Services.AddSwaggerGen(c =>
         Title = "Product Service API",
         Version = "v1",
         Description = "API endpoints for product management"
+    });
+    c.CustomSchemaIds(type => {
+        // Use fully qualified type name to avoid conflicts
+        return type.FullName;
     });
 
     // Cấu hình JWT Authentication cho Swagger
@@ -81,9 +102,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-// Add this near other service registrations
-//builder.Services.AddHealthChecks();
-
 
 var app = builder.Build();
 

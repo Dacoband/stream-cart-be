@@ -51,10 +51,4 @@ namespace ProductService.Application.Queries
         public Guid? ShopId { get; set; }
         public Guid? CategoryId { get; set; }
     }
-
-    // Lấy sản phẩm của một livestream
-    public class GetProductsByLivestreamIdQuery : IRequest<IEnumerable<ProductDto>>
-    {
-        public Guid LivestreamId { get; set; }
-    }
 }

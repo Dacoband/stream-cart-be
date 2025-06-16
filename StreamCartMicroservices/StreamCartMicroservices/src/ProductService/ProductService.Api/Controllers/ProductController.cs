@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.Commands;
 using ProductService.Application.DTOs;
+using ProductService.Application.DTOs.Details;
 using ProductService.Application.Queries;
+using ProductService.Application.Queries.DetailQueries;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
@@ -233,16 +235,6 @@ namespace ProductService.Api.Controllers
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }
 
-        [HttpGet("livestream/{livestreamId}")]
-        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
-        public async Task<IActionResult> GetProductsByLivestreamId(Guid livestreamId)
-        {
-            var query = new GetProductsByLivestreamIdQuery { LivestreamId = livestreamId };
-            var products = await _mediator.Send(query);
-
-            return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
-        }
-
         [HttpPatch("{id}/status")]
        // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
@@ -305,66 +297,6 @@ namespace ProductService.Api.Controllers
             }
         }
 
-        [HttpPost("{id}/assign-to-livestream")]
-        //[Authorize]
-        [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
-        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> AssignProductToLivestream(Guid id, [FromBody] AssignToLivestreamDto assignDto)
-        {
-            try
-            {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                var command = new AssignProductToLivestreamCommand
-                {
-                    ProductId = id,
-                    LivestreamId = assignDto.LivestreamId,
-                    UpdatedBy = userId
-                };
-
-                var updatedProduct = await _mediator.Send(command);
-                return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct, "Product assigned to livestream successfully"));
-            }
-            catch (ApplicationException ex)
-            {
-                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResult($"Error assigning product to livestream: {ex.Message}"));
-            }
-        }
-
-        [HttpPost("{id}/remove-from-livestream")]
-        //[Authorize]
-        [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
-        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> RemoveProductFromLivestream(Guid id)
-        {
-            try
-            {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                var command = new AssignProductToLivestreamCommand
-                {
-                    ProductId = id,
-                    LivestreamId = null, // Gán null để gỡ khỏi livestream
-                    UpdatedBy = userId
-                };
-
-                var updatedProduct = await _mediator.Send(command);
-                return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct, "Product removed from livestream successfully"));
-            }
-            catch (ApplicationException ex)
-            {
-                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResult($"Error removing product from livestream: {ex.Message}"));
-            }
-        }
-
         [HttpPost("{id}/check-stock")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -396,6 +328,26 @@ namespace ProductService.Api.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product stock: {ex.Message}"));
+            }
+        }
+        [HttpGet("{id}/detail")]
+        [ProducesResponseType(typeof(ApiResponse<ProductDetailDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetProductDetail(Guid id)
+        {
+            try
+            {
+                var query = new GetProductDetailQuery { ProductId = id };
+                var productDetail = await _mediator.Send(query);
+
+                if (productDetail == null)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
+
+                return Ok(ApiResponse<ProductDetailDto>.SuccessResult(productDetail));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error retrieving product details: {ex.Message}"));
             }
         }
     }

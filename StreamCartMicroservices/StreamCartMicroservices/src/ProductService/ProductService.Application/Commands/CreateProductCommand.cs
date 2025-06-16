@@ -50,12 +50,6 @@ namespace ProductService.Application.Commands
         public int StockQuantity { get; set; }
         public string UpdatedBy { get; set; }
     }
-    public class AssignProductToLivestreamCommand : IRequest<ProductDto>
-    {
-        public Guid ProductId { get; set; }
-        public Guid? LivestreamId { get; set; }
-        public string UpdatedBy { get; set; }
-    }
     public class CheckProductStockCommand : IRequest<bool>
     {
         public Guid ProductId { get; set; }
