@@ -42,8 +42,6 @@ namespace ProductService.Domain.Entities
 
         public Guid? ShopId { get; private set; }
 
-        public Guid? LivestreamId { get; private set; }
-
         // EF Constructor
         private Product() { }
 
@@ -166,12 +164,6 @@ namespace ProductService.Domain.Entities
         public void SetUpdatedBy(string updatedBy)
         {
             LastModifiedBy = updatedBy;
-            LastModifiedAt = DateTime.UtcNow;
-        }
-
-        public void AssignToLivestream(Guid? livestreamId)
-        {
-            LivestreamId = livestreamId;
             LastModifiedAt = DateTime.UtcNow;
         }
 

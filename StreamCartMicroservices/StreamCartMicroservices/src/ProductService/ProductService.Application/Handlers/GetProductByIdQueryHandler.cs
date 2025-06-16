@@ -42,7 +42,7 @@ namespace ProductService.Application.Handlers
                 HasVariant = product.HasVariant,
                 QuantitySold = product.QuantitySold,
                 ShopId = product.ShopId,
-                LivestreamId = product.LivestreamId,
+                //LivestreamId = product.LivestreamId,
                 CreatedAt = product.CreatedAt,
                 CreatedBy = product.CreatedBy,
                 LastModifiedAt = product.LastModifiedAt,

@@ -30,8 +30,6 @@ namespace ProductService.Infrastructure.Interfaces
             Guid? shopId = null,
             Guid? categoryId = null);
 
-        Task<IEnumerable<Product>> GetByLivestreamIdAsync(Guid livestreamId);
-
         Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeProductId = null);
     }
 }

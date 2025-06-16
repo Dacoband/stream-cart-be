@@ -128,13 +128,6 @@ namespace ProductService.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Product>> GetByLivestreamIdAsync(Guid livestreamId)
-        {
-            return await _dbSet
-                .Where(p => p.LivestreamId == livestreamId && !p.IsDeleted)
-                .ToListAsync();
-        }
-
         public async Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeProductId = null)
         {
             if (string.IsNullOrWhiteSpace(sku))

@@ -27,6 +27,12 @@ namespace ProductService.Infrastructure.Extensions
 
             // Register specific repositories
             services.AddScoped<IProductRepository, ProductRepository>();
+            // Inside AddInfrastructureServices method
+            services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
+            services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
+            services.AddScoped<IAttributeValueRepository, AttributeValueRepository>();
+            services.AddScoped<IProductCombinationRepository, ProductCombinationRepository>();
+            services.AddScoped<IProductImageRepository, ProductImageRepository>(); // Add this line
 
             return services;
         }
