@@ -7,7 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />
+    <ProjectReference Include="..\ShopService.Domain\ShopService.Domain.csproj" />
   </ItemGroup>
-
+	<ItemGroup>
+		<PackageReference Include="FluentValidation" Version="12.0.0" />
+		<PackageReference Include="MassTransit" Version="8.4.1" />
+		<PackageReference Include="MediatR" Version="12.5.0" />
+	</ItemGroup>
 </Project>

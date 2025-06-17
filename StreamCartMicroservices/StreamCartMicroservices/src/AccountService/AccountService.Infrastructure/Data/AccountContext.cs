@@ -7,6 +7,7 @@ using AccountService.Domain.Entities;
 using AccountService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using ShopService.Domain.Entities;
 
 namespace AccountService.Infrastructure.Data
 {
@@ -103,7 +104,10 @@ namespace AccountService.Infrastructure.Data
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("created_at")
                     .IsRequired();
-                    
+                entity.HasOne<Shop>()
+                      .WithMany()
+                      .HasForeignKey(a => a.ShopId)
+                      .OnDelete(DeleteBehavior.SetNull);
                 entity.Property(e => e.CreatedBy)
                     .HasColumnName("created_by")
                     .HasMaxLength(50);
@@ -218,6 +222,10 @@ namespace AccountService.Infrastructure.Data
                     .HasColumnName("is_deleted")
                     .IsRequired();
 
+                entity.HasOne<Shop>()
+                      .WithMany()  
+                      .HasForeignKey(e => e.ShopId)
+                      .OnDelete(DeleteBehavior.SetNull);
                 entity.HasOne<Account>()
                     .WithMany() 
                     .HasForeignKey(a => a.AccountId)

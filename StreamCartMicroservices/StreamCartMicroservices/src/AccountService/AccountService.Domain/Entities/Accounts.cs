@@ -46,7 +46,7 @@ namespace AccountService.Domain.Entities
         [ForeignKey("Shop")]
         public Guid? ShopId { get; private set; }
 
-        // public virtual Shop? Shop { get; private set; }
+        //public virtual Shop? Shop { get; private set; }
 
         // Thêm các thuộc tính cho xác thực OTP
         public string? VerificationToken { get; private set; }
