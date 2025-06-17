@@ -57,7 +57,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new CreateProductVariantCommand
                 {
@@ -94,7 +97,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UpdateProductVariantCommand
                 {
@@ -126,7 +132,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new DeleteProductVariantCommand
                 {
@@ -164,7 +173,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UpdateVariantStockCommand
                 {
@@ -193,7 +205,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UpdateVariantPriceCommand
                 {
@@ -223,8 +238,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new BulkUpdateVariantStockCommand
                 {
                     StockUpdates = bulkUpdateDto.StockUpdates,

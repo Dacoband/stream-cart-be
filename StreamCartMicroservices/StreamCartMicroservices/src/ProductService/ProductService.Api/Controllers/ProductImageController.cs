@@ -54,7 +54,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UploadProductImageCommand
                 {
@@ -93,8 +96,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new UpdateProductImageCommand
                 {
                     Id = id,
@@ -124,8 +129,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new DeleteProductImageCommand
                 {
                     Id = id,
@@ -169,8 +176,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new SetPrimaryImageCommand
                 {
                     Id = id,
@@ -198,8 +207,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new ReorderProductImagesCommand
                 {
                     ImagesOrder = reorderDto.ImagesOrder,

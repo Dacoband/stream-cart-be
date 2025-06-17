@@ -38,7 +38,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new CreateProductCommand
                 {
@@ -82,8 +85,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new UpdateProductCommand
                 {
                     Id = id,
@@ -120,8 +125,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new DeleteProductCommand
                 {
                     Id = id,
@@ -243,8 +250,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new UpdateProductStatusCommand
                 {
                     Id = id,
@@ -275,8 +284,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new UpdateProductStockCommand
                 {
                     Id = id,
