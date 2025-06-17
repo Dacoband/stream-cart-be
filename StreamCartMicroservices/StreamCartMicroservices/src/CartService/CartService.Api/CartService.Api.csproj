@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ShopService.Application\ShopService.Application.csproj" />
-    <ProjectReference Include="..\ShopService.Infrastructure\ShopService.Infrastructure.csproj" />
+    <ProjectReference Include="..\CartService.Application\CartService.Application.csproj" />
+    <ProjectReference Include="..\CartService.Infrastructure\CartService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
