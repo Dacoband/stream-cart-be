@@ -56,7 +56,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new CreateAttributeValueCommand
                 {
@@ -94,7 +97,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UpdateAttributeValueCommand
                 {
@@ -124,7 +130,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new DeleteAttributeValueCommand
                 {

@@ -56,8 +56,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new CreateProductCombinationCommand
                 {
                     VariantId = createCombinationDto.VariantId,
@@ -94,7 +96,10 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new UpdateProductCombinationCommand
                 {
@@ -124,8 +129,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
                 var command = new DeleteProductCombinationCommand
                 {
                     VariantId = variantId,
@@ -163,7 +170,10 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
                 var command = new GenerateProductCombinationsCommand
                 {
