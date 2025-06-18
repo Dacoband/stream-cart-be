@@ -16,7 +16,7 @@ using ShopService.Domain.Enums;
 namespace ShopService.Api.Controllers
 {
     [ApiController]
-    [Route("api/shops-service")]
+    [Route("api/shops")]
     public class ShopController : ControllerBase
     {
         private readonly IShopManagementService _shopManagementService;

@@ -703,7 +703,7 @@
       "UpstreamHttpMethod": [ "GET" ]
     },
     {
-      "DownstreamPathTemplate": "/api/shops-service/{everything}",
+      "DownstreamPathTemplate": "/api/shops/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -713,10 +713,10 @@
       ],
       "UpstreamPathTemplate": "/api/shops/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
-      "SwaggerKey": "shops"
+      "SwaggerKey": "shop"
     },
     {
-      "DownstreamPathTemplate": "/api/shops-service",
+      "DownstreamPathTemplate": "/api/shops",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -726,7 +726,7 @@
       ],
       "UpstreamPathTemplate": "/api/shops",
       "UpstreamHttpMethod": [ "GET", "POST" ],
-      "SwaggerKey": "shops"
+      "SwaggerKey": "shop"
     },
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
@@ -737,9 +737,9 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/swagger/shops/{everything}",
+      "UpstreamPathTemplate": "/swagger/shop/{everything}",
       "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "shops"
+      "SwaggerKey": "shop"
     }
   ],
   "SwaggerEndPoints": [
@@ -764,7 +764,7 @@
       ]
     },
     {
-      "Key": "shops",
+      "Key": "shop",
       "Config": [
         {
           "Name": "Shop API",
