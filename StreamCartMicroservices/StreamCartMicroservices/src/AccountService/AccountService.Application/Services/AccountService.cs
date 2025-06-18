@@ -110,9 +110,53 @@ namespace AccountService.Application.Services
         {
             return await _accountRepository.IsEmailUniqueAsync(email);
         }
+        public async Task<AccountDto> CreateModeratorAccountAsync(CreateAccountCommand command, Guid shopId, Guid createdBySellerAccountId)
+        {
+            var creatorAccount = await _accountRepository.GetByIdAsync(createdBySellerAccountId.ToString());
+            if (creatorAccount == null || creatorAccount.Role != RoleType.Seller)
+            {
+                throw new UnauthorizedAccessException("Only Sellers can create Moderator accounts");
+            }
 
+            if (creatorAccount.ShopId != shopId)
+            {
+                throw new InvalidOperationException("The Moderator must be assigned to the Seller's shop");
+            }
+
+            command.Role = RoleType.Moderator;
+            command.IsActive = true;
+            command.IsVerified = false; 
+
+            var accountDto = await _mediator.Send(command);
+
+            var updateCommand = new UpdateAccountCommand
+            {
+                Id = accountDto.Id,
+                ShopId = shopId,
+                UpdatedBy = createdBySellerAccountId.ToString()
+            };
+
+            return await UpdateAccountAsync(updateCommand);
+        }
+
+        public async Task<AccountDto> CreateOperationManagerAccountAsync(CreateAccountCommand command, Guid createdByITAdminAccountId)
+        {
+
+            var creatorAccount = await _accountRepository.GetByIdAsync(createdByITAdminAccountId.ToString());
+            if (creatorAccount == null || creatorAccount.Role != RoleType.ITAdmin)
+            {
+                throw new UnauthorizedAccessException("Only IT Admins can create Operation Manager accounts");
+            }
+
+           
+            command.Role = RoleType.OperationManager;
+            command.IsActive = true;
+            command.IsVerified = false; 
+
+            return await _mediator.Send(command);
+        }
         #endregion
-       
+
         private AccountDto? MapToDto(Account? account)
         {
             if (account == null)

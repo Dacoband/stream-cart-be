@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
+using System.Security.Claims;
 
 namespace AccountService.Api.Controllers
 {
@@ -92,6 +93,121 @@ namespace AccountService.Api.Controllers
         {
             var accounts = await _accountService.GetAccountsByRoleAsync(role);
             return Ok(ApiResponse<IEnumerable<AccountDto>>.SuccessResult(accounts));
+        }
+        [HttpPost("moderators")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        public async Task<IActionResult> CreateModeratorAccount([FromBody] CreateAccountDto createAccountDto, [FromQuery] Guid shopId)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
+
+            // Get the seller's account ID from the claims
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var sellerAccountId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
+
+            try
+            {
+                // Check username and email uniqueness
+                if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Username already exists"));
+                }
+
+                if (!await _accountService.IsEmailUniqueAsync(createAccountDto.Email))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Email already exists"));
+                }
+
+                // Create command
+                var command = new CreateAccountCommand
+                {
+                    Username = createAccountDto.Username,
+                    Email = createAccountDto.Email,
+                    Password = createAccountDto.Password,
+                    PhoneNumber = createAccountDto.PhoneNumber,
+                    Fullname = createAccountDto.Fullname,
+                    AvatarURL = createAccountDto.AvatarURL
+                };
+
+                // Create moderator account
+                var createdAccount = await _accountService.CreateModeratorAccountAsync(command, shopId, sellerAccountId);
+
+                // Return success response
+                return CreatedAtAction(
+                    nameof(GetAccountById),
+                    new { id = createdAccount.Id },
+                    ApiResponse<AccountDto>.SuccessResult(createdAccount, "Moderator account created successfully")
+                );
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error creating moderator account: {ex.Message}"));
+            }
+        }
+
+        [HttpPost("operation-managers")]
+        [Authorize(Roles = "ITAdmin")]
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        public async Task<IActionResult> CreateOperationManagerAccount([FromBody] CreateAccountDto createAccountDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var itAdminAccountId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
+            try
+            {
+                if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Username already exists"));
+                }
+
+                if (!await _accountService.IsEmailUniqueAsync(createAccountDto.Email))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Email already exists"));
+                }
+
+                var command = new CreateAccountCommand
+                {
+                    Username = createAccountDto.Username,
+                    Email = createAccountDto.Email,
+                    Password = createAccountDto.Password,
+                    PhoneNumber = createAccountDto.PhoneNumber,
+                    Fullname = createAccountDto.Fullname,
+                    AvatarURL = createAccountDto.AvatarURL
+                };
+
+                var createdAccount = await _accountService.CreateOperationManagerAccountAsync(command, itAdminAccountId);
+
+                return CreatedAtAction(
+                    nameof(GetAccountById),
+                    new { id = createdAccount.Id },
+                    ApiResponse<AccountDto>.SuccessResult(createdAccount, "Operation Manager account created successfully")
+                );
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error creating operation manager account: {ex.Message}"));
+            }
         }
     }
 }
