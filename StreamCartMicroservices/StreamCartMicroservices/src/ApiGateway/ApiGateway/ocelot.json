@@ -373,7 +373,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-variants/{id}",
@@ -385,7 +386,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants/{id}",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-variants/product/{productId}",
@@ -397,7 +399,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants/product/{productId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-variants/{id}/stock",
@@ -409,7 +412,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants/{id}/stock",
-      "UpstreamHttpMethod": [ "PATCH" ]
+      "UpstreamHttpMethod": [ "PATCH" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-variants/{id}/price",
@@ -421,7 +425,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants/{id}/price",
-      "UpstreamHttpMethod": [ "PATCH" ]
+      "UpstreamHttpMethod": [ "PATCH" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-variants/bulk-update-stock",
@@ -433,7 +438,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-variants/bulk-update-stock",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "product"
     },
 
     {
@@ -446,7 +452,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-attributes",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-attributes/{id}",
@@ -458,7 +465,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-attributes/{id}",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-attributes/products/{productId}",
@@ -470,7 +478,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-attributes/products/{productId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-attributes/{attributeId}/values",
@@ -482,7 +491,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-attributes/{attributeId}/values",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/attribute-values",
@@ -494,7 +504,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/attribute-values",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/attribute-values/{id}",
@@ -506,7 +517,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/attribute-values/{id}",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/attribute-values/attribute/{attributeId}",
@@ -518,7 +530,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/attribute-values/attribute/{attributeId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-combinations",
@@ -530,7 +543,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-combinations",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-combinations/{variantId}",
@@ -542,7 +556,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-combinations/{variantId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-combinations/{variantId}/{attributeValueId}",
@@ -554,7 +569,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-combinations/{variantId}/{attributeValueId}",
-      "UpstreamHttpMethod": [ "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "PUT", "DELETE" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-combinations/products/{productId}",
@@ -566,7 +582,8 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-combinations/products/{productId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "product"
     },
     {
       "DownstreamPathTemplate": "/api/product-combinations/products/{productId}/generate-combinations",
@@ -578,7 +595,9 @@
         }
       ],
       "UpstreamPathTemplate": "/api/product-combinations/products/{productId}/generate-combinations",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "product" 
+
     },
     {
       "DownstreamPathTemplate": "/api/product-images",
