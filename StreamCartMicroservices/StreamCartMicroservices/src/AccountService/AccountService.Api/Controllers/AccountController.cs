@@ -156,7 +156,7 @@ namespace AccountService.Api.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult($"Error creating moderator account: {ex.Message}"));
             }
         }
-
+        
         [HttpPost("operation-managers")]
         [Authorize(Roles = "ITAdmin")]
         [ProducesResponseType(typeof(ApiResponse<AccountDto>), 201)]
@@ -207,6 +207,65 @@ namespace AccountService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<object>.ErrorResult($"Error creating operation manager account: {ex.Message}"));
+            }
+        }
+
+        //Inactive/Active Account
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Seller,ITAdmin")]
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+        public async Task<IActionResult> UpdateAccountStatus(Guid id, [FromBody] bool isActive)
+        {
+            // Get the current user's ID
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(ApiResponse<object>.ErrorResult("User identity not found"));
+            try
+            {
+                if (!await _accountService.CanManageAccountStatusAsync(userId, id))
+                    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to change this account's status").ToString());
+
+                var updatedAccount = await _accountService.UpdateAccountStatusAsync(id, isActive, userId);
+
+                string status = isActive ? "activated" : "deactivated";
+                return Ok(ApiResponse<AccountDto>.SuccessResult(updatedAccount, $"Account successfully {status}"));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ApiResponse<object>.ErrorResult(ex.Message).ToString());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error updating account status: {ex.Message}"));
+            }
+        }
+
+        // Get Moderators by Shop
+        [HttpGet("moderators/by-shop/{shopId}")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
+        public async Task<IActionResult> GetModeratorsByShop(Guid shopId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(ApiResponse<object>.ErrorResult("User identity not found"));
+            try
+            {
+                var sellerAccount = await _accountService.GetAccountByIdAsync(userId);
+                if (sellerAccount == null || sellerAccount.Role != RoleType.Seller || sellerAccount.ShopId != shopId)
+                    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to access moderators for this shop").ToString());
+
+                var allModerators = await _accountService.GetAccountsByRoleAsync(RoleType.Moderator);
+
+                var shopModerators = allModerators.Where(m => m.ShopId == shopId).ToList();
+
+                return Ok(ApiResponse<IEnumerable<AccountDto>>.SuccessResult(shopModerators, "Moderators retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error retrieving moderators: {ex.Message}"));
             }
         }
     }

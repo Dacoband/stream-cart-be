@@ -141,19 +141,55 @@ namespace AccountService.Application.Services
 
         public async Task<AccountDto> CreateOperationManagerAccountAsync(CreateAccountCommand command, Guid createdByITAdminAccountId)
         {
-
             var creatorAccount = await _accountRepository.GetByIdAsync(createdByITAdminAccountId.ToString());
             if (creatorAccount == null || creatorAccount.Role != RoleType.ITAdmin)
             {
                 throw new UnauthorizedAccessException("Only IT Admins can create Operation Manager accounts");
             }
 
-           
             command.Role = RoleType.OperationManager;
             command.IsActive = true;
             command.IsVerified = false; 
 
             return await _mediator.Send(command);
+        }
+        public async Task<AccountDto> UpdateAccountStatusAsync(Guid accountId, bool isActive, Guid updatedByAccountId)
+        {
+            if (!await CanManageAccountStatusAsync(updatedByAccountId, accountId))
+            {
+                throw new UnauthorizedAccessException("You don't have permission to change this account's status");
+            }
+
+            var updateCommand = new UpdateAccountCommand
+            {
+                Id = accountId,
+                IsActive = isActive,
+                UpdatedBy = updatedByAccountId.ToString()
+            };
+            return await _mediator.Send(updateCommand);
+        }
+
+        public async Task<bool> CanManageAccountStatusAsync(Guid managerId, Guid targetAccountId)
+        {
+            var manager = await _accountRepository.GetByIdAsync(managerId.ToString());
+            if (manager == null)
+                return false;
+
+            var targetAccount = await _accountRepository.GetByIdAsync(targetAccountId.ToString());
+            if (targetAccount == null)
+                return false;
+
+            if (manager.Role == RoleType.ITAdmin)
+                return true;
+
+            if (manager.Role == RoleType.Seller && 
+                targetAccount.Role == RoleType.Moderator && 
+                manager.ShopId.HasValue && 
+                targetAccount.ShopId.HasValue && 
+                manager.ShopId == targetAccount.ShopId)
+                return true;
+
+            return false;
         }
         #endregion
 
