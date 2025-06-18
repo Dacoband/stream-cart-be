@@ -51,7 +51,7 @@ namespace AccountService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
 
-            // Kiểm tra username và email đã tồn tại chưa
+            
             if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
             {
                 return BadRequest(ApiResponse<object>.ErrorResult("Username already exists"));
@@ -70,13 +70,12 @@ namespace AccountService.Api.Controllers
                 PhoneNumber = createAccountDto.PhoneNumber,
                 Fullname = createAccountDto.Fullname,
                 AvatarURL = createAccountDto.AvatarURL,
-                IsVerified = false, // Tài khoản chưa được xác minh
-                CompleteRate = 1.0m // CompleteRate mặc định là 1.0 (100%)
+                IsVerified = false, 
+                CompleteRate = 1.0m 
             };
 
             var createdAccount = await _authService.RegisterAsync(command);
 
-            // Trả về thông báo thành công kèm thông tin tài khoản
             var responseMessage = "Account registered successfully. Please check your email for verification OTP.";
             return CreatedAtAction(
                 "GetAccountById",
