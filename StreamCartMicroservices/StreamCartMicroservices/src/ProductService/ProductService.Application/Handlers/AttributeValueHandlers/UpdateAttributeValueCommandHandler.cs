@@ -59,7 +59,7 @@ namespace ProductService.Application.Handlers.AttributeValueHandlers
                 CreatedAt = attributeValue.CreatedAt,
                 CreatedBy = attributeValue.CreatedBy,
                 LastModifiedAt = attributeValue.LastModifiedAt,
-                LastModifiedBy = attributeValue.LastModifiedBy
+                LastModifiedBy = attributeValue.LastModifiedBy ?? string.Empty
             };
         }
     }

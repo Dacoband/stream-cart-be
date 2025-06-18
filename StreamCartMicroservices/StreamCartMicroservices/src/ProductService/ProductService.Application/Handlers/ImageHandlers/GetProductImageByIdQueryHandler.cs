@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Handlers.ImageHandlers
 {
-    public class GetProductImageByIdQueryHandler : IRequestHandler<GetProductImageByIdQuery, ProductImageDto>
+    public class GetProductImageByIdQueryHandler : IRequestHandler<GetProductImageByIdQuery, ProductImageDto?>
     {
         private readonly IProductImageRepository _imageRepository;
 
@@ -17,7 +17,7 @@ namespace ProductService.Application.Handlers.ImageHandlers
             _imageRepository = imageRepository ?? throw new ArgumentNullException(nameof(imageRepository));
         }
 
-        public async Task<ProductImageDto> Handle(GetProductImageByIdQuery request, CancellationToken cancellationToken)
+        public async Task<ProductImageDto?> Handle(GetProductImageByIdQuery request, CancellationToken cancellationToken)
         {
             var image = await _imageRepository.GetByIdAsync(request.Id.ToString());
             if (image == null || image.IsDeleted)

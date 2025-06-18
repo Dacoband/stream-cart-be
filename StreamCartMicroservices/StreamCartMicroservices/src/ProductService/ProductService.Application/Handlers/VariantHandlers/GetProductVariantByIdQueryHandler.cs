@@ -22,7 +22,7 @@ namespace ProductService.Application.Handlers.VariantHandlers
             var variant = await _variantRepository.GetByIdAsync(request.Id.ToString());
             if (variant == null)
             {
-                return null;
+                throw new InvalidOperationException($"Product variant with ID {request.Id} not found.");
             }
 
             return new ProductVariantDto

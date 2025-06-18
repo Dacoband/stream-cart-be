@@ -81,7 +81,7 @@ namespace ProductService.Application.Handlers.CombinationHandlers
                 CreatedAt = newCombination.CreatedAt,
                 CreatedBy = newCombination.CreatedBy,
                 LastModifiedAt = newCombination.LastModifiedAt,
-                LastModifiedBy = newCombination.LastModifiedBy
+                LastModifiedBy = newCombination.LastModifiedBy ?? string.Empty
             };
         }
     }

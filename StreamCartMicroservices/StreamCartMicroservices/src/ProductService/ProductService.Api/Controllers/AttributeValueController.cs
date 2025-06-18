@@ -61,10 +61,13 @@ namespace ProductService.Api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
+                if (createAttributeValueDto.ValueName == null)
+                    return BadRequest(ApiResponse<object>.ErrorResult("ValueName cannot be null"));
+
                 var command = new CreateAttributeValueCommand
                 {
                     AttributeId = createAttributeValueDto.AttributeId,
-                    ValueName = createAttributeValueDto.ValueName,
+                    ValueName = createAttributeValueDto.ValueName!,
                     CreatedBy = userId
                 };
 
