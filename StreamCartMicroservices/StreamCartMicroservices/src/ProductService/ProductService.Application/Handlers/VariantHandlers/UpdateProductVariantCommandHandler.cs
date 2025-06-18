@@ -32,8 +32,11 @@ namespace ProductService.Application.Handlers.VariantHandlers
                 throw new ApplicationException($"SKU '{request.SKU}' already exists");
             }
 
-            // Update SKU
-            variant.UpdateSKU(request.SKU);
+            // Update SKU only if it's not null or empty
+            if (!string.IsNullOrWhiteSpace(request.SKU))
+            {
+                variant.UpdateSKU(request.SKU);
+            }
 
             // Update price and flash sale price
             variant.UpdatePrice(request.Price, request.FlashSalePrice);

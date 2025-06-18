@@ -27,6 +27,9 @@ namespace ProductService.Application.Handlers.CombinationHandlers
 
         public async Task<ProductCombinationDto> Handle(UpdateProductCombinationCommand request, CancellationToken cancellationToken)
         {
+            // Ensure UpdatedBy is not null or empty
+            var updatedBy = string.IsNullOrWhiteSpace(request.UpdatedBy) ? "system" : request.UpdatedBy;
+
             // First, check if current combination exists
             var combinations = await _combinationRepository.GetByVariantIdAsync(request.CurrentVariantId);
             var existingCombination = combinations.FirstOrDefault(c =>
@@ -67,7 +70,7 @@ namespace ProductService.Application.Handlers.CombinationHandlers
             var newCombination = new ProductCombination(
                 request.CurrentVariantId,
                 request.NewAttributeValueId,
-                request.UpdatedBy);
+                updatedBy); // Use the validated updatedBy value
 
             await _combinationRepository.InsertAsync(newCombination);
 

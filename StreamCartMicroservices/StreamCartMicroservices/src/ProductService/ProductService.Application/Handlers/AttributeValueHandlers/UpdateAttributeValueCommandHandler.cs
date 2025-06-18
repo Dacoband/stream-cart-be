@@ -36,13 +36,18 @@ namespace ProductService.Application.Handlers.AttributeValueHandlers
             }
 
             // Check if value name is unique for this attribute if changed
-            if (attributeValue.ValueName != request.ValueName &&
+            if (!string.IsNullOrEmpty(request.ValueName) &&
+                attributeValue.ValueName != request.ValueName &&
                 !await _valueRepository.IsValueNameUniqueForAttributeAsync(attributeValue.AttributeId, request.ValueName, request.Id))
             {
                 throw new ApplicationException($"Value '{request.ValueName}' already exists for this attribute");
             }
 
-            attributeValue.UpdateValueName(request.ValueName);
+            // Ensure ValueName is not null before calling UpdateValueName
+            if (!string.IsNullOrEmpty(request.ValueName))
+            {
+                attributeValue.UpdateValueName(request.ValueName);
+            }
 
             if (!string.IsNullOrEmpty(request.UpdatedBy))
             {
