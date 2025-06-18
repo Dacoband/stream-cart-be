@@ -7,6 +7,7 @@ using ProductService.Application.Commands.CombinationCommands;
 using ProductService.Application.Commands.ImageCommands;
 using ProductService.Application.Commands.VariantCommands;
 using ProductService.Application.DTOs.Attributes;
+using ProductService.Application.DTOs.Category;
 using ProductService.Application.DTOs.Combinations;
 using ProductService.Application.DTOs.Details;
 using ProductService.Application.DTOs.Images;
@@ -19,6 +20,7 @@ using ProductService.Application.Handlers.DetailHandlers;
 using ProductService.Application.Handlers.ImageHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
 using ProductService.Application.Interface;
+using ProductService.Application.Queries.CategoryQueries;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Application.Queries.ImageQueries;
 using ProductService.Application.Services;
@@ -73,7 +75,12 @@ namespace ProductService.Application.Extensions
             //Category 
             services.AddScoped<ICategoryService,CategoryService>();
             services.AddScoped<IRequestHandler<CreateCategoryCommand, ApiResponse<Category>>,CreateCategoryHandler>();
-                
+            services.AddScoped<IRequestHandler<GetAllCategoryQuery, ApiResponse<ICollection<CategoryDetailDTO>>>, GetAllCategoryHanlder>();
+            services.AddScoped<IRequestHandler<GetDetailCategoryQuery, ApiResponse<CategoryDetailDTO>>, GetDetailCategoryHandler>();
+            services.AddScoped<IRequestHandler<UpdateCategoryCommand, ApiResponse<Category>>, UpdateCategoryHandler>();
+            services.AddScoped<IRequestHandler<DeleteCategoryCommand, ApiResponse<bool>>, DeleteCategoryHandler>();
+
+
             return services;
         }
     }

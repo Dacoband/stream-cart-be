@@ -21,6 +21,7 @@ using ProductService.Application.Handlers.AttributeValueHandlers;
 using ProductService.Application.Handlers.CombinationHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
 using ProductService.Application.Queries.AttributeValueQueries;
+using ProductService.Application.Queries.CategoryQueries;
 using ProductService.Infrastructure.Extensions;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
@@ -45,6 +46,10 @@ builder.Services.AddMediatR(config =>
     config.RegisterServicesFromAssembly(typeof(CreateProductCommand).Assembly);
     config.RegisterServicesFromAssembly(typeof(GetAllAttributeValuesQuery).Assembly);
     config.RegisterServicesFromAssembly(typeof(CreateCategoryCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetAllCategoryQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetDetailCategoryQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(UpdateCategoryCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(DeleteCategoryCommand).Assembly);
 
 });
 //builder.Services.AddMediator(cfg =>

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Shared.Common.Domain.Bases;
+using System.Text.Json.Serialization;
 
 namespace ProductService.Domain.Entities
 {
@@ -25,6 +26,7 @@ namespace ProductService.Domain.Entities
         public Guid? ParentCategoryID { get; set; }
 
         [ForeignKey("ParentCategoryID")]
+        [JsonIgnore]
         public Category? ParentCategory { get; set; }
 
         public ICollection<Category>? SubCategories { get; set; }

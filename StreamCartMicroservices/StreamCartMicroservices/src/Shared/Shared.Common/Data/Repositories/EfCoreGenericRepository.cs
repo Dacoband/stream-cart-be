@@ -86,7 +86,7 @@ namespace Shared.Common.Data.Repositories
             {
                 var entity = await _dbSet.FindAsync(guidId);
                 if (entity != null)
-                {
+                {   
                     entity.Delete(); // Using soft delete from BaseEntity
                     _dbContext.Entry(entity).State = EntityState.Modified;
                     await _dbContext.SaveChangesAsync();

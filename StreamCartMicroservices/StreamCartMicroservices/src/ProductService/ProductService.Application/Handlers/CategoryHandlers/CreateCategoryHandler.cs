@@ -23,8 +23,7 @@ namespace ProductService.Application.Handlers.CategoryHandlers
         public async Task<ApiResponse<Category>> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
         {
             Category category = new Category( request.CategoryName, request.Description, request.IconURL, request.Slug, request.ParentCategoryID);
-
-            category.SetCreator(category.CreatedBy);
+            category.SetCreator(request.CreatedBy);
             category.SetModifier(request.CreatedBy);
             return await _categoryService.CreateCategory(category);
 

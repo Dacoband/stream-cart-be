@@ -17,5 +17,10 @@ namespace ProductService.Infrastructure.Repositories
         {
             
         }
+
+        public async Task<Category> GetCategoryById(Guid id)
+        {
+            return await _dbSet.Include(x => x.SubCategories).Where(x=> x.Id == id).FirstOrDefaultAsync();
+        }
     }
 }

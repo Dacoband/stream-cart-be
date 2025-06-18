@@ -10,5 +10,6 @@ namespace ProductService.Infrastructure.Interfaces
 {
     public interface ICategoryRepository : IGenericRepository<Category>
     {
+        public Task<Category> GetCategoryById(Guid id);
     }
 }
