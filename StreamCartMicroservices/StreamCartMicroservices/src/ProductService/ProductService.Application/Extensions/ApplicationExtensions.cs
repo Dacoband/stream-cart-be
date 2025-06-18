@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application.Commands.AttributeCommands;
 using ProductService.Application.Commands.AttributeValueCommands;
+using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.Commands.CombinationCommands;
 using ProductService.Application.Commands.ImageCommands;
 using ProductService.Application.Commands.VariantCommands;
@@ -12,12 +13,17 @@ using ProductService.Application.DTOs.Images;
 using ProductService.Application.DTOs.Variants;
 using ProductService.Application.Handlers.AttributeHandlers;
 using ProductService.Application.Handlers.AttributeValueHandlers;
+using ProductService.Application.Handlers.CategoryHandlers;
 using ProductService.Application.Handlers.CombinationHandlers;
 using ProductService.Application.Handlers.DetailHandlers;
 using ProductService.Application.Handlers.ImageHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
+using ProductService.Application.Interface;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Application.Queries.ImageQueries;
+using ProductService.Application.Services;
+using ProductService.Domain.Entities;
+using Shared.Common.Models;
 using System.Reflection;
 
 namespace ProductService.Application.Extensions
@@ -63,6 +69,11 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<GetProductImagesByProductIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByProductIdQueryHandler>();
             services.AddScoped<IRequestHandler<GetProductImagesByVariantIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByVariantIdQueryHandler>();
             services.AddScoped<IRequestHandler<GetProductDetailQuery, ProductDetailDto>, GetProductDetailQueryHandler>();
+
+            //Category 
+            services.AddScoped<ICategoryService,CategoryService>();
+            services.AddScoped<IRequestHandler<CreateCategoryCommand, ApiResponse<Category>>,CreateCategoryHandler>();
+                
             return services;
         }
     }

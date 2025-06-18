@@ -9,6 +9,7 @@ using ProductService.Api.Services;
 using ProductService.Application.Commands;
 using ProductService.Application.Commands.AttributeCommands;
 using ProductService.Application.Commands.AttributeValueCommands;
+using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.Commands.CombinationCommands;
 using ProductService.Application.Commands.VariantCommands;
 using ProductService.Application.DTOs.Attributes;
@@ -43,6 +44,7 @@ builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(CreateProductCommand).Assembly);
     config.RegisterServicesFromAssembly(typeof(GetAllAttributeValuesQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(CreateCategoryCommand).Assembly);
 
 });
 //builder.Services.AddMediator(cfg =>

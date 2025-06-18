@@ -33,7 +33,7 @@ namespace ProductService.Infrastructure.Extensions
             services.AddScoped<IAttributeValueRepository, AttributeValueRepository>();
             services.AddScoped<IProductCombinationRepository, ProductCombinationRepository>();
             services.AddScoped<IProductImageRepository, ProductImageRepository>(); // Add this line
-
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
             return services;
         }
     }

@@ -13,6 +13,8 @@ namespace ProductService.Infrastructure.Data
         public DbSet<ProductAttribute> ProductAttributes { get; set; }
         public DbSet<AttributeValue> AttributeValues { get; set; }
         public DbSet<ProductCombination> ProductCombinations { get; set; }
+        public DbSet<Category> Categories { get; set; }
+
 
         public ProductContext(DbContextOptions<ProductContext> options) : base(options)
         {
@@ -276,6 +278,23 @@ namespace ProductService.Infrastructure.Data
                 entity.HasIndex(e => e.VariantId);
                 entity.HasIndex(e => e.IsPrimary);
             });
+            modelBuilder.Entity<Category>()
+                .ToTable("Category")
+                .HasKey(c => c.Id); // Dùng Id từ BaseEntity
+
+            modelBuilder.Entity<Category>()
+                .HasOne(c => c.ParentCategory)
+                .WithMany(c => c.SubCategories)
+                .HasForeignKey(c => c.ParentCategoryID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Category>()
+                .Property(c => c.CategoryName)
+                .HasMaxLength(255)
+                .IsRequired();
+
+            base.OnModelCreating(modelBuilder);
+
         }
     }
 }
