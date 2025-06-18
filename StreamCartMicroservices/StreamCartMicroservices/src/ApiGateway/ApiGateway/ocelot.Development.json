@@ -11,10 +11,7 @@
       ],
       "UpstreamPathTemplate": "/api/accounts",
       "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "POST"],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/accounts/moderators",

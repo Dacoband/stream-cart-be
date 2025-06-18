@@ -44,7 +44,7 @@ namespace AccountService.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ITAdmin")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> DeleteAccount(Guid id)
@@ -87,7 +87,7 @@ namespace AccountService.Api.Controllers
         }
 
         [HttpGet("by-role/{role}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ITAdmin")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
         public async Task<IActionResult> GetAccountsByRole(RoleType role)
         {
