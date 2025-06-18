@@ -1,33 +1,25 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 80
+EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-
-# Copy csproj và restore dependencies
-COPY ["ApiGateway/ApiGateway/ApiGateway.csproj", "ApiGateway/ApiGateway/"]
+COPY ["ShopService/ShopService.Api/ShopService.Api.csproj", "ShopService/ShopService.Api/"]
+COPY ["ShopService/ShopService.Application/ShopService.Application.csproj", "ShopService/ShopService.Application/"]
+COPY ["ShopService/ShopService.Domain/ShopService.Domain.csproj", "ShopService/ShopService.Domain/"]
+COPY ["ShopService/ShopService.Infrastructure/ShopService.Infrastructure.csproj", "ShopService/ShopService.Infrastructure/"]
 COPY ["Shared/Shared.Common/Shared.Common.csproj", "Shared/Shared.Common/"]
-
-RUN dotnet restore "ApiGateway/ApiGateway/ApiGateway.csproj"
-
-# Copy toàn bộ source code
+COPY ["Shared/Shared.Messaging/Shared.Messaging.csproj", "Shared/Shared.Messaging/"]
+RUN dotnet restore "ShopService/ShopService.Api/ShopService.Api.csproj"
 COPY . .
-WORKDIR "/src/ApiGateway/ApiGateway"
+WORKDIR "/src/ShopService/ShopService.Api"
+RUN dotnet build "ShopService.Api.csproj" -c Release -o /app/build
 
-# Build và publish
-RUN dotnet build "ApiGateway.csproj" -c Release -o /app/build
 FROM build AS publish
-RUN dotnet publish "ApiGateway.csproj" -c Release -o /app/publish
+RUN dotnet publish "ShopService.Api.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-# Add curl here:
-RUN apt-get update && apt-get install -y curl
 COPY --from=publish /app/publish .
-# Copy config files into the final image (relative to build context)
-COPY ["ApiGateway/ApiGateway/ocelot.json", "./ocelot.json"]
-COPY ["ApiGateway/ApiGateway/ocelot.Development.json", "./ocelot.Development.json"] 
-COPY ["ApiGateway/ApiGateway/appsettings.json", "./appsettings.json"]
-COPY ["ApiGateway/ApiGateway/appsettings.Development.json", "./appsettings.Development.json"]
-ENTRYPOINT ["dotnet", "ApiGateway.dll"]
+ENTRYPOINT ["dotnet", "ShopService.Api.dll"]

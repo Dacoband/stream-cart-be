@@ -119,6 +119,8 @@ services:
     build:
       context: ./src
       dockerfile: src/ShopService/ShopService.API/Dockerfile
+    ports:
+      - "7077:80"
     environment:
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_ENVIRONMENT=Production
