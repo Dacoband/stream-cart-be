@@ -10,7 +10,46 @@
         }
       ],
       "UpstreamPathTemplate": "/api/accounts",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "POST"],
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/paged",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/paged",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/by-role/{role}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/by-role/{role}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/{id}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/{id}",
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
       "SwaggerKey": "account"
     },
     {
