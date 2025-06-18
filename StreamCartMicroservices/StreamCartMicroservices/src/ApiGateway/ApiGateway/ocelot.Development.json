@@ -416,6 +416,45 @@
       ],
       "UpstreamPathTemplate": "/swagger/product/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/shops-service/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/api/shops/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shops"
+    },
+    {
+      "DownstreamPathTemplate": "/api/shops-service",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/api/shops",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "shops"
+    },
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/shops/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "shops"
     }
   ],
   "SwaggerEndPoints": [
@@ -436,6 +475,16 @@
           "Name": "Product API",
           "Version": "v1",
           "Url": "https://localhost:7005/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "shops",
+      "Config": [
+        {
+          "Name": "Shop API",
+          "Version": "v1",
+          "Url": "https://localhost:7077/swagger/v1/swagger.json"
         }
       ]
     }
