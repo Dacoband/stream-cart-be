@@ -52,6 +52,17 @@ services:
         - JwtSettings__Issuer=${JWT_ISSUER}
         - JwtSettings__Audience=${JWT_AUDIENCE}
         - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+        - EMAIL_API_KEY=${EMAIL_API_KEY}
+        - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+        - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+        - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+        - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+
+        # Appwrite Settings
+        - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+        - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+        - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+        - APPWRITE_API_KEY=${APPWRITE_API_KEY}
     # volumes:
     #    - ${USERPROFILE}/.aspnet/https:/https:ro 
     depends_on:
@@ -83,6 +94,16 @@ services:
       - JwtSettings__Issuer=${JWT_ISSUER}
       - JwtSettings__Audience=${JWT_AUDIENCE}
       - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
     depends_on:
       - account-service
       - product-service
@@ -106,6 +127,17 @@ services:
       - JwtSettings__Issuer=${JWT_ISSUER}
       - JwtSettings__Audience=${JWT_AUDIENCE}
       - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -132,6 +164,17 @@ services:
       - JwtSettings__Issuer=${JWT_ISSUER}
       - JwtSettings__Audience=${JWT_AUDIENCE}
       - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
     depends_on:
       rabbitmq:
         condition: service_healthy
