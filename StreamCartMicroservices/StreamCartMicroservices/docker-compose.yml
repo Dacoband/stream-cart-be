@@ -118,7 +118,7 @@ services:
   shop-service:
     build:
       context: ./src
-      dockerfile: ./ShopService/ShopService.API/Dockerfile
+      dockerfile: ./ShopService/ShopService.Api/Dockerfile
     ports:
       - "7077:80"
     environment:
