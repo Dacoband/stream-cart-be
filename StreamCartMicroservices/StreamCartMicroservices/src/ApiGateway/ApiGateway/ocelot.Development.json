@@ -1,7 +1,7 @@
 {
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/accounts/{everything}",
+      "DownstreamPathTemplate": "/api/accounts",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
@@ -9,12 +9,100 @@
           "Port": 7022
         }
       ],
-      "UpstreamPathTemplate": "/api/accounts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "UpstreamPathTemplate": "/api/accounts",
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/paged",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/paged",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/by-role/{role}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/by-role/{role}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/{id}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/{id}",
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/moderators",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/moderators",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/operation-managers",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/operation-managers",
+      "UpstreamHttpMethod": [ "POST" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/{id}/status",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/{id}/status",
+      "UpstreamHttpMethod": [ "PATCH" ],
+      "SwaggerKey": "account"
+    },
+    {
+      "DownstreamPathTemplate": "/api/accounts/moderators/by-shop/{shopId}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7022
+        }
+      ],
+      "UpstreamPathTemplate": "/api/accounts/moderators/by-shop/{shopId}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "account"
     },
     {
       "DownstreamPathTemplate": "/api/image/upload",
