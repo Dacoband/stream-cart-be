@@ -1,0 +1,125 @@
+﻿using Appwrite.Services;
+using Microsoft.EntityFrameworkCore;
+using ShopService.Domain.Entities;
+using System.Reflection;
+
+namespace ShopService.Infrastructure.Data
+{
+    public class ShopContext : DbContext
+    {
+        // Add all required DbSet properties
+        public DbSet<Shop> Shops { get; set; }
+
+        public ShopContext(DbContextOptions<ShopContext> options) : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+            // Configure Shop entity for PostgreSQL
+            modelBuilder.Entity<Shop>(entity =>
+            {
+                entity.ToTable("shops");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id");
+
+                entity.Property(e => e.ShopName)
+                    .HasColumnName("shop_name")
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasColumnName("description")
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.LogoURL)
+                    .HasColumnName("logo_url")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CoverImageURL)
+                    .HasColumnName("cover_image_url")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.RatingAverage)
+                    .HasColumnName("rating_average")
+                    .HasColumnType("decimal(3,2)");
+
+                entity.Property(e => e.TotalReview)
+                    .HasColumnName("total_review");
+
+                entity.Property(e => e.RegistrationDate)
+                    .HasColumnName("registration_date");
+
+                entity.Property(e => e.ApprovalStatus)
+                    .HasColumnName("approval_status")
+                    .HasConversion<string>();
+
+                entity.Property(e => e.ApprovalDate)
+                    .HasColumnName("approval_date");
+
+                entity.Property(e => e.BankAccountNumber)
+                    .HasColumnName("bank_account_number")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.BankName)
+                    .HasColumnName("bank_name")
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.TaxNumber)
+                    .HasColumnName("tax_number")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.TotalProduct)
+                    .HasColumnName("total_product");
+
+                entity.Property(e => e.CompleteRate)
+                    .HasColumnName("complete_rate")
+                    .HasColumnType("decimal(5,2)");
+
+                entity.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasConversion<string>();
+                // Base entity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.IsDeleted)
+                    .HasColumnName("is_deleted");
+
+                // Indexes for PostgreSQL
+                entity.HasIndex(e => e.ShopName)
+                    .HasDatabaseName("ix_shops_shop_name");
+
+                entity.HasIndex(e => e.Status)
+                    .HasDatabaseName("ix_shops_status");
+
+                entity.HasIndex(e => e.ApprovalStatus)
+                    .HasDatabaseName("ix_shops_approval_status");
+
+                entity.HasIndex(e => e.RatingAverage)
+                    .HasDatabaseName("ix_shops_rating_average");
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+        }
+    }
+}

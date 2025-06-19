@@ -86,6 +86,7 @@ services:
     depends_on:
       - account-service
       - product-service
+      - shop-service
     restart: unless-stopped
    # Product Service (Mới thêm)
   product-service:
@@ -114,6 +115,26 @@ services:
     #   interval: 10s
     #   timeout: 5s
     #   retries: 5
-    
+  shop-service:
+    build:
+      context: ./src
+      dockerfile: ./ShopService/ShopService.API/Dockerfile
+    ports:
+      - "7077:80"
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   postgres_data:

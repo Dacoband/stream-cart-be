@@ -64,7 +64,7 @@ namespace ProductService.Api.Controllers
 
                 var command = new CreateProductAttributeCommand
                 {
-                    Name = createAttributeDto.Name,
+                    Name = createAttributeDto.Name ?? string.Empty,
                     CreatedBy = userId
                 };
 

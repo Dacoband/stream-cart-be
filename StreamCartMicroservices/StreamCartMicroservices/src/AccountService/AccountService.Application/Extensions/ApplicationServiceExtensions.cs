@@ -1,4 +1,6 @@
 ﻿using AccountService.Application.Commands;
+using AccountService.Application.DTOs;
+using AccountService.Application.Handlers;
 using AccountService.Application.Interfaces;
 using AccountService.Application.Services;
 using MediatR;
@@ -16,6 +18,11 @@ namespace AccountService.Application.Extensions
             {
                 config.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
             });
+            // Register MediatR handlers explicitly if needed
+             services.AddScoped<IRequestHandler<CreateAccountCommand, AccountDto>, CreateAccountCommandHandler>();
+             services.AddScoped<IRequestHandler<UpdateAccountCommand, AccountDto>, UpdateAccountCommandHandler>();
+           // services.AddScoped<IRequestHandler<UpdateLastLoginCommand, AccountDto>, UpdateLastLoginCommandHandler>();
+
 
             // Register services
             services.AddScoped<IAccountManagementService, AccountManagementService>();

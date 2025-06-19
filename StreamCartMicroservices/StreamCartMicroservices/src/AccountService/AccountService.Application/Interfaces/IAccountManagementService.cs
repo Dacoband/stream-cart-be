@@ -20,5 +20,9 @@ namespace AccountService.Application.Interfaces
         Task<IEnumerable<AccountDto>> GetAccountsByRoleAsync(RoleType role);
         Task<bool> IsUsernameUniqueAsync(string username);
         Task<bool> IsEmailUniqueAsync(string email);
+        Task<AccountDto> CreateModeratorAccountAsync(CreateAccountCommand command, Guid shopId, Guid createdBySellerAccountId);
+        Task<AccountDto> CreateOperationManagerAccountAsync(CreateAccountCommand command, Guid createdByITAdminAccountId);
+        Task<AccountDto> UpdateAccountStatusAsync(Guid accountId, bool isActive, Guid updatedByAccountId);
+        Task<bool> CanManageAccountStatusAsync(Guid accountId, Guid targetAccountId);
     }
 }

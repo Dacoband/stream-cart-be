@@ -37,13 +37,19 @@ namespace ProductService.Application.Handlers.VariantHandlers
                 throw new ApplicationException($"SKU '{request.SKU}' already exists");
             }
 
+            // Ensure SKU is not null or empty
+            var sku = request.SKU ?? throw new ArgumentNullException(nameof(request.SKU), "SKU cannot be null");
+
+            // Ensure CreatedBy is not null or empty
+            var createdBy = request.CreatedBy ?? "system";
+
             // Create the variant
             var variant = new ProductVariant(
                 request.ProductId,
-                request.SKU,
+                sku,
                 request.Price,
                 request.Stock,
-                request.CreatedBy);
+                createdBy);
 
             // Set flash sale price if present
             if (request.FlashSalePrice.HasValue)

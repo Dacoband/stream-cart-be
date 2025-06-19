@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.Commands;
+using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
-using ProductService.Application.DTOs.Details;
+using ProductService.Application.DTOs.Products;
 using ProductService.Application.Queries;
 using ProductService.Application.Queries.DetailQueries;
+using ProductService.Application.Queries.ProductQueries;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
@@ -33,6 +35,9 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
         {
+            if (createProductDto == null)
+                return BadRequest(ApiResponse<object>.ErrorResult("Product data is missing"));
+
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product data"));
 
@@ -45,15 +50,15 @@ namespace ProductService.Api.Controllers
 
                 var command = new CreateProductCommand
                 {
-                    ProductName = createProductDto.ProductName,
-                    Description = createProductDto.Description,
-                    SKU = createProductDto.SKU,
+                    ProductName = createProductDto.ProductName ?? string.Empty, 
+                    Description = createProductDto.Description ?? string.Empty,
+                    SKU = createProductDto.SKU ?? string.Empty, 
                     CategoryId = createProductDto.CategoryId,
                     BasePrice = createProductDto.BasePrice,
                     DiscountPrice = createProductDto.DiscountPrice,
                     StockQuantity = createProductDto.StockQuantity,
                     Weight = createProductDto.Weight,
-                    Dimensions = createProductDto.Dimensions,
+                    Dimensions = createProductDto.Dimensions ?? string.Empty, 
                     HasVariant = createProductDto.HasVariant,
                     ShopId = createProductDto.ShopId,
                     CreatedBy = userId

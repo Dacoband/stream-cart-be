@@ -65,7 +65,7 @@ namespace ProductService.Api.Controllers
                 var command = new CreateProductVariantCommand
                 {
                     ProductId = createVariantDto.ProductId,
-                    SKU = createVariantDto.SKU,
+                    SKU = createVariantDto.SKU ?? string.Empty, 
                     Price = createVariantDto.Price,
                     FlashSalePrice = createVariantDto.FlashSalePrice,
                     Stock = createVariantDto.Stock,
@@ -105,7 +105,7 @@ namespace ProductService.Api.Controllers
                 var command = new UpdateProductVariantCommand
                 {
                     Id = id,
-                    SKU = updateVariantDto.SKU,
+                    SKU = updateVariantDto.SKU ?? string.Empty,
                     Price = updateVariantDto.Price,
                     FlashSalePrice = updateVariantDto.FlashSalePrice,
                     Stock = updateVariantDto.Stock,

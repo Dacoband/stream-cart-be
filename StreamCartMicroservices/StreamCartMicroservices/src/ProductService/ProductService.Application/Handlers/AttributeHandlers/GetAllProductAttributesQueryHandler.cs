@@ -30,7 +30,7 @@ namespace ProductService.Application.Handlers.AttributeHandlers
                 CreatedAt = attr.CreatedAt,
                 CreatedBy = attr.CreatedBy,
                 LastModifiedAt = attr.LastModifiedAt,
-                LastModifiedBy = attr.LastModifiedBy
+                LastModifiedBy = attr.LastModifiedBy 
             });
         }
     }

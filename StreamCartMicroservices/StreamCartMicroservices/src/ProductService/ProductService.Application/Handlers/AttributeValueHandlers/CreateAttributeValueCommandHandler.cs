@@ -24,6 +24,18 @@ namespace ProductService.Application.Handlers.AttributeValueHandlers
 
         public async Task<AttributeValueDto> Handle(CreateAttributeValueCommand request, CancellationToken cancellationToken)
         {
+            // Validate request.ValueName to ensure it is not null or empty
+            if (string.IsNullOrWhiteSpace(request.ValueName))
+            {
+                throw new ArgumentException("ValueName cannot be null or empty", nameof(request.ValueName));
+            }
+
+            // Validate request.CreatedBy to ensure it is not null or empty
+            if (string.IsNullOrWhiteSpace(request.CreatedBy))
+            {
+                throw new ArgumentException("CreatedBy cannot be null or empty", nameof(request.CreatedBy));
+            }
+
             // Check if attribute exists
             var attribute = await _attributeRepository.GetByIdAsync(request.AttributeId.ToString());
             if (attribute == null)
@@ -38,7 +50,7 @@ namespace ProductService.Application.Handlers.AttributeValueHandlers
             }
 
             // Create the attribute value
-            var attributeValue = new AttributeValue(request.AttributeId, request.ValueName, request.CreatedBy);
+            var attributeValue = new AttributeValue(request.AttributeId, request.ValueName, request.CreatedBy!);
 
             // Save to database
             await _valueRepository.InsertAsync(attributeValue);
@@ -49,7 +61,6 @@ namespace ProductService.Application.Handlers.AttributeValueHandlers
                 Id = attributeValue.Id,
                 AttributeId = attributeValue.AttributeId,
                 ValueName = attributeValue.ValueName,
-                //AttributeName = attribute.Name,
                 CreatedAt = attributeValue.CreatedAt,
                 CreatedBy = attributeValue.CreatedBy,
                 LastModifiedAt = attributeValue.LastModifiedAt,

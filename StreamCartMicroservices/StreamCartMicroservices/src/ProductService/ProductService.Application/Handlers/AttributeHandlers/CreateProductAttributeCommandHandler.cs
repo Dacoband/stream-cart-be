@@ -20,6 +20,18 @@ namespace ProductService.Application.Handlers.AttributeHandlers
 
         public async Task<ProductAttributeDto> Handle(CreateProductAttributeCommand request, CancellationToken cancellationToken)
         {
+            // Validate input to ensure 'Name' is not null or empty
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                throw new ArgumentException("The attribute name cannot be null or empty.", nameof(request.Name));
+            }
+
+            // Validate 'CreatedBy' to ensure it is not null or empty
+            if (string.IsNullOrWhiteSpace(request.CreatedBy))
+            {
+                throw new ArgumentException("The 'CreatedBy' field cannot be null or empty.", nameof(request.CreatedBy));
+            }
+
             // Check if name is unique
             if (!await _attributeRepository.IsNameUniqueAsync(request.Name))
             {
