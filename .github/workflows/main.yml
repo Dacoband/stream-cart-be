@@ -24,9 +24,7 @@ jobs:
         REMOTE_USER: ${{ secrets.REMOTE_USER }}
       run: |
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
-          cd /dotnet-microservice/stream-cart-be/ && \
-          git pull origin main && \
-          cd StreamCartMicroservices/StreamCartMicroservices/ && \
+          cd /dotnet-microservice/stream-cart-be/StreamCartMicroservices/StreamCartMicroservices/ && \
           docker-compose down || true && \
           docker-compose up -d --build
         "
