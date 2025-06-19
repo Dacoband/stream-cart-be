@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccountService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/image")]
     [ApiController]
     public class ImageController : ControllerBase
     {
