@@ -130,19 +130,19 @@
     //  "UpstreamHttpMethod": [ "PUT" ],
     //  "SwaggerKey": "account"
     //},
-    //{
-    //  "DownstreamPathTemplate": "/api/auth/login",
-    //  "DownstreamScheme": "http",
-    //  "DownstreamHostAndPorts": [
-    //    {
-    //      "Host": "account-service",
-    //      "Port": 80
-    //    }
-    //  ],
-    //  "UpstreamPathTemplate": "/api/auth/login",
-    //  "UpstreamHttpMethod": [ "POST" ],
-    //  "SwaggerKey": "account"
-    //},
+    {
+      "DownstreamPathTemplate": "/api/auth/{everthing}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "account"
+    },
     //{
     //  "DownstreamPathTemplate": "/api/auth/register",
     //  "DownstreamScheme": "http",
