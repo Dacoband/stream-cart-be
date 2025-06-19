@@ -23,14 +23,10 @@ jobs:
         REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
         REMOTE_USER: ${{ secrets.REMOTE_USER }}
       run: |
-        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'ENDSSH'
-          # Move to project directory
-          cd /dotnet-microservice/stream-cart-be/
-          # Pull latest code
-          git pull origin main
-          # Move to docker-compose directory
-          cd StreamCartMicroservices/StreamCartMicroservices/
-          docker-compose down
-          # Build and run Docker Compose
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+          cd /dotnet-microservice/stream-cart-be/ && \
+          git pull origin main && \
+          cd StreamCartMicroservices/StreamCartMicroservices/ && \
+          docker-compose down || true && \
           docker-compose up -d --build
-        ENDSSH
+        "
