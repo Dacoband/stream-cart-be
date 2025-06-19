@@ -21,7 +21,7 @@ namespace AccountService.Application.Extensions
             // Register MediatR handlers explicitly if needed
              services.AddScoped<IRequestHandler<CreateAccountCommand, AccountDto>, CreateAccountCommandHandler>();
              services.AddScoped<IRequestHandler<UpdateAccountCommand, AccountDto>, UpdateAccountCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateLastLoginCommand, AccountDto>, UpdateLastLoginCommandHandler>();
+           // services.AddScoped<IRequestHandler<UpdateLastLoginCommand, AccountDto>, UpdateLastLoginCommandHandler>();
 
 
             // Register services
