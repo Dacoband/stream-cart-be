@@ -16,8 +16,10 @@ using ProductService.Application.Handlers.CombinationHandlers;
 using ProductService.Application.Handlers.DetailHandlers;
 using ProductService.Application.Handlers.ImageHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Application.Queries.ImageQueries;
+using ProductService.Application.Services;
 using System.Reflection;
 
 namespace ProductService.Application.Extensions
@@ -63,6 +65,12 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<GetProductImagesByProductIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByProductIdQueryHandler>();
             services.AddScoped<IRequestHandler<GetProductImagesByVariantIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByVariantIdQueryHandler>();
             services.AddScoped<IRequestHandler<GetProductDetailQuery, ProductDetailDto>, GetProductDetailQueryHandler>();
+            services.AddScoped<IProductService, ProductManagementService>();
+            services.AddScoped<IAttributeValueService, AttributeValueService>();
+            services.AddScoped<IProductAttributeService, AttributeService>();
+            services.AddScoped<IProductCombinationService, CombinationService>();
+            services.AddScoped<IProductVariantService, ProductVariantService>();
+            services.AddScoped<IProductImageService, ProductImageService>();
             return services;
         }
     }
