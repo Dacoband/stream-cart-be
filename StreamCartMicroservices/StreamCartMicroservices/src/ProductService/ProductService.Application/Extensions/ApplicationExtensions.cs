@@ -20,6 +20,7 @@ using ProductService.Application.Handlers.DetailHandlers;
 using ProductService.Application.Handlers.ImageHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
 using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.CategoryQueries;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Application.Queries.ImageQueries;
