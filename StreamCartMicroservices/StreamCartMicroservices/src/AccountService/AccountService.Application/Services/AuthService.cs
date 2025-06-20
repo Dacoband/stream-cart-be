@@ -35,8 +35,11 @@ namespace AccountService.Application.Services
 
         public async Task<AccountDto> RegisterAsync(CreateAccountCommand command)
         {
-            // Đảm bảo các giá trị mặc định
-            command.Role = RoleType.Customer;
+            if (command.Role != RoleType.Customer && command.Role != RoleType.Seller)
+            {
+                command.Role = RoleType.Customer;  
+            }
+
             command.IsActive = true;
             command.IsVerified = false;
 
@@ -56,7 +59,6 @@ namespace AccountService.Application.Services
                     Message = "Username or password is incorrect"
                 };
             }
-
             // Verify the password
             bool isPasswordValid = await _mediator.Send(new VerifyPasswordCommand 
             { 
@@ -72,7 +74,6 @@ namespace AccountService.Application.Services
                     Message = "Username or password is incorrect"
                 };
             }
-
             // Check if account is active
             if (!account.IsActive)
             {
@@ -82,7 +83,23 @@ namespace AccountService.Application.Services
                     Message = "Account is disabled"
                 };
             }
+            if (!account.IsVerified)
+            {
+                // Gửi lại OTP xác thực qua email
+                await _mediator.Send(new GenerateOTPCommand
+                {
+                    AccountId = account.Id,
+                    Email = account.Email
+                });
 
+                return new AuthResultDto
+                {
+                    Success = false,
+                    RequiresVerification = true,
+                    Account = MapToAccountDto(account),
+                    Message = "Account requires verification. A new OTP has been sent to your email."
+                };
+            }
             // Update last login date
             await _mediator.Send(new UpdateLastLoginCommand { AccountId = account.Id });
 

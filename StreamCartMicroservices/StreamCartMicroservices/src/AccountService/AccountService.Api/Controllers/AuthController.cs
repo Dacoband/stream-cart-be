@@ -38,8 +38,18 @@ namespace AccountService.Api.Controllers
             var result = await _authService.LoginAsync(loginDto);
 
             if (!result.Success)
-                return BadRequest(ApiResponse<object>.ErrorResult(result.Message));
+            {
+                if (result.RequiresVerification && result.Account != null) 
+                {
+                    return Ok(ApiResponse<object>.CustomResponse(false, result.Message, new
+                    {
+                        requiresVerification = true,
+                        accountId = result.Account.Id
+                    }));
+                }
 
+                return BadRequest(ApiResponse<object>.ErrorResult(result.Message));
+            }
             return Ok(ApiResponse<AuthResultDto>.SuccessResult(result));
         }
 
@@ -70,8 +80,9 @@ namespace AccountService.Api.Controllers
                 PhoneNumber = createAccountDto.PhoneNumber,
                 Fullname = createAccountDto.Fullname,
                 AvatarURL = createAccountDto.AvatarURL,
-                IsVerified = false, 
-                CompleteRate = 1.0m 
+                Role = createAccountDto.Role,  
+                IsVerified = false,
+                CompleteRate = 1.0m
             };
 
             var createdAccount = await _authService.RegisterAsync(command);
