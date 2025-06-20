@@ -54,6 +54,12 @@ namespace ProductService.Application.Handlers.ImageHandlers
                 }
             }
 
+            // Ensure image is not null
+            if (request.Image == null)
+            {
+                throw new ArgumentNullException(nameof(request.Image), "Image file cannot be null");
+            }
+
             // If this is set to primary, reset other primary images
             if (request.IsPrimary)
             {
@@ -63,6 +69,9 @@ namespace ProductService.Application.Handlers.ImageHandlers
             // Upload image to Appwrite
             string imageUrl = await _appwriteService.UploadImage(request.Image);
 
+            // Ensure AltText is not null or empty
+            var altText = request.AltText ?? string.Empty;
+
             // Create product image entity
             var productImage = new ProductImage(
                 request.ProductId,
@@ -70,8 +79,8 @@ namespace ProductService.Application.Handlers.ImageHandlers
                 request.VariantId,
                 request.IsPrimary,
                 request.DisplayOrder,
-                request.AltText,
-                request.CreatedBy);
+                altText,
+                request.CreatedBy ?? "system");
 
             // Save to database
             await _imageRepository.InsertAsync(productImage);
@@ -89,7 +98,7 @@ namespace ProductService.Application.Handlers.ImageHandlers
                 CreatedAt = productImage.CreatedAt,
                 CreatedBy = productImage.CreatedBy,
                 LastModifiedAt = productImage.LastModifiedAt,
-                LastModifiedBy = productImage.LastModifiedBy
+                LastModifiedBy = productImage.LastModifiedBy ?? string.Empty
             };
         }
     }

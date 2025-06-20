@@ -1,8 +1,6 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands.AttributeValueCommands;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs.Attributes;
-using ProductService.Application.Queries.AttributeValueQueries;
+using ProductService.Application.Interfaces;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
@@ -15,20 +13,18 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class AttributeValueController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IAttributeValueService _service;
 
-        public AttributeValueController(IMediator mediator)
+        public AttributeValueController(IAttributeValueService service)
         {
-            _mediator = mediator;
+            _service = service;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AttributeValueDto>>), 200)]
         public async Task<IActionResult> GetAllAttributeValues()
         {
-            var query = new GetAllAttributeValuesQuery();
-            var attributeValues = await _mediator.Send(query);
-
+            var attributeValues = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<AttributeValueDto>>.SuccessResult(attributeValues));
         }
 
@@ -37,44 +33,31 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetAttributeValueById(Guid id)
         {
-            var query = new GetAttributeValueByIdQuery { Id = id };
-            var attributeValue = await _mediator.Send(query);
-
+            var attributeValue = await _service.GetByIdAsync(id);
             if (attributeValue == null)
                 return NotFound(ApiResponse<object>.ErrorResult($"Attribute value with ID {id} not found"));
-
             return Ok(ApiResponse<AttributeValueDto>.SuccessResult(attributeValue));
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<AttributeValueDto>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> CreateAttributeValue([FromBody] CreateAttributeValueDto createAttributeValueDto)
+        public async Task<IActionResult> CreateAttributeValue([FromBody] CreateAttributeValueDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid attribute value data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+            if (dto.ValueName == null)
+                return BadRequest(ApiResponse<object>.ErrorResult("ValueName cannot be null"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new CreateAttributeValueCommand
-                {
-                    AttributeId = createAttributeValueDto.AttributeId,
-                    ValueName = createAttributeValueDto.ValueName,
-                    CreatedBy = userId
-                };
-
-                var createdAttributeValue = await _mediator.Send(command);
-
-                return CreatedAtAction(
-                    nameof(GetAttributeValueById),
-                    new { id = createdAttributeValue.Id },
-                    ApiResponse<AttributeValueDto>.SuccessResult(createdAttributeValue, "Attribute value created successfully")
-                );
+                var created = await _service.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetAttributeValueById), new { id = created.Id },
+                    ApiResponse<AttributeValueDto>.SuccessResult(created, "Attribute value created successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -90,27 +73,19 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<AttributeValueDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> UpdateAttributeValue(Guid id, [FromBody] UpdateAttributeValueDto updateAttributeValueDto)
+        public async Task<IActionResult> UpdateAttributeValue(Guid id, [FromBody] UpdateAttributeValueDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid attribute value data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateAttributeValueCommand
-                {
-                    Id = id,
-                    ValueName = updateAttributeValueDto.ValueName,
-                    UpdatedBy = userId
-                };
-
-                var updatedAttributeValue = await _mediator.Send(command);
-                return Ok(ApiResponse<AttributeValueDto>.SuccessResult(updatedAttributeValue, "Attribute value updated successfully"));
+                var updated = await _service.UpdateAsync(id, dto, userId);
+                return Ok(ApiResponse<AttributeValueDto>.SuccessResult(updated, "Attribute value updated successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -128,24 +103,15 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> DeleteAttributeValue(Guid id)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new DeleteAttributeValueCommand
-                {
-                    Id = id,
-                    DeletedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
-
+                var result = await _service.DeleteAsync(id, userId);
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Attribute value with ID {id} not found"));
-
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Attribute value deleted successfully"));
             }
             catch (InvalidOperationException ex)
@@ -165,9 +131,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                var query = new GetAttributeValuesByAttributeIdQuery { AttributeId = attributeId };
-                var attributeValues = await _mediator.Send(query);
-
+                var attributeValues = await _service.GetByAttributeIdAsync(attributeId);
                 return Ok(ApiResponse<IEnumerable<AttributeValueDto>>.SuccessResult(attributeValues));
             }
             catch (ApplicationException ex)

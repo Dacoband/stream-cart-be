@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using ProductService.Application.DTOs.Details;
+using ProductService.Application.DTOs.Products;
 using System;
 
 namespace ProductService.Application.Queries.DetailQueries

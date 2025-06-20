@@ -45,7 +45,7 @@ namespace ProductService.Application.Handlers.VariantHandlers
                 CreatedAt = variant.CreatedAt,
                 CreatedBy = variant.CreatedBy,
                 LastModifiedAt = variant.LastModifiedAt,
-                LastModifiedBy = variant.LastModifiedBy
+                LastModifiedBy = variant.LastModifiedBy ?? string.Empty
             };
         }
     }

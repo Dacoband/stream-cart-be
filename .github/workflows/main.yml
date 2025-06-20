@@ -1,0 +1,32 @@
+name: Deploy StreamCart Microservices
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Add SSH key to agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.REMOTE_SSH_KEY }}
+
+    - name: Deploy code via SSH
+      env:
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}
+      run: |
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "
+          cd dotnet-microservice/stream-cart-be/ && \
+          git pull origin main && \
+          cd StreamCartMicroservices/StreamCartMicroservices/ && \
+          docker compose down || true && \
+          docker compose up -d --build
+        "

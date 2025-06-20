@@ -11,8 +11,9 @@ namespace AccountService.Domain.Enums
         Admin,
         Customer,
         Seller,
-        Partner,
+        Moderator,
         Guest,
+        OperationManager,
         ITAdmin,
     }
 }

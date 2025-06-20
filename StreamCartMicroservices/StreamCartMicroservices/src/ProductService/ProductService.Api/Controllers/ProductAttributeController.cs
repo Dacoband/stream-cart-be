@@ -1,9 +1,6 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands.AttributeCommands;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs.Attributes;
-using ProductService.Application.Queries.AttributeQueries;
-using ProductService.Application.Queries.AttributeValueQueries;
+using ProductService.Application.Interfaces;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
@@ -16,20 +13,18 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class ProductAttributeController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IProductAttributeService _service;
 
-        public ProductAttributeController(IMediator mediator)
+        public ProductAttributeController(IProductAttributeService service)
         {
-            _mediator = mediator;
+            _service = service;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductAttributeDto>>), 200)]
         public async Task<IActionResult> GetAllAttributes()
         {
-            var query = new GetAllProductAttributesQuery();
-            var attributes = await _mediator.Send(query);
-
+            var attributes = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<ProductAttributeDto>>.SuccessResult(attributes));
         }
 
@@ -38,43 +33,29 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetAttributeById(Guid id)
         {
-            var query = new GetProductAttributeByIdQuery { Id = id };
-            var attribute = await _mediator.Send(query);
-
+            var attribute = await _service.GetByIdAsync(id);
             if (attribute == null)
                 return NotFound(ApiResponse<object>.ErrorResult($"Product attribute with ID {id} not found"));
-
             return Ok(ApiResponse<ProductAttributeDto>.SuccessResult(attribute));
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<ProductAttributeDto>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> CreateAttribute([FromBody] CreateProductAttributeDto createAttributeDto)
+        public async Task<IActionResult> CreateAttribute([FromBody] CreateProductAttributeDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product attribute data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new CreateProductAttributeCommand
-                {
-                    Name = createAttributeDto.Name,
-                    CreatedBy = userId
-                };
-
-                var createdAttribute = await _mediator.Send(command);
-
-                return CreatedAtAction(
-                    nameof(GetAttributeById),
-                    new { id = createdAttribute.Id },
-                    ApiResponse<ProductAttributeDto>.SuccessResult(createdAttribute, "Product attribute created successfully")
-                );
+                var created = await _service.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetAttributeById), new { id = created.Id },
+                    ApiResponse<ProductAttributeDto>.SuccessResult(created, "Product attribute created successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -90,27 +71,19 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<ProductAttributeDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> UpdateAttribute(Guid id, [FromBody] UpdateProductAttributeDto updateAttributeDto)
+        public async Task<IActionResult> UpdateAttribute(Guid id, [FromBody] UpdateProductAttributeDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product attribute data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateProductAttributeCommand
-                {
-                    Id = id,
-                    Name = updateAttributeDto.Name,
-                    UpdatedBy = userId
-                };
-
-                var updatedAttribute = await _mediator.Send(command);
-                return Ok(ApiResponse<ProductAttributeDto>.SuccessResult(updatedAttribute, "Product attribute updated successfully"));
+                var updated = await _service.UpdateAsync(id, dto, userId);
+                return Ok(ApiResponse<ProductAttributeDto>.SuccessResult(updated, "Product attribute updated successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -128,23 +101,15 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> DeleteAttribute(Guid id)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new DeleteProductAttributeCommand
-                {
-                    Id = id,
-                    DeletedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
-
+                var result = await _service.DeleteAsync(id, userId);
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product attribute with ID {id} not found"));
-
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Product attribute deleted successfully"));
             }
             catch (InvalidOperationException ex)
@@ -161,9 +126,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductAttributeDto>>), 200)]
         public async Task<IActionResult> GetAttributesByProductId(Guid productId)
         {
-            var query = new GetAttributesByProductIdQuery { ProductId = productId };
-            var attributes = await _mediator.Send(query);
-
+            var attributes = await _service.GetByProductIdAsync(productId);
             return Ok(ApiResponse<IEnumerable<ProductAttributeDto>>.SuccessResult(attributes));
         }
 
@@ -174,9 +137,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                var query = new GetAttributeValuesByAttributeIdQuery { AttributeId = attributeId };
-                var values = await _mediator.Send(query);
-
+                var values = await _service.GetValuesByAttributeIdAsync(attributeId);
                 return Ok(ApiResponse<IEnumerable<AttributeValueDto>>.SuccessResult(values));
             }
             catch (ApplicationException ex)

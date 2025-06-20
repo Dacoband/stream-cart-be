@@ -1,11 +1,10 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands.CombinationCommands;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs.Combinations;
-using ProductService.Application.Queries.CombinationQueries;
+using ProductService.Application.Interfaces;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -15,20 +14,18 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class ProductCombinationController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IProductCombinationService _service;
 
-        public ProductCombinationController(IMediator mediator)
+        public ProductCombinationController(IProductCombinationService service)
         {
-            _mediator = mediator;
+            _service = service;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductCombinationDto>>), 200)]
         public async Task<IActionResult> GetAllCombinations()
         {
-            var query = new GetAllProductCombinationsQuery();
-            var combinations = await _mediator.Send(query);
-
+            var combinations = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<ProductCombinationDto>>.SuccessResult(combinations));
         }
 
@@ -37,43 +34,29 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetCombinationsByVariantId(Guid variantId)
         {
-            var query = new GetCombinationsByVariantIdQuery { VariantId = variantId };
-            var combinations = await _mediator.Send(query);
-
+            var combinations = await _service.GetByVariantIdAsync(variantId);
             if (combinations == null || !combinations.Any())
                 return NotFound(ApiResponse<object>.ErrorResult($"Combinations for variant with ID {variantId} not found"));
-
             return Ok(ApiResponse<IEnumerable<ProductCombinationDto>>.SuccessResult(combinations));
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<ProductCombinationDto>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> CreateCombination([FromBody] CreateProductCombinationDto createCombinationDto)
+        public async Task<IActionResult> CreateCombination([FromBody] CreateProductCombinationDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new CreateProductCombinationCommand
-                {
-                    VariantId = createCombinationDto.VariantId,
-                    AttributeValueId = createCombinationDto.AttributeValueId,
-                    CreatedBy = userId
-                };
-
-                var createdCombination = await _mediator.Send(command);
-
-                return CreatedAtAction(
-                    nameof(GetCombinationsByVariantId),
-                    new { variantId = createdCombination.VariantId },
-                    ApiResponse<ProductCombinationDto>.SuccessResult(createdCombination, "Product combination created successfully")
-                );
+                var created = await _service.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetCombinationsByVariantId), new { variantId = created.VariantId },
+                    ApiResponse<ProductCombinationDto>.SuccessResult(created, "Product combination created successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -89,28 +72,19 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<ProductCombinationDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> UpdateCombination(Guid variantId, Guid attributeValueId, [FromBody] UpdateProductCombinationDto updateCombinationDto)
+        public async Task<IActionResult> UpdateCombination(Guid variantId, Guid attributeValueId, [FromBody] UpdateProductCombinationDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateProductCombinationCommand
-                {
-                    CurrentVariantId = variantId,
-                    CurrentAttributeValueId = attributeValueId,
-                    NewAttributeValueId = updateCombinationDto.AttributeValueId,
-                    UpdatedBy = userId
-                };
-
-                var updatedCombination = await _mediator.Send(command);
-                return Ok(ApiResponse<ProductCombinationDto>.SuccessResult(updatedCombination, "Product combination updated successfully"));
+                var updated = await _service.UpdateAsync(variantId, attributeValueId, dto, userId);
+                return Ok(ApiResponse<ProductCombinationDto>.SuccessResult(updated, "Product combination updated successfully"));
             }
             catch (ApplicationException ex)
             {
@@ -127,24 +101,15 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteCombination(Guid variantId, Guid attributeValueId)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new DeleteProductCombinationCommand
-                {
-                    VariantId = variantId,
-                    AttributeValueId = attributeValueId,
-                    DeletedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
-
+                var result = await _service.DeleteAsync(variantId, attributeValueId, userId);
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Combination with variant ID {variantId} and attribute value ID {attributeValueId} not found"));
-
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Product combination deleted successfully"));
             }
             catch (Exception ex)
@@ -157,9 +122,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductCombinationDto>>), 200)]
         public async Task<IActionResult> GetCombinationsByProductId(Guid productId)
         {
-            var query = new GetCombinationsByProductIdQuery { ProductId = productId };
-            var combinations = await _mediator.Send(query);
-
+            var combinations = await _service.GetByProductIdAsync(productId);
             return Ok(ApiResponse<IEnumerable<ProductCombinationDto>>.SuccessResult(combinations));
         }
 
@@ -168,23 +131,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GenerateCombinations(Guid productId, [FromBody] GenerateCombinationsDto generateDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new GenerateProductCombinationsCommand
-                {
-                    ProductId = productId,
-                    AttributeValueGroups = generateDto.AttributeValueGroups,
-                    DefaultPrice = generateDto.DefaultPrice,
-                    DefaultStock = generateDto.DefaultStock,
-                    CreatedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
+                var result = await _service.GenerateCombinationsAsync(productId, generateDto.AttributeValueGroups, generateDto.DefaultPrice, generateDto.DefaultStock, userId);
                 return Ok(ApiResponse<bool>.SuccessResult(result, "Product combinations generated successfully"));
             }
             catch (ApplicationException ex)

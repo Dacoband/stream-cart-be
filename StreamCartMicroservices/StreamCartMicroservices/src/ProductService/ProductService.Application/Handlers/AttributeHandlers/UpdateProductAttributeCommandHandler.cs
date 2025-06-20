@@ -25,13 +25,14 @@ namespace ProductService.Application.Handlers.AttributeHandlers
                 throw new ApplicationException($"Product attribute with ID {request.Id} not found");
             }
 
-            // Check if name is unique if changed
-            if (attribute.Name != request.Name && !await _attributeRepository.IsNameUniqueAsync(request.Name, request.Id))
+            // Ensure 'request.Name' is not null before calling IsNameUniqueAsync
+            if (!string.IsNullOrEmpty(request.Name) && attribute.Name != request.Name &&
+                !await _attributeRepository.IsNameUniqueAsync(request.Name, request.Id))
             {
                 throw new ApplicationException($"An attribute with the name '{request.Name}' already exists");
             }
 
-            attribute.UpdateName(request.Name);
+            attribute.UpdateName(request.Name ?? throw new ArgumentNullException(nameof(request.Name)));
 
             if (!string.IsNullOrEmpty(request.UpdatedBy))
             {
@@ -47,7 +48,7 @@ namespace ProductService.Application.Handlers.AttributeHandlers
                 CreatedAt = attribute.CreatedAt,
                 CreatedBy = attribute.CreatedBy,
                 LastModifiedAt = attribute.LastModifiedAt,
-                LastModifiedBy = attribute.LastModifiedBy
+                LastModifiedBy = attribute.LastModifiedBy ?? string.Empty
             };
         }
     }

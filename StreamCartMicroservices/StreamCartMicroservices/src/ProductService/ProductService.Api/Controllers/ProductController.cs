@@ -1,11 +1,7 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
-using ProductService.Application.DTOs.Details;
-using ProductService.Application.Queries;
-using ProductService.Application.Queries.DetailQueries;
+using ProductService.Application.DTOs.Products;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
@@ -20,46 +16,31 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IProductService _productService;
 
-        public ProductController(IMediator mediator)
+        public ProductController(IProductService productService)
         {
-            _mediator = mediator;
+            _productService = productService;
         }
 
         [HttpPost]
-        //[Authorize] // Thường sẽ cần role Seller hoặc Admin
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
         {
+            if (createProductDto == null)
+                return BadRequest(ApiResponse<object>.ErrorResult("Product data is missing"));
+
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product data"));
 
             try
             {
                 string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
-                var command = new CreateProductCommand
-                {
-                    ProductName = createProductDto.ProductName,
-                    Description = createProductDto.Description,
-                    SKU = createProductDto.SKU,
-                    CategoryId = createProductDto.CategoryId,
-                    BasePrice = createProductDto.BasePrice,
-                    DiscountPrice = createProductDto.DiscountPrice,
-                    StockQuantity = createProductDto.StockQuantity,
-                    Weight = createProductDto.Weight,
-                    Dimensions = createProductDto.Dimensions,
-                    HasVariant = createProductDto.HasVariant,
-                    ShopId = createProductDto.ShopId,
-                    CreatedBy = userId
-                };
-
-                var createdProduct = await _mediator.Send(command);
+                var createdProduct = await _productService.CreateProductAsync(createProductDto, userId);
 
                 return CreatedAtAction(
                     nameof(GetProductById),
@@ -74,7 +55,6 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -86,25 +66,10 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new UpdateProductCommand
-                {
-                    Id = id,
-                    ProductName = updateProductDto.ProductName,
-                    Description = updateProductDto.Description,
-                    SKU = updateProductDto.SKU,
-                    CategoryId = updateProductDto.CategoryId,
-                    BasePrice = updateProductDto.BasePrice,
-                    DiscountPrice = updateProductDto.DiscountPrice,
-                    Weight = updateProductDto.Weight,
-                    Dimensions = updateProductDto.Dimensions,
-                    HasVariant = updateProductDto.HasVariant,
-                    UpdatedBy = userId
-                };
 
-                var updatedProduct = await _mediator.Send(command);
+                var updatedProduct = await _productService.UpdateProductAsync(id, updateProductDto, userId);
                 return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct, "Product updated successfully"));
             }
             catch (ApplicationException ex)
@@ -118,7 +83,6 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteProduct(Guid id)
@@ -126,16 +90,10 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new DeleteProductCommand
-                {
-                    Id = id,
-                    DeletedBy = userId
-                };
 
-                var result = await _mediator.Send(command);
+                var result = await _productService.DeleteProductAsync(id, userId);
 
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
@@ -153,8 +111,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetProductById(Guid id)
         {
-            var query = new GetProductByIdQuery { Id = id };
-            var product = await _mediator.Send(query);
+            var product = await _productService.GetProductByIdAsync(id);
 
             if (product == null)
                 return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
@@ -166,9 +123,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
         public async Task<IActionResult> GetAllProducts([FromQuery] bool activeOnly = false)
         {
-            var query = new GetAllProductsQuery { ActiveOnly = activeOnly };
-            var products = await _mediator.Send(query);
-
+            var products = await _productService.GetAllProductsAsync(activeOnly);
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }
 
@@ -182,17 +137,7 @@ namespace ProductService.Api.Controllers
             [FromQuery] Guid? shopId = null,
             [FromQuery] Guid? categoryId = null)
         {
-            var query = new GetPagedProductsQuery
-            {
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                SortOption = sortOption,
-                ActiveOnly = activeOnly,
-                ShopId = shopId,
-                CategoryId = categoryId
-            };
-
-            var pagedProducts = await _mediator.Send(query);
+            var pagedProducts = await _productService.GetPagedProductsAsync(pageNumber, pageSize, sortOption, activeOnly, shopId, categoryId);
             return Ok(ApiResponse<PagedResult<ProductDto>>.SuccessResult(pagedProducts));
         }
 
@@ -200,13 +145,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
         public async Task<IActionResult> GetProductsByShopId(Guid shopId, [FromQuery] bool activeOnly = false)
         {
-            var query = new GetProductsByShopIdQuery
-            {
-                ShopId = shopId,
-                ActiveOnly = activeOnly
-            };
-
-            var products = await _mediator.Send(query);
+            var products = await _productService.GetProductsByShopIdAsync(shopId, activeOnly);
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }
 
@@ -214,13 +153,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
         public async Task<IActionResult> GetProductsByCategoryId(Guid categoryId, [FromQuery] bool activeOnly = false)
         {
-            var query = new GetProductsByCategoryIdQuery
-            {
-                CategoryId = categoryId,
-                ActiveOnly = activeOnly
-            };
-
-            var products = await _mediator.Send(query);
+            var products = await _productService.GetProductsByCategoryIdAsync(categoryId, activeOnly);
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }
 
@@ -231,19 +164,11 @@ namespace ProductService.Api.Controllers
             [FromQuery] Guid? shopId = null,
             [FromQuery] Guid? categoryId = null)
         {
-            var query = new GetBestSellingProductsQuery
-            {
-                Count = count,
-                ShopId = shopId,
-                CategoryId = categoryId
-            };
-
-            var products = await _mediator.Send(query);
+            var products = await _productService.GetBestSellingProductsAsync(count, shopId, categoryId);
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }
 
         [HttpPatch("{id}/status")]
-       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateProductStatus(Guid id, [FromBody] bool isActive)
@@ -251,17 +176,10 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new UpdateProductStatusCommand
-                {
-                    Id = id,
-                    IsActive = isActive,
-                    UpdatedBy = userId
-                };
 
-                var updatedProduct = await _mediator.Send(command);
+                var updatedProduct = await _productService.UpdateProductStatusAsync(id, isActive, userId);
 
                 string statusMessage = isActive ? "activated" : "deactivated";
                 return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct, $"Product {statusMessage} successfully"));
@@ -277,7 +195,6 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPatch("{id}/stock")]
-       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateProductStock(Guid id, [FromBody] UpdateStockDto updateStockDto)
@@ -285,17 +202,10 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new UpdateProductStockCommand
-                {
-                    Id = id,
-                    StockQuantity = updateStockDto.Quantity,
-                    UpdatedBy = userId
-                };
 
-                var updatedProduct = await _mediator.Send(command);
+                var updatedProduct = await _productService.UpdateProductStockAsync(id, updateStockDto.Quantity, userId);
                 return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct, "Product stock updated successfully"));
             }
             catch (ApplicationException ex)
@@ -315,13 +225,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                var command = new CheckProductStockCommand
-                {
-                    ProductId = id,
-                    RequestedQuantity = checkStockDto.RequestedQuantity
-                };
-
-                var hasStock = await _mediator.Send(command);
+                var hasStock = await _productService.CheckProductStockAsync(id, checkStockDto.RequestedQuantity);
 
                 if (hasStock)
                 {
@@ -341,6 +245,7 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product stock: {ex.Message}"));
             }
         }
+
         [HttpGet("{id}/detail")]
         [ProducesResponseType(typeof(ApiResponse<ProductDetailDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -348,8 +253,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                var query = new GetProductDetailQuery { ProductId = id };
-                var productDetail = await _mediator.Send(query);
+                var productDetail = await _productService.GetProductDetailAsync(id);
 
                 if (productDetail == null)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));

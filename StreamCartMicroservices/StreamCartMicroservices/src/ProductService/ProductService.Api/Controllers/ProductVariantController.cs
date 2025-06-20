@@ -1,9 +1,7 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands.VariantCommands;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Variants;
-using ProductService.Application.Queries.VariantQueries;
+using ProductService.Application.Interfaces;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
@@ -16,20 +14,18 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class ProductVariantController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IProductVariantService _service;
 
-        public ProductVariantController(IMediator mediator)
+        public ProductVariantController(IProductVariantService service)
         {
-            _mediator = mediator;
+            _service = service;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductVariantDto>>), 200)]
         public async Task<IActionResult> GetAllVariants()
         {
-            var query = new GetAllProductVariantsQuery();
-            var variants = await _mediator.Send(query);
-
+            var variants = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<ProductVariantDto>>.SuccessResult(variants));
         }
 
@@ -38,12 +34,9 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetVariantById(Guid id)
         {
-            var query = new GetProductVariantByIdQuery { Id = id };
-            var variant = await _mediator.Send(query);
-
+            var variant = await _service.GetByIdAsync(id);
             if (variant == null)
                 return NotFound(ApiResponse<object>.ErrorResult($"Product variant with ID {id} not found"));
-
             return Ok(ApiResponse<ProductVariantDto>.SuccessResult(variant));
         }
 
@@ -55,25 +48,13 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product variant data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new CreateProductVariantCommand
-                {
-                    ProductId = createVariantDto.ProductId,
-                    SKU = createVariantDto.SKU,
-                    Price = createVariantDto.Price,
-                    FlashSalePrice = createVariantDto.FlashSalePrice,
-                    Stock = createVariantDto.Stock,
-                    CreatedBy = userId
-                };
-
-                var createdVariant = await _mediator.Send(command);
-
+                var createdVariant = await _service.CreateAsync(createVariantDto, userId);
                 return CreatedAtAction(
                     nameof(GetVariantById),
                     new { id = createdVariant.Id },
@@ -95,24 +76,13 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product variant data"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateProductVariantCommand
-                {
-                    Id = id,
-                    SKU = updateVariantDto.SKU,
-                    Price = updateVariantDto.Price,
-                    FlashSalePrice = updateVariantDto.FlashSalePrice,
-                    Stock = updateVariantDto.Stock,
-                    UpdatedBy = userId
-                };
-
-                var updatedVariant = await _mediator.Send(command);
+                var updatedVariant = await _service.UpdateAsync(id, updateVariantDto, userId);
                 return Ok(ApiResponse<ProductVariantDto>.SuccessResult(updatedVariant, "Product variant updated successfully"));
             }
             catch (ApplicationException ex)
@@ -130,24 +100,15 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteVariant(Guid id)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new DeleteProductVariantCommand
-                {
-                    Id = id,
-                    DeletedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
-
+                var result = await _service.DeleteAsync(id, userId);
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product variant with ID {id} not found"));
-
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Product variant deleted successfully"));
             }
             catch (Exception ex)
@@ -160,9 +121,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductVariantDto>>), 200)]
         public async Task<IActionResult> GetVariantsByProductId(Guid productId)
         {
-            var query = new GetVariantsByProductIdQuery { ProductId = productId };
-            var variants = await _mediator.Send(query);
-
+            var variants = await _service.GetByProductIdAsync(productId);
             return Ok(ApiResponse<IEnumerable<ProductVariantDto>>.SuccessResult(variants));
         }
 
@@ -171,21 +130,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateVariantStock(Guid id, [FromBody] Application.DTOs.Variants.UpdateStockDto updateStockDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateVariantStockCommand
-                {
-                    Id = id,
-                    Stock = updateStockDto.Quantity,
-                    UpdatedBy = userId
-                };
-
-                var updatedVariant = await _mediator.Send(command);
+                var updatedVariant = await _service.UpdateStockAsync(id, updateStockDto.Quantity, userId);
                 return Ok(ApiResponse<ProductVariantDto>.SuccessResult(updatedVariant, "Product variant stock updated successfully"));
             }
             catch (ApplicationException ex)
@@ -203,22 +154,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateVariantPrice(Guid id, [FromBody] UpdatePriceDto updatePriceDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UpdateVariantPriceCommand
-                {
-                    Id = id,
-                    Price = updatePriceDto.Price,
-                    FlashSalePrice = updatePriceDto.FlashSalePrice,
-                    UpdatedBy = userId
-                };
-
-                var updatedVariant = await _mediator.Send(command);
+                var updatedVariant = await _service.UpdatePriceAsync(id, updatePriceDto.Price, updatePriceDto.FlashSalePrice, userId);
                 return Ok(ApiResponse<ProductVariantDto>.SuccessResult(updatedVariant, "Product variant price updated successfully"));
             }
             catch (ApplicationException ex)
@@ -236,19 +178,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> BulkUpdateStock([FromBody] BulkUpdateStockDto bulkUpdateDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new BulkUpdateVariantStockCommand
-                {
-                    StockUpdates = bulkUpdateDto.StockUpdates,
-                    UpdatedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
+                var result = await _service.BulkUpdateStockAsync((IEnumerable<BulkUpdateStockDto>)bulkUpdateDto.StockUpdates, userId);
                 return Ok(ApiResponse<bool>.SuccessResult(result, "Product variant stocks updated successfully"));
             }
             catch (Exception ex)

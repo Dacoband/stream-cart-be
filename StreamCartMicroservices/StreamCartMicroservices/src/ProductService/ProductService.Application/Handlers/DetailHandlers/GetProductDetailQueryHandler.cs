@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using ProductService.Application.DTOs.Details;
+using ProductService.Application.DTOs.Products;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Infrastructure.Interfaces;
 using System;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Handlers.DetailHandlers
 {
-    public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuery, ProductDetailDto>
+    public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuery, ProductDetailDto?>
     {
         private readonly IProductRepository _productRepository;
         private readonly IProductVariantRepository _variantRepository;
@@ -35,7 +35,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
             _combinationRepository = combinationRepository;
         }
 
-        public async Task<ProductDetailDto> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
+        public async Task<ProductDetailDto?> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
         {
             // Get product data
             var product = await _productRepository.GetByIdAsync(request.ProductId.ToString());

@@ -70,7 +70,7 @@ namespace ProductService.Application.Handlers.ImageHandlers
                 CreatedAt = image.CreatedAt,
                 CreatedBy = image.CreatedBy,
                 LastModifiedAt = image.LastModifiedAt,
-                LastModifiedBy = image.LastModifiedBy
+                LastModifiedBy = image.LastModifiedBy ?? string.Empty
             };
         }
     }

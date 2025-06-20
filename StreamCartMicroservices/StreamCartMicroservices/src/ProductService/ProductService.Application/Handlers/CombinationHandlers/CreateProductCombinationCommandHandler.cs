@@ -57,8 +57,11 @@ namespace ProductService.Application.Handlers.CombinationHandlers
                 throw new ApplicationException($"Attribute with ID {attributeValue.AttributeId} not found");
             }
 
+            // Ensure CreatedBy is not null or empty
+            var createdBy = string.IsNullOrEmpty(request.CreatedBy) ? "system" : request.CreatedBy;
+
             // Create the combination
-            var combination = new ProductCombination(request.VariantId, request.AttributeValueId, request.CreatedBy);
+            var combination = new ProductCombination(request.VariantId, request.AttributeValueId, createdBy);
 
             // Save to database
             await _combinationRepository.InsertAsync(combination);

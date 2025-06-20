@@ -147,8 +147,6 @@ namespace AccountService.Application.Services
             
             if (account == null)
             {
-                // For security reasons, we don't indicate whether the email exists or not
-                // We just return true as if we sent the email
                 return true;
             }
 

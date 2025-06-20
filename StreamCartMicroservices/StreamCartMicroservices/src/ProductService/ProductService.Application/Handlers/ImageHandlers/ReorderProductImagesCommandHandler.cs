@@ -19,6 +19,11 @@ namespace ProductService.Application.Handlers.ImageHandlers
 
         public async Task<bool> Handle(ReorderProductImagesCommand request, CancellationToken cancellationToken)
         {
+            if (request.ImagesOrder == null || !request.ImagesOrder.Any())
+            {
+                throw new ArgumentException("ImagesOrder cannot be null or empty.", nameof(request.ImagesOrder));
+            }
+
             var orderUpdates = request.ImagesOrder.Select(o => (o.ImageId, o.DisplayOrder)).ToList();
 
             // Update all images' display order

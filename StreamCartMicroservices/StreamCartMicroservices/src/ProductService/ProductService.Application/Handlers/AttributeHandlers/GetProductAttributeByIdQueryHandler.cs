@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Handlers.AttributeHandlers
 {
-    public class GetProductAttributeByIdQueryHandler : IRequestHandler<GetProductAttributeByIdQuery, ProductAttributeDto>
+    public class GetProductAttributeByIdQueryHandler : IRequestHandler<GetProductAttributeByIdQuery, ProductAttributeDto?>
     {
         private readonly IProductAttributeRepository _attributeRepository;
 
@@ -17,7 +17,7 @@ namespace ProductService.Application.Handlers.AttributeHandlers
             _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
         }
 
-        public async Task<ProductAttributeDto> Handle(GetProductAttributeByIdQuery request, CancellationToken cancellationToken)
+        public async Task<ProductAttributeDto?> Handle(GetProductAttributeByIdQuery request, CancellationToken cancellationToken)
         {
             var attribute = await _attributeRepository.GetByIdAsync(request.Id.ToString());
             if (attribute == null)

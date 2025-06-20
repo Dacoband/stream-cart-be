@@ -10,233 +10,321 @@
         }
       ],
       "UpstreamPathTemplate": "/api/accounts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-      "SwaggerKey": "account",
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
-    },
-    {
-      "DownstreamPathTemplate": "/api/image/upload",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/image/upload",
-      "UpstreamHttpMethod": [ "POST" ],
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "POST" ],
       "SwaggerKey": "account"
     },
-    {
-      "DownstreamPathTemplate": "/api/addresses",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses",
-      "UpstreamHttpMethod": [ "GET", "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/{id}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/{id}",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/default-shipping",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/default-shipping",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/by-type/{type}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/by-type/{type}",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/shops/{shopId}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/shops/{shopId}",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
-      "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
-      "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
-      "UpstreamHttpMethod": [ "PUT" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/login",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/login",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/register",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/register",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/reset-password-request",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/reset-password-request",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/reset-password",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/reset-password",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/verify",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/verify",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/refresh-token",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/refresh-token",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/me",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/me",
-      "UpstreamHttpMethod": [ "GET" ],
-      "SwaggerKey": "account"
-    },
-    {
-      "DownstreamPathTemplate": "/api/auth/change-password",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7022
-        }
-      ],
-      "UpstreamPathTemplate": "/api/auth/change-password",
-      "UpstreamHttpMethod": [ "POST" ],
-      "SwaggerKey": "account"
-    },
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/paged",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/paged",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/by-role/{role}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/by-role/{role}",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/{id}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/{id}",
+    //  "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/moderators",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/moderators",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/operation-managers",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/operation-managers",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/{id}/status",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/{id}/status",
+    //  "UpstreamHttpMethod": [ "PATCH" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/accounts/moderators/by-shop/{shopId}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/accounts/moderators/by-shop/{shopId}",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/image/upload",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/image/upload",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses",
+    //  "UpstreamHttpMethod": [ "GET", "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/{id}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/{id}",
+    //  "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/default-shipping",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/default-shipping",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/by-type/{type}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/by-type/{type}",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/shops/{shopId}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/shops/{shopId}",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/{id}/set-default-shipping",
+    //  "UpstreamHttpMethod": [ "PUT" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/{id}/assign-to-shop/{shopId}",
+    //  "UpstreamHttpMethod": [ "PUT" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/addresses/{id}/unassign-from-shop",
+    //  "UpstreamHttpMethod": [ "PUT" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/login",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/login",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/register",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/register",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/reset-password-request",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/reset-password-request",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/reset-password",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/reset-password",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/verify",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/verify",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/refresh-token",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/refresh-token",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/me",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/me",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "account"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/auth/change-password",
+    //  "DownstreamScheme": "https",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "localhost",
+    //      "Port": 7022
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/auth/change-password",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "account"
+    //},
     {
       "DownstreamPathTemplate": "/swagger/{everything}",
       "DownstreamScheme": "https",
@@ -416,6 +504,45 @@
       ],
       "UpstreamPathTemplate": "/swagger/product/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/shops-service/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/api/shops/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shops"
+    },
+    {
+      "DownstreamPathTemplate": "/api/shops-service",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/api/shops",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "shops"
+    },
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/shops/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "shops"
     }
   ],
   "SwaggerEndPoints": [
@@ -436,6 +563,16 @@
           "Name": "Product API",
           "Version": "v1",
           "Url": "https://localhost:7005/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "shops",
+      "Config": [
+        {
+          "Name": "Shop API",
+          "Version": "v1",
+          "Url": "https://localhost:7077/swagger/v1/swagger.json"
         }
       ]
     }
