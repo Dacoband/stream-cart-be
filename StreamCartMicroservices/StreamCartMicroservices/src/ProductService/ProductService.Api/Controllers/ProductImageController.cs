@@ -1,9 +1,7 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Commands.ImageCommands;
 using ProductService.Application.DTOs.Images;
-using ProductService.Application.Queries.ImageQueries;
+using ProductService.Application.Interfaces;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
@@ -16,18 +14,18 @@ namespace ProductService.Api.Controllers
     [ApiController]
     public class ProductImageController : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IProductImageService _service;
 
-        public ProductImageController(IMediator mediator)
+        public ProductImageController(IProductImageService service)
         {
-            _mediator = mediator;
+            _service = service;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductImageDto>>), 200)]
         public async Task<IActionResult> GetAllImages()
         {
-            var images = await _mediator.Send(new GetAllProductImagesQuery());
+            var images = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<ProductImageDto>>.SuccessResult(images));
         }
 
@@ -36,11 +34,9 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetImageById(Guid id)
         {
-            var image = await _mediator.Send(new GetProductImageByIdQuery { Id = id });
-
+            var image = await _service.GetByIdAsync(id);
             if (image == null)
                 return NotFound(ApiResponse<object>.ErrorResult($"Product image with ID {id} not found"));
-
             return Ok(ApiResponse<ProductImageDto>.SuccessResult(image));
         }
 
@@ -52,26 +48,13 @@ namespace ProductService.Api.Controllers
             if (imageFile == null || imageFile.Length == 0)
                 return BadRequest(ApiResponse<object>.ErrorResult("No image file provided"));
 
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-
-                var command = new UploadProductImageCommand
-                {
-                    ProductId = createImageDto.ProductId,
-                    VariantId = createImageDto.VariantId,
-                    Image = imageFile,
-                    IsPrimary = createImageDto.IsPrimary,
-                    DisplayOrder = createImageDto.DisplayOrder,
-                    AltText = createImageDto.AltText,
-                    CreatedBy = userId
-                };
-
-                var uploadedImage = await _mediator.Send(command);
-
+                var uploadedImage = await _service.UploadAsync(createImageDto, imageFile, userId);
                 return CreatedAtAction(
                     nameof(GetImageById),
                     new { id = uploadedImage.Id },
@@ -94,22 +77,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateImage(Guid id, [FromBody] UpdateProductImageDto updateImageDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new UpdateProductImageCommand
-                {
-                    Id = id,
-                    IsPrimary = updateImageDto.IsPrimary,
-                    DisplayOrder = updateImageDto.DisplayOrder,
-                    AltText = updateImageDto.AltText,
-                    UpdatedBy = userId
-                };
-
-                var updatedImage = await _mediator.Send(command);
+                var updatedImage = await _service.UpdateAsync(id, updateImageDto, userId);
                 return Ok(ApiResponse<ProductImageDto>.SuccessResult(updatedImage, "Product image updated successfully"));
             }
             catch (ApplicationException ex)
@@ -127,23 +101,15 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteImage(Guid id)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new DeleteProductImageCommand
-                {
-                    Id = id,
-                    DeletedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
-
+                var result = await _service.DeleteAsync(id, userId);
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product image with ID {id} not found"));
-
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Product image deleted successfully"));
             }
             catch (Exception ex)
@@ -156,7 +122,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductImageDto>>), 200)]
         public async Task<IActionResult> GetImagesByProductId(Guid productId)
         {
-            var images = await _mediator.Send(new GetProductImagesByProductIdQuery { ProductId = productId });
+            var images = await _service.GetByProductIdAsync(productId);
             return Ok(ApiResponse<IEnumerable<ProductImageDto>>.SuccessResult(images));
         }
 
@@ -164,7 +130,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductImageDto>>), 200)]
         public async Task<IActionResult> GetImagesByVariantId(Guid variantId)
         {
-            var images = await _mediator.Send(new GetProductImagesByVariantIdQuery { VariantId = variantId });
+            var images = await _service.GetByVariantIdAsync(variantId);
             return Ok(ApiResponse<IEnumerable<ProductImageDto>>.SuccessResult(images));
         }
 
@@ -174,20 +140,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> SetPrimaryImage(Guid id, [FromBody] SetPrimaryImageDto setPrimaryDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new SetPrimaryImageCommand
-                {
-                    Id = id,
-                    IsPrimary = setPrimaryDto.IsPrimary,
-                    UpdatedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
+                var result = await _service.SetPrimaryAsync(id, setPrimaryDto.IsPrimary, userId);
                 return Ok(ApiResponse<bool>.SuccessResult(result, "Primary image status updated successfully"));
             }
             catch (ApplicationException ex)
@@ -205,19 +164,13 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> ReorderImages([FromBody] ReorderImagesDto reorderDto)
         {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
-                var command = new ReorderProductImagesCommand
-                {
-                    ImagesOrder = reorderDto.ImagesOrder,
-                    UpdatedBy = userId
-                };
-
-                var result = await _mediator.Send(command);
+                var result = await _service.ReorderAsync(reorderDto.ImagesOrder, userId);
                 return Ok(ApiResponse<bool>.SuccessResult(result, "Image order updated successfully"));
             }
             catch (Exception ex)
