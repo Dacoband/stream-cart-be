@@ -32,5 +32,14 @@ namespace Shared.Common.Models
                 Errors = errors ?? new List<string>()
             };
         }
+        public static ApiResponse<T> CustomResponse(bool success, string message, T data)
+        {
+            return new ApiResponse<T>
+            {
+                Success = success,
+                Message = message,
+                Data = data
+            };
+        }
     }
 }

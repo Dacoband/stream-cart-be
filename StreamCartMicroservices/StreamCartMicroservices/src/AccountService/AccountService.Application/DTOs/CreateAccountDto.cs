@@ -30,8 +30,9 @@ namespace AccountService.Application.DTOs
         [Required(ErrorMessage = "Fullname is required")]
         [MinLength(2, ErrorMessage = "Fullname must be at least 2 characters long")]
         public string Fullname { get; set; } = string.Empty;
-
         public string? AvatarURL { get; set; }
-
+        [Required(ErrorMessage = "Role is required")]
+        [RoleValidation(ErrorMessage = "Role must be either Customer or Seller")]
+        public RoleType Role { get; set; } = RoleType.Customer;
     }
 }

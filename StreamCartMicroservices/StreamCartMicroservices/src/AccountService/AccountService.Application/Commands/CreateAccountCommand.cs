@@ -13,9 +13,7 @@ namespace AccountService.Application.Commands
         public string? PhoneNumber { get; set; }
         public string? Fullname { get; set; }
         public string? AvatarURL { get; set; }
-        
-        // này sẽ được set trong AccountManagementService, không phơi ra ngoài
-        public RoleType Role { get; set; } = RoleType.Customer;
+        public RoleType Role { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsVerified { get; set; } = false;
         public decimal CompleteRate { get; set; } = 1.0m;

@@ -7,5 +7,6 @@ namespace AccountService.Application.DTOs
         public string RefreshToken { get; set; } = string.Empty;
         public AccountDto? Account { get; set; }
         public string Message { get; set; } = string.Empty;
+        public bool RequiresVerification { get; set; } = false;  
     }
 }
