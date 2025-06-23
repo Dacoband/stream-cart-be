@@ -1,8 +1,10 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using ProductService.Application.Commands.CombinationCommands;
 using ProductService.Application.DTOs.Combinations;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,15 +16,19 @@ namespace ProductService.Application.Handlers.CombinationHandlers
         private readonly IProductCombinationRepository _combinationRepository;
         private readonly IAttributeValueRepository _valueRepository;
         private readonly IProductAttributeRepository _attributeRepository;
+        private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IProductVariantRepository _variantRepository;
 
         public UpdateProductCombinationCommandHandler(
             IProductCombinationRepository combinationRepository,
             IAttributeValueRepository valueRepository,
-            IProductAttributeRepository attributeRepository)
+            IProductAttributeRepository attributeRepository, IPublishEndpoint publishEndpoint, IProductVariantRepository variantRepository)
         {
             _combinationRepository = combinationRepository ?? throw new ArgumentNullException(nameof(combinationRepository));
             _valueRepository = valueRepository ?? throw new ArgumentNullException(nameof(valueRepository));
             _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
+            _publishEndpoint = publishEndpoint;
+            _variantRepository = variantRepository;
         }
 
         public async Task<ProductCombinationDto> Handle(UpdateProductCombinationCommand request, CancellationToken cancellationToken)
@@ -73,7 +79,27 @@ namespace ProductService.Application.Handlers.CombinationHandlers
                 updatedBy); // Use the validated updatedBy value
 
             await _combinationRepository.InsertAsync(newCombination);
+            try
+            {
+                var attributeDict = new Dictionary<string, string>
+                {
+                    { attribute.Id.ToString(), newAttributeValue.Id.ToString() }
+                };
+                var variantDetail = await _variantRepository.GetByIdAsync(newCombination.VariantId.ToString());
 
+                var productEvent = new ProductUpdatedEvent()
+                {
+                    ProductId = variantDetail.ProductId,
+                    VariantId = newCombination.VariantId,
+                    Attributes = attributeDict
+                };
+                await _publishEndpoint.Publish(productEvent);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
             // Return the updated combination as DTO
             return new ProductCombinationDto
             {

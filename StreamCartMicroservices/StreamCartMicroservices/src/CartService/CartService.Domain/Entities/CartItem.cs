@@ -50,6 +50,8 @@ namespace CartService.Domain.Entities
         [MaxLength(500)]
         public string PrimaryImage { get; set; } = string.Empty;
 
+        public bool ProductStatus { get; set; }
+
 
         [Column(TypeName = "jsonb")]
         public Dictionary<string, string> Attributes { get; set; } = new();

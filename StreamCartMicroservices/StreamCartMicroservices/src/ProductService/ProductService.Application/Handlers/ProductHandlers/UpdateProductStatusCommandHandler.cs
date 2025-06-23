@@ -1,7 +1,9 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,10 +13,12 @@ namespace ProductService.Application.Handlers.ProductHandlers
     public class UpdateProductStatusCommandHandler : IRequestHandler<UpdateProductStatusCommand, ProductDto>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public UpdateProductStatusCommandHandler(IProductRepository productRepository)
+        public UpdateProductStatusCommandHandler(IProductRepository productRepository, IPublishEndpoint publishEndpoint)
         {
             _productRepository = productRepository;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ProductDto> Handle(UpdateProductStatusCommand request, CancellationToken cancellationToken)
@@ -27,6 +31,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
             }
 
             // Cập nhật trạng thái
+            
             if (request.IsActive)
             {
                 product.Activate();
@@ -43,7 +48,25 @@ namespace ProductService.Application.Handlers.ProductHandlers
             }
 
             await _productRepository.ReplaceAsync(product.Id.ToString(), product);
+            
+            try
+            {
+                var productEvent = new ProductUpdatedEvent()
+                {
+                    ProductId = product.Id,
+                    ProductName = product.ProductName,
+                    Price = (decimal)(product.DiscountPrice > 0 ? product.DiscountPrice : product.BasePrice),
+                    Stock = product.StockQuantity,
+                    ProductStatus = product.IsActive,
 
+                };
+                await _publishEndpoint.Publish(productEvent);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
             return new ProductDto
             {
                 Id = product.Id,

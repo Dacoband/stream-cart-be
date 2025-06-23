@@ -70,6 +70,7 @@ namespace CartService.Application.Services
                 {
                     return null;
                 }
+                
                 if (variantId.HasValue)
                 {
                     var variant = product.Variants.Where(x => x.VariantId == variantId).FirstOrDefault();

@@ -17,6 +17,22 @@ namespace CartService.Infrastructure.Repositories
         {
             
         }
+
+        public async Task<List<CartItem>> GetCartByProduct(Guid productId, Guid? variantId)
+        {
+            var product =await _dbSet.Where(x => x.ProductId == productId).ToListAsync();
+            if (variantId.HasValue)
+            {
+                product = product.Where(x => x.VariantId == variantId).ToList();
+            }
+            return product;
+        }
+
+        public async Task<List<CartItem>> GetCartItemByShop(Guid shopId)
+        {
+            return await _dbSet.Where(x=> x.ShopId == shopId).ToListAsync();
+        }
+
         public async Task<CartItem?> GetItemByCartId(Guid cartId)
         {
             return await _dbSet.FirstOrDefaultAsync(x => x.CartId == cartId);

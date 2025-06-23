@@ -11,5 +11,8 @@ namespace CartService.Infrastructure.Interfaces
     public interface ICartItemRepository : IGenericRepository<CartItem>
     {
         Task<CartItem?> GetItemByCartId(Guid cartId);
+        Task<List<CartItem>> GetCartByProduct(Guid productId, Guid? variantId);
+        Task<List<CartItem>> GetCartItemByShop(Guid shopId);
+
     }
 }

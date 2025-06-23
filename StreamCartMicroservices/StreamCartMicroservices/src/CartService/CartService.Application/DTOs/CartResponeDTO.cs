@@ -30,6 +30,7 @@ namespace CartService.Application.DTOs
         public string PrimaryImage { get; set; }
         public Dictionary<string, string>? Attributes { get; set; }
         public int StockQuantity { get; set; }
+        public bool ProductStatus { get; set; }
     }
     public class ProductInShopCart
     {

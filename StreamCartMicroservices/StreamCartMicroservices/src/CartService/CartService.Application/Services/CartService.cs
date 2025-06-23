@@ -117,6 +117,7 @@ namespace CartService.Application.Services
                 PrimaryImage = productInfo.PrimaryImage,
                 Attributes = productInfo.Attributes,
                 CartId = existingCart.Id,
+                ProductStatus = true,
 
             };
             addToCartItem.SetCreator(userId);
@@ -204,7 +205,8 @@ namespace CartService.Application.Services
                Quantity = ci.Quantity,
                StockQuantity = ci.Stock,
                Attributes = ci.Attributes,
-               PrimaryImage = ci.PrimaryImage
+               PrimaryImage = ci.PrimaryImage,
+               ProductStatus = ci.ProductStatus,
            }).ToList()
        }).ToList();
             result.Data = new CartResponeDTO()

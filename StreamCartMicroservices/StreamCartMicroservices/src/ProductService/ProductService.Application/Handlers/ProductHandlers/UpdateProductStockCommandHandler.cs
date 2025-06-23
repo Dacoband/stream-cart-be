@@ -1,7 +1,9 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,10 +13,11 @@ namespace ProductService.Application.Handlers.ProductHandlers
     public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductStockCommand, ProductDto>
     {
         private readonly IProductRepository _productRepository;
-
-        public UpdateProductStockCommandHandler(IProductRepository productRepository)
+        private readonly IPublishEndpoint _publishEndpoint;
+        public UpdateProductStockCommandHandler(IProductRepository productRepository, IPublishEndpoint publishEndpoint)
         {
             _productRepository = productRepository;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ProductDto> Handle(UpdateProductStockCommand request, CancellationToken cancellationToken)
@@ -36,6 +39,24 @@ namespace ProductService.Application.Handlers.ProductHandlers
             }
 
             await _productRepository.ReplaceAsync(product.Id.ToString(), product);
+            try
+            {
+                var productEvent = new ProductUpdatedEvent()
+                {
+                    ProductId = product.Id,
+                    ProductName = product.ProductName,
+                    Price = (decimal)(product.DiscountPrice > 0 ? product.DiscountPrice : product.BasePrice),
+                    Stock = product.StockQuantity,
+                    ProductStatus = product.IsActive,
+
+                };
+                await _publishEndpoint.Publish(productEvent);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
 
             return new ProductDto
             {

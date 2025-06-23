@@ -66,6 +66,7 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
+
 // Add this line to Program.cs services registration
 builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddControllers();

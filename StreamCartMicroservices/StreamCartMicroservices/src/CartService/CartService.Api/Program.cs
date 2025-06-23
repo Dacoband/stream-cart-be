@@ -13,6 +13,7 @@ using CartService.Application.Services;
 using CartService.Application.Interfaces;
 using System;
 using Npgsql;
+using CartService.Application.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,14 +62,15 @@ Npgsql.NpgsqlConnection.GlobalTypeMapper
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
 builder.Services.AddApplicationServices();
-//builder.Services.AddMessaging(builder.Configuration, x => {
-//    // Đăng ký consumers ở đây
-//    x.AddConsumer<AccountRegisteredConsumer>();
+builder.Services.AddMessaging(builder.Configuration, x =>
+{
+    // Đăng ký consumers ở đây
+    x.AddConsumer<ProductUpdatedConsumer>();
 
-//    // Nếu có nhiều consumer trong cùng một namespace
-//    var consumerAssembly = typeof(AccountRegisteredConsumer).Assembly;
-//    x.AddConsumers(consumerAssembly);
-//});
+    // Nếu có nhiều consumer trong cùng một namespace
+    var consumerAssembly = typeof(ProductUpdatedConsumer).Assembly;
+    x.AddConsumers(consumerAssembly);
+});
 
 // Add shared settings configuration
 builder.Services.AddAppSettings(builder.Configuration);
