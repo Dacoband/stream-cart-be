@@ -26,7 +26,6 @@ namespace CartService.Infrastructure.Data
                 entity.ToTable("Carts");
 
                 entity.HasKey(c => c.Id);
-                entity.Property(c => c.CustomerId).IsRequired();
 
                 entity.HasMany(c => c.Items)
                       .WithOne(i => i.Cart)

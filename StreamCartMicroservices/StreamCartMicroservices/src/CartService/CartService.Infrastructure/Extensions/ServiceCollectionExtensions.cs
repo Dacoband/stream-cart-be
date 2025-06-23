@@ -1,7 +1,11 @@
 ﻿using CartService.Infrastructure.Data;
+using CartService.Infrastructure.Interfaces;
+using CartService.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using Shared.Common.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +21,10 @@ namespace CartService.Infrastructure.Extensions
                 this IServiceCollection services,
                 IConfiguration configuration)
             {
-                services.AddDbContext<CartContext>(options =>
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+            NpgsqlConnection.GlobalTypeMapper
+                .UseJsonNet();
+            services.AddDbContext<CartContext>(options =>
                 {
                     options.UseNpgsql(
                         configuration.GetConnectionString("PostgreSQL"),
@@ -25,7 +32,9 @@ namespace CartService.Infrastructure.Extensions
                             npgsqlOptions.MigrationsAssembly(typeof(CartContext).Assembly.FullName);
                         });
                 });
-
+            services.AddGenericRepositories<CartContext>();
+            services.AddScoped<ICartRepository, CartRepository>();
+            services.AddScoped<ICartItemRepository, CartItemRepository>();
 
                 return services;
             }

@@ -7,6 +7,12 @@ using System.Text.RegularExpressions;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
 using System.Text.RegularExpressions;
+using CartService.Application.Command;
+using CartService.Application.Extensions;
+using CartService.Application.Services;
+using CartService.Application.Interfaces;
+using System;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,13 +28,39 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
+builder.Services.AddMediatR(config =>
+{
+    config.RegisterServicesFromAssembly(typeof(AddToCartCommand).Assembly);
+});
 
+builder.Services.AddHttpClient<IProductService, ProductService>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            // Accept invalid HTTPS certificate for dev only
+            ServerCertificateCustomValidationCallback =
+                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+builder.Services.AddHttpClient<IProductService, ProductService>(client =>
+{
+    client.BaseAddress = new Uri("http://product-service");
+    client.Timeout = TimeSpan.FromSeconds(30); // Tăng timeout
+    client.MaxResponseContentBufferSize = 1024 * 1024 * 10; // 10MB
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback =
+        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+Npgsql.NpgsqlConnection.GlobalTypeMapper
+    .UseJsonNet();
 
 // Add services to the container
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
-//builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices();
 //builder.Services.AddMessaging(builder.Configuration, x => {
 //    // Đăng ký consumers ở đây
 //    x.AddConsumer<AccountRegisteredConsumer>();

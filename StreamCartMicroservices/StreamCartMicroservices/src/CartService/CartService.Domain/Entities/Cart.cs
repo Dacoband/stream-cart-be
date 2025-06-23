@@ -11,9 +11,6 @@ namespace CartService.Domain.Entities
 {
     public class Cart : BaseEntity
     {
-        [Required]
-        [ForeignKey("Account")]
-        public Guid CustomerId { get; private set; }
         public ICollection<CartItem> Items { get; private set; } = new List<CartItem>();
 
 

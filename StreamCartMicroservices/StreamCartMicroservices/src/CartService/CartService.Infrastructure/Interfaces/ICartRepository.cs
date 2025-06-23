@@ -10,6 +10,6 @@ namespace CartService.Infrastructure.Interfaces
 {
     public interface ICartRepository : IGenericRepository<Cart>
     {
-        Task<Cart?> GetByUserId(Guid userId);
+        public Task<Cart> GetMyCart(string customerId);
     }
 }
