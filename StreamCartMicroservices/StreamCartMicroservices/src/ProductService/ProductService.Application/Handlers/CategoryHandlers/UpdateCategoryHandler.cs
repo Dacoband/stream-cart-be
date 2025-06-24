@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.DTOs.Category;
-using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using Shared.Common.Models;
 using System;

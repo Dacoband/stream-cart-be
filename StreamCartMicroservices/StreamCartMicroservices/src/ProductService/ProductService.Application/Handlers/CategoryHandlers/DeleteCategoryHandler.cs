@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using ProductService.Application.Commands.CategoryCommands;
-using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Infrastructure.Interfaces;
 using Shared.Common.Models;
 using System;

@@ -1,5 +1,5 @@
 ﻿using ProductService.Application.DTOs.Category;
-using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
 using Shared.Common.Models;
@@ -59,8 +59,6 @@ namespace ProductService.Application.Services
                 result.Success = false;
                 result.Message = "Đã xảy ra lỗi khi tạo danh mục sản phẩm";
                 return result;
-
-
             }
         }
 

@@ -10,6 +10,8 @@ namespace ProductService.Domain.Entities
         public decimal Price { get; private set; }
         public decimal? FlashSalePrice { get; private set; }
         public int Stock { get; private set; }
+        public virtual ICollection<FlashSale> FlashSales { get; set; } = new List<FlashSale>();
+
 
         // Required by EF Core
         private ProductVariant() { }
@@ -42,7 +44,7 @@ namespace ProductService.Domain.Entities
             if (price <= 0)
                 throw new ArgumentException("Price must be greater than zero", nameof(price));
 
-            if (flashSalePrice.HasValue && flashSalePrice.Value <= 0)
+            if (flashSalePrice.HasValue && flashSalePrice.Value < 0)
                 throw new ArgumentException("Flash sale price must be greater than zero", nameof(flashSalePrice));
 
             if (flashSalePrice.HasValue && flashSalePrice.Value >= price)

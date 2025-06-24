@@ -41,6 +41,8 @@ namespace ProductService.Domain.Entities
         public int QuantitySold { get; private set; }
 
         public Guid? ShopId { get; private set; }
+        public virtual ICollection<FlashSale> FlashSales { get; set; } = new List<FlashSale>();
+
 
         // EF Constructor
         private Product() { }

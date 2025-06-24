@@ -1,7 +1,7 @@
 ﻿using CartService.Infrastructure.Interfaces;
 using MassTransit;
 using Shared.Messaging.Consumers;
-using Shared.Messaging.Event.ProductEvent;
+using Shared.Messaging.Event.ShopEvent;
 using System;
 using System.Collections.Generic;
 using System.Linq;

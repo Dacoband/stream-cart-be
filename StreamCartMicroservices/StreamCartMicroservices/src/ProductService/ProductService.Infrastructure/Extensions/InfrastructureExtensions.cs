@@ -34,6 +34,7 @@ namespace ProductService.Infrastructure.Extensions
             services.AddScoped<IProductCombinationRepository, ProductCombinationRepository>();
             services.AddScoped<IProductImageRepository, ProductImageRepository>(); // Add this line
             services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IFlashSaleRepository, FlashSaleRepository>();
             return services;
         }
     }

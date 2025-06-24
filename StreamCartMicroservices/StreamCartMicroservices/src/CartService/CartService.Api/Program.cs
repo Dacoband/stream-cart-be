@@ -42,17 +42,17 @@ builder.Services.AddHttpClient<IProductService, ProductService>()
             ServerCertificateCustomValidationCallback =
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         });
-builder.Services.AddHttpClient<IProductService, ProductService>(client =>
-{
-    client.BaseAddress = new Uri("http://product-service");
-    client.Timeout = TimeSpan.FromSeconds(30); // Tăng timeout
-    client.MaxResponseContentBufferSize = 1024 * 1024 * 10; // 10MB
-})
-.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback =
-        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-});
+//builder.Services.AddHttpClient<IProductService, ProductService>(client =>
+//{
+//    client.BaseAddress = new Uri("http://product-service");
+//    client.Timeout = TimeSpan.FromSeconds(30); // Tăng timeout
+//    client.MaxResponseContentBufferSize = 1024 * 1024 * 10; // 10MB
+//})
+//.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+//{
+//    ServerCertificateCustomValidationCallback =
+//        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+//});
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 Npgsql.NpgsqlConnection.GlobalTypeMapper
@@ -66,6 +66,7 @@ builder.Services.AddMessaging(builder.Configuration, x =>
 {
     // Đăng ký consumers ở đây
     x.AddConsumer<ProductUpdatedConsumer>();
+    x.AddConsumer<ShopUpdatedConsumer>();
 
     // Nếu có nhiều consumer trong cùng một namespace
     var consumerAssembly = typeof(ProductUpdatedConsumer).Assembly;

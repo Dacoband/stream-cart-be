@@ -1,6 +1,6 @@
-﻿    using MediatR;
+﻿using MediatR;
 using ProductService.Application.Commands.CategoryCommands;
-using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Repositories;
 using Shared.Common.Models;

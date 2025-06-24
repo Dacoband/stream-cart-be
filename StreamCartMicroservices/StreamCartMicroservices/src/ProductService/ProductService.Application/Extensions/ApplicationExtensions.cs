@@ -4,11 +4,13 @@ using ProductService.Application.Commands.AttributeCommands;
 using ProductService.Application.Commands.AttributeValueCommands;
 using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.Commands.CombinationCommands;
+using ProductService.Application.Commands.FlashSaleCommands;
 using ProductService.Application.Commands.ImageCommands;
 using ProductService.Application.Commands.VariantCommands;
 using ProductService.Application.DTOs.Attributes;
 using ProductService.Application.DTOs.Category;
 using ProductService.Application.DTOs.Combinations;
+using ProductService.Application.DTOs.FlashSale;
 using ProductService.Application.DTOs.Images;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.DTOs.Variants;
@@ -17,12 +19,13 @@ using ProductService.Application.Handlers.AttributeValueHandlers;
 using ProductService.Application.Handlers.CategoryHandlers;
 using ProductService.Application.Handlers.CombinationHandlers;
 using ProductService.Application.Handlers.DetailHandlers;
+using ProductService.Application.Handlers.FlashSaleHandlers;
 using ProductService.Application.Handlers.ImageHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
-using ProductService.Application.Interface;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.CategoryQueries;
 using ProductService.Application.Queries.DetailQueries;
+using ProductService.Application.Queries.FlashSaleQueries;
 using ProductService.Application.Queries.ImageQueries;
 using ProductService.Application.Services;
 using ProductService.Domain.Entities;
@@ -86,8 +89,12 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<GetDetailCategoryQuery, ApiResponse<CategoryDetailDTO>>, GetDetailCategoryHandler>();
             services.AddScoped<IRequestHandler<UpdateCategoryCommand, ApiResponse<Category>>, UpdateCategoryHandler>();
             services.AddScoped<IRequestHandler<DeleteCategoryCommand, ApiResponse<bool>>, DeleteCategoryHandler>();
-
-
+            services.AddScoped<IFlashSaleService, FlashSaleService>();
+            services.AddScoped<IRequestHandler<CreateFlashSaleCommand, ApiResponse<List<DetailFlashSaleDTO>>>, CreateFlashSaleHandle>();
+            services.AddScoped<IRequestHandler<UpdateFlashSaleCommand, ApiResponse<DetailFlashSaleDTO>>, UpdateFlashSaleHandler>();
+            services.AddScoped<IRequestHandler<GetAllFlashSaleQuery, ApiResponse<List<DetailFlashSaleDTO>>>, GetAllFlashSaleHandler>();
+            services.AddScoped<IRequestHandler<GetDetailFlashSaleQuery, ApiResponse<DetailFlashSaleDTO>>, GetDetailFlashSaleHandler>();
+            services.AddScoped<IRequestHandler<DeleteFlashSaleCommand, ApiResponse<bool>>, DeleteFlashSaleHandler>();
             return services;
         }
     }

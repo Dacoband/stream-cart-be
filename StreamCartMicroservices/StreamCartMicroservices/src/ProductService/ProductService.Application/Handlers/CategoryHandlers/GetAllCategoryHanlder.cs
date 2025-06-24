@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using ProductService.Application.DTOs.Category;
-using ProductService.Application.Interface;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.CategoryQueries;
 using Shared.Common.Models;
 using System;
