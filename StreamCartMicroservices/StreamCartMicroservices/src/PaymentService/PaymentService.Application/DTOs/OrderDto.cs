@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace PaymentService.Application.DTOs
+{
+    /// <summary>
+    /// DTO for basic order information needed by payment service
+    /// </summary>
+    public class OrderDto
+    {
+        public Guid Id { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string PaymentStatus { get; set; } = string.Empty;
+    }
+}
