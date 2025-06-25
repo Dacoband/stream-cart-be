@@ -2,22 +2,21 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Shared.Messaging.Extensions
 {
     public static class MessagingExtensions
     {
-        public static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration, Action<IBusRegistrationConfigurator>? configureBus = null)
+        public static IServiceCollection AddMessaging(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            Action<IBusRegistrationConfigurator>? configureBus = null)
         {
             services.AddMassTransit(x =>
             {
-                x.SetKebabCaseEndpointNameFormatter(); // Định dạng tên queue (kebab-case)
+                x.SetKebabCaseEndpointNameFormatter(); // Tên queue dạng kebab-case
 
-                // Allow caller to configure consumers or other settings
+                // Cho phép caller đăng ký consumers
                 configureBus?.Invoke(x);
 
                 x.UsingRabbitMq((context, cfg) =>
@@ -25,32 +24,34 @@ namespace Shared.Messaging.Extensions
                     var rabbitMqHost = configuration["RabbitMQ:Host"] ?? configuration["RABBITMQ_HOST"];
                     var rabbitMqUsername = configuration["RabbitMQ:Username"] ?? configuration["RABBITMQ_USERNAME"];
                     var rabbitMqPassword = configuration["RabbitMQ:Password"] ?? configuration["RABBITMQ_PASSWORD"];
+
                     cfg.Host(rabbitMqHost, h =>
                     {
                         h.Username(rabbitMqUsername);
                         h.Password(rabbitMqPassword);
                     });
 
-                    // Cấu hình retry policy (tùy chọn)
-                    cfg.UseMessageRetry(r => r.Interval(5, 1000)); // Thử lại 5 lần, mỗi lần cách 1 giây
-
-                    // Cấu hình circuit breaker (tùy chọn)
+                    // Retry & Circuit Breaker (tuỳ chọn)
+                    cfg.UseMessageRetry(r => r.Interval(5, TimeSpan.FromSeconds(1)));
                     cfg.UseCircuitBreaker(c =>
                     {
                         c.TrackingPeriod = TimeSpan.FromMinutes(1);
-                        c.TripThreshold = (int)0.5; // Ngắt khi 50% lỗi
-                        c.ActiveThreshold = 10; // Ít nhất 10 thông điệp
+                        c.TripThreshold = 1;
+                        c.ActiveThreshold = 10;
                     });
+
+                    // Tự động tạo endpoint cho các consumer đã AddConsumer trước đó
+                    cfg.ConfigureEndpoints(context);
                 });
             });
 
-            // Đăng ký IBus và IPublishEndpoint
+            // Đăng ký background service cho MassTransit
             services.AddMassTransitHostedService();
 
             return services;
         }
 
-        // Modified extension method that doesn't call AddMassTransit again
+        // Optional: tiện ích để đăng ký tất cả consumer trong namespace/class nhất định
         public static IServiceCollection AddConsumers<T>(this IServiceCollection services)
             where T : class
         {

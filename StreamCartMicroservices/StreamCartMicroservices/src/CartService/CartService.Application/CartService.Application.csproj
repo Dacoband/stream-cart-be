@@ -6,13 +6,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="FluentValidation" Version="12.0.0" />
-		<PackageReference Include="MassTransit" Version="8.4.1" />
-		<PackageReference Include="MediatR" Version="12.5.0" />
-	</ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CartService.Infrastructure\CartService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

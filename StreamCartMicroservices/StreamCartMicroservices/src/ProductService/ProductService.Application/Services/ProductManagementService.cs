@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;

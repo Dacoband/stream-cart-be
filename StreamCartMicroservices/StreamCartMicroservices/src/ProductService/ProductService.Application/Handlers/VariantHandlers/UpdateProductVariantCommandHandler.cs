@@ -1,7 +1,10 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using ProductService.Application.Commands.VariantCommands;
 using ProductService.Application.DTOs.Variants;
+using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,10 +14,12 @@ namespace ProductService.Application.Handlers.VariantHandlers
     public class UpdateProductVariantCommandHandler : IRequestHandler<UpdateProductVariantCommand, ProductVariantDto>
     {
         private readonly IProductVariantRepository _variantRepository;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public UpdateProductVariantCommandHandler(IProductVariantRepository variantRepository)
+        public UpdateProductVariantCommandHandler(IProductVariantRepository variantRepository, IPublishEndpoint publishEndpoint)
         {
             _variantRepository = variantRepository ?? throw new ArgumentNullException(nameof(variantRepository));
+            _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException( nameof(publishEndpoint));
         }
 
         public async Task<ProductVariantDto> Handle(UpdateProductVariantCommand request, CancellationToken cancellationToken)
@@ -52,6 +57,23 @@ namespace ProductService.Application.Handlers.VariantHandlers
 
             // Save to database
             await _variantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+            try
+            {
+                var productEvent = new ProductUpdatedEvent()
+                {
+                    ProductId = variant.ProductId,
+                    Price = (decimal)(variant.FlashSalePrice > 0 ? variant.FlashSalePrice : variant.Price),
+                    Stock = variant.Stock,
+                    ProductStatus = !variant.IsDeleted,
+                    VariantId = variant.Id,
+                };
+                await _publishEndpoint.Publish(productEvent);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
 
             // Return DTO
             return new ProductVariantDto

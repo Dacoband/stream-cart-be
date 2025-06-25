@@ -13,6 +13,9 @@ namespace ProductService.Infrastructure.Data
         public DbSet<ProductAttribute> ProductAttributes { get; set; }
         public DbSet<AttributeValue> AttributeValues { get; set; }
         public DbSet<ProductCombination> ProductCombinations { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<FlashSale> FlashSale { get; set; }
+
 
         public ProductContext(DbContextOptions<ProductContext> options) : base(options)
         {
@@ -276,6 +279,43 @@ namespace ProductService.Infrastructure.Data
                 entity.HasIndex(e => e.VariantId);
                 entity.HasIndex(e => e.IsPrimary);
             });
+            modelBuilder.Entity<Category>()
+                .ToTable("Category")
+                .HasKey(c => c.Id); // Dùng Id từ BaseEntity
+
+            modelBuilder.Entity<Category>()
+                .HasOne(c => c.ParentCategory)
+                .WithMany(c => c.SubCategories)
+                .HasForeignKey(c => c.ParentCategoryID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Category>()
+                .Property(c => c.CategoryName)
+                .HasMaxLength(255)
+                .IsRequired();
+
+            modelBuilder.Entity<FlashSale>(entity =>
+            {
+                entity.ToTable("Flash-Sales");
+                entity.HasKey(e => e.Id);
+
+                // Relationship: FlashSale -> Product
+                entity.HasOne(e => e.Product)
+                      .WithMany(p => p.FlashSales)
+                      .HasForeignKey(e => e.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("FK_FlashSales_Products");
+
+                // Relationship: FlashSale -> ProductVariant
+                entity.HasOne(e => e.ProductVariant)
+                      .WithMany(v => v.FlashSales)
+                      .HasForeignKey(e => e.VariantId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("FK_FlashSales_ProductVariants");
+            });
+
+            base.OnModelCreating(modelBuilder);
+
         }
     }
 }

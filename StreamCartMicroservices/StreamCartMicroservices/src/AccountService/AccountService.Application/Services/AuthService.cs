@@ -200,7 +200,8 @@ namespace AccountService.Application.Services
                 new Claim(ClaimTypes.NameIdentifier, account.Id.ToString()),
                 new Claim(ClaimTypes.Name, account.Username),
                 new Claim(ClaimTypes.Email, account.Email),
-                new Claim(ClaimTypes.Role, account.Role.ToString())
+                new Claim(ClaimTypes.Role, account.Role.ToString()),
+                new Claim("ShopId", account.ShopId.ToString())
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor

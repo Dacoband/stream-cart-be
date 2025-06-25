@@ -6,6 +6,8 @@ using ShopService.Application.Events;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MassTransit;
+using Shared.Messaging.Event.ShopEvent;
 
 namespace ShopService.Application.Handlers
 {
@@ -13,11 +15,13 @@ namespace ShopService.Application.Handlers
     {
         private readonly IShopRepository _shopRepository;
         private readonly IMessagePublisher _messagePublisher;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public UpdateShopCommandHandler(IShopRepository shopRepository, IMessagePublisher messagePublisher)
+        public UpdateShopCommandHandler(IShopRepository shopRepository, IMessagePublisher messagePublisher, IPublishEndpoint publishEndpoint)
         {
             _shopRepository = shopRepository;
             _messagePublisher = messagePublisher;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ShopDto> Handle(UpdateShopCommand request, CancellationToken cancellationToken)
@@ -60,6 +64,14 @@ namespace ShopService.Application.Handlers
                 CoverImageURL = shop.CoverImageURL,
                 LastUpdatedDate = DateTime.UtcNow
             }, cancellationToken);
+
+            var shopUpdatedEvent = new ShopUpdatedEvent()
+            {
+                ShopId = shop.Id,
+                ShopName = shop.ShopName,
+            };
+            await _publishEndpoint.Publish(shopUpdatedEvent);
+
 
             // Trả về DTO
             return new ShopDto

@@ -8,7 +8,9 @@ using Microsoft.Extensions.Hosting;
 using ProductService.Api.Services;
 using ProductService.Application.Commands.AttributeCommands;
 using ProductService.Application.Commands.AttributeValueCommands;
+using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.Commands.CombinationCommands;
+using ProductService.Application.Commands.FlashSaleCommands;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.Commands.VariantCommands;
 using ProductService.Application.DTOs.Attributes;
@@ -19,8 +21,14 @@ using ProductService.Application.Handlers.AttributeHandlers;
 using ProductService.Application.Handlers.AttributeValueHandlers;
 using ProductService.Application.Handlers.CombinationHandlers;
 using ProductService.Application.Handlers.VariantHandlers;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.AttributeValueQueries;
+using ProductService.Application.Queries.CategoryQueries;
+using ProductService.Application.Queries.FlashSaleQueries;
+using ProductService.Application.Services;
 using ProductService.Infrastructure.Extensions;
+using ProductService.Infrastructure.Jobs;
+using Quartz;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
 using System.Text.Json.Serialization;
@@ -43,6 +51,15 @@ builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(CreateProductCommand).Assembly);
     config.RegisterServicesFromAssembly(typeof(GetAllAttributeValuesQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(CreateCategoryCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetAllCategoryQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetDetailCategoryQuery).Assembly);
+    config.RegisterServicesFromAssembly(typeof(UpdateCategoryCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(DeleteCategoryCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(CreateFlashSaleCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof (UpdateFlashSaleCommand).Assembly);
+    config.RegisterServicesFromAssembly (typeof (DeleteFlashSaleCommand).Assembly);
+    config.RegisterServicesFromAssembly(typeof(GetDetailFlashSaleQuery).Assembly);
 
 });
 //builder.Services.AddMediator(cfg =>
@@ -59,6 +76,24 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
+//Add cronjob
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("UpdateFlashSaleDiscountJob");
+
+    q.AddJob<UpdateFlashSaleDiscountJob>(opts => opts.WithIdentity(jobKey));
+
+    q.AddTrigger(t => t
+        .ForJob(jobKey)
+        .WithIdentity("UpdateFlashSaleDiscountTrigger")
+        .WithCronSchedule("*/10 * * * * ?"));
+});
+
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+
+// Register services
+builder.Services.AddScoped<IFlashSaleJobService, FlashSaleJobService>();
+
 // Add this line to Program.cs services registration
 builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddControllers();
