@@ -15,23 +15,23 @@ namespace PaymentService.Infrastructure.Repositories
 {
     public class PaymentRepository : EfCoreGenericRepository<Payment>, IPaymentRepository
     {
-        private readonly PaymentContext _paymentContext;
+        private readonly PaymentContext _context;
 
         public PaymentRepository(PaymentContext paymentContext) : base(paymentContext)
         {
-            _paymentContext = paymentContext;
+            _context = paymentContext;
         }
 
         public async Task<IEnumerable<Payment>> GetByOrderIdAsync(Guid orderId)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.OrderId == orderId && !p.IsDeleted)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Payment>> GetByUserIdAsync(Guid userId)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.UserId == userId && !p.IsDeleted)
                 .ToListAsync();
         }
@@ -39,27 +39,27 @@ namespace PaymentService.Infrastructure.Repositories
         // Sửa method GetByTransactionIdAsync thành GetByQrCodeAsync
         public async Task<Payment?> GetByQrCodeAsync(string qrCode)
         {
-            return await _dbSet
+            return await _context.Payments
                 .FirstOrDefaultAsync(p => p.QrCode == qrCode && !p.IsDeleted);
         }
 
         public async Task<IEnumerable<Payment>> GetByPaymentMethodAsync(PaymentMethod paymentMethod)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.PaymentMethod == paymentMethod && !p.IsDeleted)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.Status == status && !p.IsDeleted)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<Payment>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.CreatedAt >= startDate && p.CreatedAt <= endDate && !p.IsDeleted)
                 .ToListAsync();
         }
@@ -77,7 +77,7 @@ namespace PaymentService.Infrastructure.Repositories
             bool ascending = true)
         {
             // Start with base query
-            var query = _dbSet.Where(p => !p.IsDeleted);
+            var query = _context.Payments.Where(p => !p.IsDeleted);
 
             // Apply filters
             if (status.HasValue)
@@ -163,7 +163,7 @@ namespace PaymentService.Infrastructure.Repositories
 
         public async Task<decimal> GetTotalAmountByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            return await _dbSet
+            return await _context.Payments
                 .Where(p => p.CreatedAt >= startDate &&
                        p.CreatedAt <= endDate &&
                        p.Status == PaymentStatus.Paid &&
@@ -173,7 +173,7 @@ namespace PaymentService.Infrastructure.Repositories
 
         public async Task<Dictionary<PaymentStatus, int>> GetPaymentCountByStatusAsync()
         {
-            var statusCounts = await _dbSet
+            var statusCounts = await _context.Payments
                 .Where(p => !p.IsDeleted)
                 .GroupBy(p => p.Status)
                 .Select(g => new { Status = g.Key, Count = g.Count() })
@@ -191,7 +191,7 @@ namespace PaymentService.Infrastructure.Repositories
 
         public async Task<Dictionary<PaymentMethod, int>> GetPaymentCountByMethodAsync()
         {
-            var methodCounts = await _dbSet
+            var methodCounts = await _context.Payments
                 .Where(p => !p.IsDeleted)
                 .GroupBy(p => p.PaymentMethod)
                 .Select(g => new { Method = g.Key, Count = g.Count() })

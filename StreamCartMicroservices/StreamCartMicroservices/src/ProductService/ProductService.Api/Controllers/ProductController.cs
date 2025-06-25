@@ -17,10 +17,12 @@ namespace ProductService.Api.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IShopServiceClient _shopServiceClient;
 
-        public ProductController(IProductService productService)
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient)
         {
             _productService = productService;
+            _shopServiceClient = shopServiceClient;
         }
 
         [HttpPost]
@@ -145,6 +147,9 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
         public async Task<IActionResult> GetProductsByShopId(Guid shopId, [FromQuery] bool activeOnly = false)
         {
+            var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+            if (!shopExists)
+                return NotFound($"Shop with ID {shopId} not found");
             var products = await _productService.GetProductsByShopIdAsync(shopId, activeOnly);
             return Ok(ApiResponse<IEnumerable<ProductDto>>.SuccessResult(products));
         }

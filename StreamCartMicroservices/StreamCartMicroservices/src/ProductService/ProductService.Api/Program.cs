@@ -51,7 +51,7 @@ builder.Services.AddMediatR(config =>
 //});
 // Add services to the container
 builder.Services.AddInfrastructureServices(builder.Configuration);
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
 
 // Thêm các dịch vụ chung từ Shared

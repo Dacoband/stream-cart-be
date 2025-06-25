@@ -1,6 +1,6 @@
 ﻿using Appwrite;
 using dotenv.net;
-using Microsoft.Extensions.Configuration;
+using PaymentService.Api.Service;
 using PaymentService.Application.Extensions;
 using PaymentService.Application.Interfaces;
 using PaymentService.Infrastructure.Extensions;
@@ -21,13 +21,12 @@ ReplaceConfigurationPlaceholders(builder.Configuration);
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-//builder.Services.AddHostedService<DatabaseInitializer>();
+builder.Services.AddHostedService<DatabaseInitializer>();
 builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
-// Add services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -70,18 +69,23 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Payment Service API v1");
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    c.DefaultModelsExpandDepth(0);
+});
+
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
-
+//app.UseHttpsRedirection();
+app.UseConfiguredCors();
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

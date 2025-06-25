@@ -15,16 +15,18 @@ using System.Threading.Tasks;
 namespace PaymentService.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payments")]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
         private readonly IQrCodeService _qrCodeService;
+        private readonly IOrderServiceClient _orderServiceClient;
 
-        public PaymentsController(IPaymentService paymentService, IQrCodeService qrCodeService)
+        public PaymentsController(IPaymentService paymentService, IQrCodeService qrCodeService, IOrderServiceClient orderServiceClient)
         {
             _paymentService = paymentService;
             _qrCodeService = qrCodeService;
+            _orderServiceClient = orderServiceClient;
         }
 
         /// <summary>
@@ -96,7 +98,7 @@ namespace PaymentService.Api.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PaymentDto>> UpdatePaymentStatus(
-            Guid paymentId, [FromBody] UpdatePaymentStatusDto updateStatusDto)
+            Guid paymentId, [FromBody] Application.DTOs.UpdatePaymentStatusDto updateStatusDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -117,7 +119,7 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Xử lý callback/cập nhật từ cổng thanh toán
         /// </summary>
-        [HttpPost("{paymentId}/callback")]
+        [HttpPost("callbacks/{paymentId}")]
         [AllowAnonymous] // Cổng thanh toán không có JWT
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -134,7 +136,7 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Yêu cầu hoàn tiền
         /// </summary>
-        [HttpPost("{paymentId}/refund")]
+        [HttpPost("refunds/{paymentId}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -161,7 +163,7 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Lấy lịch sử thanh toán theo user
         /// </summary>
-        [HttpGet("/api/users/{userId}/payments")]
+        [HttpGet("users/{userId}/transactions")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<PaymentDto>>> GetPaymentsByUserId(Guid userId)
@@ -173,7 +175,7 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Lấy thanh toán của đơn hàng
         /// </summary>
-        [HttpGet("/api/orders/{orderId}/payments")]
+        [HttpGet("orders/{orderId}/payments")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<PaymentDto>>> GetPaymentsByOrderId(Guid orderId)
         {
@@ -222,14 +224,47 @@ namespace PaymentService.Api.Controllers
                 return BadRequest(ModelState);
 
             // Fix: Pass the required parameters to the GenerateQrCodeAsync method
+            var orderDetails = await _orderServiceClient.GetOrderByIdAsync(requestDto.OrderId);
+            if (orderDetails == null)
+                return NotFound($"Order with ID {requestDto.OrderId} not found");
+
+            var createPaymentDto = new CreatePaymentDto
+            {
+                OrderId = orderDetails.Id,
+                UserId = orderDetails.UserId,
+                Amount = orderDetails.TotalAmount,
+                PaymentMethod = PaymentMethod.BankTransfer,
+                CreatedBy = User.Identity?.Name ?? "System"
+            };
+
+            var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
+
+            // cập nhật trạng thái đơn hàng 
+            await _orderServiceClient.UpdateOrderPaymentStatusAsync(
+                orderDetails.Id, PaymentStatus.Pending);
+
             var qrCode = await _qrCodeService.GenerateQrCodeAsync(
-                requestDto.OrderId,
-                requestDto.Amount,
-                requestDto.UserId,
-                requestDto.paymentMethod
+                orderDetails.Id,
+                orderDetails.TotalAmount,
+                orderDetails.UserId,
+                PaymentMethod.BankTransfer 
             );
 
-            return Ok(qrCode);
+            // 4. Cập nhật QR code cho Payment nếu cần
+                var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
+                {
+                    NewStatus = PaymentStatus.Pending,
+                    QrCode = qrCode,
+                    UpdatedBy = User.Identity?.Name ?? "System"
+                };
+                await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
+
+            return Ok(new
+            {
+                qrCode = qrCode,
+                paymentId = payment.Id,
+                amount = orderDetails.TotalAmount
+            });
         }
     }
 }

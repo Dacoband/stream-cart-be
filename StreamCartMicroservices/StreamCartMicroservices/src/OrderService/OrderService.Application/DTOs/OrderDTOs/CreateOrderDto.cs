@@ -9,10 +9,12 @@ namespace OrderService.Application.DTOs.OrderDTOs
         public Guid AccountId { get; set; }
         public Guid ShopId { get; set; }
         public Guid ShippingProviderId { get; set; }
+        public string PaymentMethod { get; set; } = "COD"; 
         public ShippingAddressDto ShippingAddress { get; set; } = new ShippingAddressDto();
         public List<CreateOrderItemDto> Items { get; set; } = new List<CreateOrderItemDto>();
         public string CustomerNotes { get; set; } = string.Empty;
         public Guid? LivestreamId { get; set; }
         public Guid? CreatedFromCommentId { get; set; }
+        public decimal ShippingFee { get; set; }
     }
 }

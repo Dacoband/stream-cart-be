@@ -6,6 +6,7 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using PaymentService.Domain.Enums;
 
 namespace PaymentService.Infrastructure.Services
 {
@@ -27,15 +28,17 @@ namespace PaymentService.Infrastructure.Services
             }
         }
 
-        public async Task UpdateOrderPaymentStatusAsync(Guid orderId, string paymentStatus)
+        public async Task UpdateOrderPaymentStatusAsync(Guid orderId, PaymentStatus paymentStatus)
         {
             try
             {
-                var response = await _httpClient.PutAsJsonAsync($"api/orders/{orderId}/payment-status", new
+                // Create the DTO that matches what OrderController expects
+                var updatePaymentStatusDto = new UpdatePaymentStatusDto1
                 {
                     Status = paymentStatus
-                });
+                };
 
+                var response = await _httpClient.PutAsJsonAsync($"api/orders/{orderId}/payment-status", updatePaymentStatusDto);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
@@ -57,5 +60,11 @@ namespace PaymentService.Infrastructure.Services
                 return null;
             }
         }
+    }
+
+    // Add this DTO to match the OrderController's expected input
+    public class UpdatePaymentStatusDto1
+    {
+        public PaymentStatus Status { get; set; }
     }
 }

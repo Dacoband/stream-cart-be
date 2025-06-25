@@ -19,5 +19,7 @@ namespace OrderService.Application.Interfaces
         /// <param name="shopId">Shop ID</param>
         /// <returns>True if the shop is active, otherwise false</returns>
         Task<bool> IsShopActiveAsync(Guid shopId);
+        Task<bool> IsShopMemberAsync(Guid shopId, Guid accountId);
+
     }
 }

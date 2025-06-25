@@ -740,6 +740,138 @@
       "UpstreamPathTemplate": "/swagger/shop/{everything}",
       "UpstreamHttpMethod": [ "GET" ],
       "SwaggerKey": "shop"
+    },
+    //order
+    {
+      "DownstreamPathTemplate": "/api/orders/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "order-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/orders/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "order"
+    },
+    {
+      "DownstreamPathTemplate": "/api/order-items/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "order-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/order-items/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "order"
+    },
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "order-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/order/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "order"
+    },
+    //payment
+    {
+      "DownstreamPathTemplate": "/api/payments/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "payment-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/payments/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH" , "DELETE" ],
+      "SwaggerKey": "payment"
+    },
+    //{
+    //  "DownstreamPathTemplate": "/api/payments/generate-qr-code",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/payments/generate-qr-code",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "payment"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/payments/users/{userId}/transactions",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/payments/users/{userId}/transactions",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "payment"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/payments/orders/{orderId}/payments",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/payments/orders/{orderId}/payments",
+    //  "UpstreamHttpMethod": [ "GET" ],
+    //  "SwaggerKey": "payment"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/payments/callbacks/{paymentId}",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/payments/callbacks/{paymentId}",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "payment"
+    //},
+    //{
+    //  "DownstreamPathTemplate": "/api/payments/refunds/{paymentId}",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "/api/payments/refunds/{paymentId}",
+    //  "UpstreamHttpMethod": [ "POST" ],
+    //  "SwaggerKey": "payment"
+    //},
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "payment-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/payment/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "payment"
     }
   ],
   "SwaggerEndPoints": [
@@ -770,6 +902,26 @@
           "Name": "Shop API",
           "Version": "v1",
           "Url": "http://shop-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "order",
+      "Config": [
+        {
+          "Name": "Order API",
+          "Version": "v1",
+          "Url": "http://order-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "payment",
+      "Config": [
+        {
+          "Name": "Payment API",
+          "Version": "v1",
+          "Url": "http://payment-service/swagger/v1/swagger.json"
         }
       ]
     }

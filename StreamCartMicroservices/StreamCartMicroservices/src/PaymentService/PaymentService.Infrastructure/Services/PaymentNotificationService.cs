@@ -32,7 +32,7 @@ namespace PaymentService.Infrastructure.Services
                     payment.Id, payment.OrderId);
 
                 // Update order status
-                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, "Paid");
+                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, Domain.Enums.PaymentStatus.Paid);
 
                 // Could send an email to the user here
             }
@@ -50,7 +50,7 @@ namespace PaymentService.Infrastructure.Services
                     payment.Id, payment.OrderId, reason);
 
                 // Update order status
-                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, "PaymentFailed");
+                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, Domain.Enums.PaymentStatus.Failed);
 
                 // Could send an email to the user here
             }
@@ -68,7 +68,7 @@ namespace PaymentService.Infrastructure.Services
                     payment.Id, payment.OrderId);
 
                 // Update order status
-                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, "Refunded");
+                await _orderServiceClient.UpdateOrderPaymentStatusAsync(payment.OrderId, Domain.Enums.PaymentStatus.Refunded);
 
                 // Could send an email to the user here
             }

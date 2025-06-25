@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
@@ -20,17 +21,19 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IOrderItemRepository _orderItemRepository;
         private readonly IProductServiceClient _productServiceClient;
         private readonly ILogger<CreateOrderCommandHandler> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
 
         public CreateOrderCommandHandler(
             IOrderRepository orderRepository,
             IOrderItemRepository orderItemRepository,
             IProductServiceClient productServiceClient,
-            ILogger<CreateOrderCommandHandler> logger)
+            ILogger<CreateOrderCommandHandler> logger,IAccountServiceClient accountServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _orderItemRepository = orderItemRepository ?? throw new ArgumentNullException(nameof(orderItemRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _accountServiceClient = accountServiceClient ?? throw new ArgumentNullException(nameof(accountServiceClient));
         }
 
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -76,7 +79,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     "Shop PostalCode",         // fromPostalCode (placeholder)
                     "Shop Name",               // fromShop (placeholder)
                     "Shop Phone",              // fromPhone (placeholder)
-                    Guid.NewGuid(),            // shippingProviderId (placeholder)
+                   request.ShippingProviderId ?? Guid.Empty,            // shippingProviderId (placeholder)
                     request.Notes               // customerNotes
                 );
 

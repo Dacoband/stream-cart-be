@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application.Commands.AttributeCommands;
 using ProductService.Application.Commands.AttributeValueCommands;
@@ -26,12 +27,20 @@ namespace ProductService.Application.Extensions
 {
     public static class ApplicationExtensions
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
             // Đăng ký MediatR handlers
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            });
+            services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:ShopService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                {
+                    client.BaseAddress = new Uri(baseUrl);
+                }
             });
             // Inside AddApplicationServices method
             services.AddScoped<IRequestHandler<CreateProductVariantCommand, ProductVariantDto>, CreateProductVariantCommandHandler>();

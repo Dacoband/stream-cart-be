@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using PaymentService.Application.DTOs;
+using PaymentService.Domain.Enums;
 
 namespace PaymentService.Application.Interfaces
 {
@@ -15,7 +16,7 @@ namespace PaymentService.Application.Interfaces
         /// <param name="orderId">Order ID</param>
         /// <param name="paymentStatus">Status to update to</param>
         /// <returns>Task representing the async operation</returns>
-        Task UpdateOrderPaymentStatusAsync(Guid orderId, string paymentStatus);
+        Task UpdateOrderPaymentStatusAsync(Guid orderId, PaymentStatus paymentStatus);
 
         /// <summary>
         /// Gets order details
