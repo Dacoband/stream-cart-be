@@ -21,5 +21,6 @@ namespace OrderService.Application.Interfaces
         Task<bool> IsShopActiveAsync(Guid shopId);
         Task<bool> IsShopMemberAsync(Guid shopId, Guid accountId);
 
+
     }
 }
