@@ -26,7 +26,7 @@ builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
-builder.Services.AddCurrentUserService();
+//builder.Services.AddCurrentUserService();
 // Add services to the container.
 
 builder.Services.AddControllers();

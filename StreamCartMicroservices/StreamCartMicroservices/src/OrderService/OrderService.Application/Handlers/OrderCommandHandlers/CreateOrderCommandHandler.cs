@@ -59,11 +59,11 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 string addressLine1 = request.ShippingAddress.AddressLine1;
                 string addressLine2 = request.ShippingAddress.AddressLine2 ?? string.Empty;
                 string city = request.ShippingAddress.City;
-                //string state = request.ShippingAddress.State ?? string.Empty;
+                string state = request.ShippingAddress.State ?? string.Empty;
                 string postalCode = request.ShippingAddress.PostalCode ?? string.Empty;
                 string country = request.ShippingAddress.Country;
                 // Get shop details for sender information
-                var shopDetails = await _shopServiceClient.GetShopByIdAsync(request.ShopId ?? Guid.Empty);
+                var shopDetails = await _shopServiceClient.GetShopAddressAsync(request.ShopId ?? Guid.Empty);
                 if (shopDetails == null)
                 {
                     throw new ApplicationException($"Shop with ID {request.ShopId} not found");

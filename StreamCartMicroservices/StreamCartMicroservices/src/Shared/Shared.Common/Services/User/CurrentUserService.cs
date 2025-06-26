@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System;
+using System.Linq;
 using System.Security.Claims;
 
 namespace Shared.Common.Services.User
@@ -12,6 +13,7 @@ namespace Shared.Common.Services.User
         bool IsInRole(string role);
         bool IsAuthenticated();
         string GetUserEmail();
+        string GetShopId();
     }
 
     public class CurrentUserService : ICurrentUserService
@@ -25,7 +27,8 @@ namespace Shared.Common.Services.User
 
         public Guid GetUserId()
         {
-            var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)
+                               ?? _httpContextAccessor.HttpContext?.User.FindFirst("nameid");
 
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
             {
@@ -38,21 +41,24 @@ namespace Shared.Common.Services.User
         public string GetUsername()
         {
             return _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.Name)?.Value
-                ?? throw new UnauthorizedAccessException("Username not found in token");
+                   ?? _httpContextAccessor.HttpContext?.User.FindFirst("unique_name")?.Value
+                   ?? throw new UnauthorizedAccessException("Username not found in token");
         }
 
         public string[] GetRoles()
         {
-            return _httpContextAccessor.HttpContext?.User.Claims
-                .Where(c => c.Type == ClaimTypes.Role)
-                .Select(c => c.Value)
-                .ToArray()
-                ?? Array.Empty<string>();
+            // Nếu role là 1 hoặc nhiều, đều xử lý được
+            var roleClaims = _httpContextAccessor.HttpContext?.User.Claims
+                              .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
+                              .Select(c => c.Value)
+                              .ToArray();
+
+            return roleClaims ?? Array.Empty<string>();
         }
 
         public bool IsInRole(string role)
         {
-            return _httpContextAccessor.HttpContext?.User.IsInRole(role) ?? false;
+            return GetRoles().Contains(role, StringComparer.OrdinalIgnoreCase);
         }
 
         public bool IsAuthenticated()
@@ -63,7 +69,14 @@ namespace Shared.Common.Services.User
         public string GetUserEmail()
         {
             return _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.Email)?.Value
-                ?? throw new UnauthorizedAccessException("Email not found in token");
+                   ?? _httpContextAccessor.HttpContext?.User.FindFirst("email")?.Value
+                   ?? throw new UnauthorizedAccessException("Email not found in token");
+        }
+
+        public string GetShopId()
+        {
+            return _httpContextAccessor.HttpContext?.User.FindFirst("ShopId")?.Value
+                   ?? string.Empty;
         }
     }
 }

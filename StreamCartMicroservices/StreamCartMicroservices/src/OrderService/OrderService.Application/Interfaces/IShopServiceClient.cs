@@ -20,7 +20,12 @@ namespace OrderService.Application.Interfaces
         /// <returns>True if the shop is active, otherwise false</returns>
         Task<bool> IsShopActiveAsync(Guid shopId);
         Task<bool> IsShopMemberAsync(Guid shopId, Guid accountId);
-
+        /// <summary>
+        /// Gets shop address information for order creation
+        /// </summary>
+        /// <param name="shopId">Shop ID</param>
+        /// <returns>Shop address information</returns>
+        Task<AddressOfShop> GetShopAddressAsync(Guid shopId);
 
     }
 }

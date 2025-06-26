@@ -18,6 +18,7 @@ namespace OrderService.Application.DTOs.OrderDTOs
         public string Province { get; set; } = string.Empty;
         public string PostalCode { get; set; } = string.Empty;
         public string Country { get; set; } = "Vietnam";
+        public string State { get; set; } = string.Empty; 
         public bool IsDefault { get; set; }
     }
 }
