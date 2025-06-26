@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
@@ -20,17 +21,21 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IOrderItemRepository _orderItemRepository;
         private readonly IProductServiceClient _productServiceClient;
         private readonly ILogger<CreateOrderCommandHandler> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
+        private readonly IShopServiceClient _shopServiceClient;
 
         public CreateOrderCommandHandler(
             IOrderRepository orderRepository,
             IOrderItemRepository orderItemRepository,
             IProductServiceClient productServiceClient,
-            ILogger<CreateOrderCommandHandler> logger)
+            ILogger<CreateOrderCommandHandler> logger,IAccountServiceClient accountServiceClient, IShopServiceClient shopServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _orderItemRepository = orderItemRepository ?? throw new ArgumentNullException(nameof(orderItemRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _accountServiceClient = accountServiceClient ?? throw new ArgumentNullException(nameof(accountServiceClient));
+            _shopServiceClient = shopServiceClient;
         }
 
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -54,31 +59,38 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 string addressLine1 = request.ShippingAddress.AddressLine1;
                 string addressLine2 = request.ShippingAddress.AddressLine2 ?? string.Empty;
                 string city = request.ShippingAddress.City;
-                string state = request.ShippingAddress.State ?? string.Empty;
+                //string state = request.ShippingAddress.State ?? string.Empty;
                 string postalCode = request.ShippingAddress.PostalCode ?? string.Empty;
                 string country = request.ShippingAddress.Country;
-
+                // Get shop details for sender information
+                var shopDetails = await _shopServiceClient.GetShopByIdAsync(request.ShopId ?? Guid.Empty);
+                if (shopDetails == null)
+                {
+                    throw new ApplicationException($"Shop with ID {request.ShopId} not found");
+                }
                 var order = new Orders(
                     request.AccountId,
                     request.ShopId ?? Guid.Empty,
-                    fullName,                  // toName
-                    phone,                     // toPhone
-                    addressLine1,              // toAddress
-                    string.Empty,              // toWard (not in ShippingAddressDto)
-                    state,                     // toDistrict
-                    city,                      // toProvince
-                    postalCode,                // toPostalCode
-                    // Shipping From information (sender)
-                    "Shop Address",            // fromAddress (placeholder)
-                    "Shop Ward",               // fromWard (placeholder)
-                    "Shop District",           // fromDistrict (placeholder)
-                    "Shop Province",           // fromProvince (placeholder)
-                    "Shop PostalCode",         // fromPostalCode (placeholder)
-                    "Shop Name",               // fromShop (placeholder)
-                    "Shop Phone",              // fromPhone (placeholder)
-                    Guid.NewGuid(),            // shippingProviderId (placeholder)
-                    request.Notes               // customerNotes
-                );
+                    request.ShippingAddress.FullName,      // toName
+                    request.ShippingAddress.Phone,         // toPhone
+                    request.ShippingAddress.AddressLine1,  // toAddress
+                    request.ShippingAddress.Ward,          // toWard
+                    request.ShippingAddress.District,      // toDistrict
+                    request.ShippingAddress.City,          // toProvince (City actually maps to Province)
+                    request.ShippingAddress.PostalCode,    // toPostalCode
+
+                    // Shop information - this should come from the shop service
+                    shopDetails?.Address ?? "Shop Address",       // fromAddress
+                    shopDetails?.Ward ?? "Shop Ward",             // fromWard
+                    shopDetails?.District ?? "Shop District",     // fromDistrict
+                    shopDetails?.City ?? "Shop Province",         // fromProvince
+                    shopDetails?.PostalCode ?? "Shop PostalCode", // fromPostalCode
+                    shopDetails?.Name ?? "Shop Name",             // fromShop
+                    shopDetails?.PhoneNumber ?? "Shop Phone",     // fromPhone
+
+                    request.ShippingProviderId ?? Guid.Empty,     // shippingProviderId
+                    request.Notes                                 // customerNotes
+);
 
                 // Apply shipping fee and discount to calculate final amount
                 order.SetShippingFee(request.ShippingFee, request.AccountId.ToString());

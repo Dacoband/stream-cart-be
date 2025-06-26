@@ -90,6 +90,41 @@ namespace OrderService.Infrastructure.Clients
                 return false;
             }
         }
+        public async Task<bool> IsShopMemberAsync(Guid shopId, Guid accountId)
+        {
+            try
+            {
+                _logger.LogInformation("Checking if account {AccountId} is a member of shop {ShopId}", accountId, shopId);
+
+                // Call the Shop service API to check membership
+                var response = await _httpClient.GetAsync($"/api/shops/{shopId}/members/check/{accountId}");
+
+                // If the response is successful, the account is a member
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var json = JsonDocument.Parse(content);
+
+                    // Extract the membership status from the response
+                    return GetJsonPropertyValue(json.RootElement, "isMember", false);
+                }
+
+                // If we get a 404, the account is not a member
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return false;
+                }
+
+                // For any other error, log it and return false
+                _logger.LogWarning("Unexpected response checking shop membership. StatusCode: {StatusCode}", response.StatusCode);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if account {AccountId} is a member of shop {ShopId}", accountId, shopId);
+                return false;
+            }
+        }
 
         private T GetJsonPropertyValue<T>(JsonElement element, string propertyName, T defaultValue)
         {

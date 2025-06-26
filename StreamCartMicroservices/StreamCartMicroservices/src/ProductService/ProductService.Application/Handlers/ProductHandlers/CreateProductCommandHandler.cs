@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
 using System;
@@ -12,10 +13,12 @@ namespace ProductService.Application.Handlers
     public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, ProductDto>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IShopServiceClient _shopServiceClient;
 
-        public CreateProductCommandHandler(IProductRepository productRepository)
+        public CreateProductCommandHandler(IProductRepository productRepository, IShopServiceClient shopServiceClient)
         {
             _productRepository = productRepository;
+            _shopServiceClient = shopServiceClient;
         }
 
         public async Task<ProductDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
@@ -24,6 +27,14 @@ namespace ProductService.Application.Handlers
             if (!string.IsNullOrWhiteSpace(request.SKU) && !await _productRepository.IsSkuUniqueAsync(request.SKU))
             {
                 throw new ApplicationException($"SKU '{request.SKU}' already exists");
+            }
+            if (request.ShopId.HasValue)
+            {
+                bool shopExists = await _shopServiceClient.DoesShopExistAsync(request.ShopId.Value);
+                if (!shopExists)
+                {
+                    throw new ApplicationException($"Shop with ID {request.ShopId.Value} not found");
+                }
             }
 
             // Tạo đối tượng sản phẩm

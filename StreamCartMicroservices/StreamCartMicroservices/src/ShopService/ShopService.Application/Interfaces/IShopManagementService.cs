@@ -231,5 +231,13 @@ namespace ShopService.Application.Interfaces
         Task<ShopDto> RejectShopAsync(Guid shopId, string reason, Guid rejectedByAccountId);
 
         #endregion
+        /// <summary>
+        /// Cập nhật số lượng sản phẩm trong shop
+        /// </summary>
+        /// <param name="shopId">ID của shop</param>
+        /// <param name="totalProduct">Số lượng sản phẩm mới</param>
+        /// <param name="updatedByAccountId">ID của người cập nhật</param>
+        /// <returns>Shop đã cập nhật</returns>
+        Task<ShopDto> UpdateProductCountAsync(Guid shopId, int totalProduct, Guid updatedByAccountId);
     }
 }
