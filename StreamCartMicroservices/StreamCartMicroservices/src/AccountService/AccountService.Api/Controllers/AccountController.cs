@@ -268,5 +268,34 @@ namespace AccountService.Api.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult($"Error retrieving moderators: {ex.Message}"));
             }
         }
+
+        [HttpPut("{id}/shop")]
+        [AllowAnonymous] 
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> UpdateAccountShopInfo(Guid id, [FromBody] UpdateShopInfoDto dto)
+        {
+            try
+            {
+                var command = new UpdateAccountCommand
+                {
+                    Id = id,
+                    ShopId = dto.ShopId,
+                    UpdatedBy = "ShopService" 
+                };
+
+                var updatedAccount = await _accountService.UpdateAccountAsync(command);
+                return Ok(ApiResponse<AccountDto>.SuccessResult(updatedAccount, "Account ShopId updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error updating ShopId: {ex.Message}"));
+            }
+        }
+
+        public class UpdateShopInfoDto
+        {
+            public Guid ShopId { get; set; }
+        }
     }
 }
