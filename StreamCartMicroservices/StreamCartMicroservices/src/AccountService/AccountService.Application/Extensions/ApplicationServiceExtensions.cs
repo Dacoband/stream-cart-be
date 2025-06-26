@@ -28,7 +28,7 @@ namespace AccountService.Application.Extensions
             services.AddScoped<IAccountManagementService, AccountManagementService>();
             services.AddScoped<IAddressManagementService, AddressManagementService>();
             services.AddScoped<IAuthService, AuthService>();
-
+            services.AddHttpClient<IShopServiceClient, ShopServiceClient>();
             return services;
         }
     }
