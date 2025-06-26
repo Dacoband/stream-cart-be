@@ -6,7 +6,7 @@ namespace OrderService.Application.DTOs.OrderDTOs
 {
     public class CreateOrderDto
     {
-        public Guid AccountId { get; set; }
+        //public Guid AccountId { get; set; }
         public Guid ShopId { get; set; }
         public Guid ShippingProviderId { get; set; }
         public string PaymentMethod { get; set; } = "COD"; 

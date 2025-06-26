@@ -10,6 +10,7 @@ using OrderService.Application.Queries.OrderQueries;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,30 +25,34 @@ namespace OrderService.Infrastructure.Services
         private readonly ILogger<OrderManagementService> _logger;
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
+        private readonly ICurrentUserService _currentUserService;
 
         public OrderManagementService(
             IMediator mediator,
             IOrderRepository orderRepository,
             ILogger<OrderManagementService> logger,
             IAccountServiceClient accountServiceClient,
-            IShopServiceClient shopServiceClient)
+            IShopServiceClient shopServiceClient,
+            ICurrentUserService currentUserService)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _accountServiceClient = accountServiceClient;
             _shopServiceClient = shopServiceClient;
+            _currentUserService = currentUserService;
         }
 
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto)
         {
             try
             {
-                _logger.LogInformation("Creating order for account {AccountId}", createOrderDto.AccountId);
+                var accountId = _currentUserService.GetUserId();
+                _logger.LogInformation("Creating order for account {AccountId}", accountId);
                 // Validate account exists
-                var account = await _accountServiceClient.GetAccountByIdAsync(createOrderDto.AccountId);
+                var account = await _accountServiceClient.GetAccountByIdAsync(accountId);
                 if (account == null)
-                    throw new ApplicationException($"Account with ID {createOrderDto.AccountId} not found");
+                    throw new ApplicationException($"Account with ID {accountId} not found");
 
                 // Validate shop exists 
                 var shop = await _shopServiceClient.GetShopByIdAsync(createOrderDto.ShopId);
@@ -56,14 +61,14 @@ namespace OrderService.Infrastructure.Services
 
                 // Validate relationship (optional, depending on business rules)
                 var isShopMember = await _shopServiceClient.IsShopMemberAsync(
-                    createOrderDto.ShopId, createOrderDto.AccountId);
+                    createOrderDto.ShopId, accountId);
                 if (!isShopMember)
                     throw new ApplicationException("Account is not authorized to create orders for this shop");
                 var shippingAddress = createOrderDto.ShippingAddress;
 
                 var command = new CreateOrderCommand
                 {
-                    AccountId = createOrderDto.AccountId,
+                    AccountId = accountId,
                     ShopId = createOrderDto.ShopId,
                     CustomerName = shippingAddress.FullName ?? string.Empty, 
                     CustomerEmail = account?.Email ?? string.Empty, 
@@ -325,12 +330,13 @@ namespace OrderService.Infrastructure.Services
         {
             try
             {
+                var accountId = _currentUserService.GetUserId();
                 if (createOrderDto == null)
                 {
                     return (false, "Order data cannot be null");
                 }
 
-                if (createOrderDto.AccountId == Guid.Empty)
+                if ( accountId == Guid.Empty)
                 {
                     return (false, "Account ID is required");
                 }
