@@ -1,4 +1,6 @@
 ﻿using DeliveryService.Application.DTOs.AddressDTOs;
+using DeliveryService.Application.DTOs.DeliveryOrder;
+using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +11,9 @@ namespace DeliveryService.Application.Interfaces
 {
     public interface IDeliveryAddressInterface
     {
-        Task<int?> FindProvinceIdByNameAsync(string provinceName);
-        Task<int?> FindDistrictIdByNameAsync(string districtName, int provinceId);
-        Task<string?> FindWardCodeByNameAsync(string wardName, int districtId);
-        public Task<List<GHNProvinceDTO>> GetProvincesAsync();
-        public Task<List<GHNDistrictDTO>> GetDistrictsAsync(int provinceId  );
-        Task<List<GHNWardDTO>> GetWardsAsync(int districtId);
+        public Task<ApiResponse<CreateOrderResult>> CreateOrderAsync(UserCreateOrderRequest input);
+        public Task<ApiResponse<PreviewOrderResponse>> PreviewOrder(UserPreviewOrderRequestDTO input);
+        public Task<ApiResponse<OrderLogResponse>> GetDeliveryStatus(string deliveryId);
 
     }
 }

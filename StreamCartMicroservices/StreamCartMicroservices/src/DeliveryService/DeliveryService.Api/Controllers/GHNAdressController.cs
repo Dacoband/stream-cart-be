@@ -1,6 +1,9 @@
-﻿using DeliveryService.Application.Interfaces;
+﻿using DeliveryService.Application.DTOs.AddressDTOs;
+using DeliveryService.Application.DTOs.DeliveryOrder;
+using DeliveryService.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Common.Models;
 
 namespace DeliveryService.Api.Controllers
 {
@@ -13,19 +16,36 @@ namespace DeliveryService.Api.Controllers
         {
             _addressService = addressService;
         }
-        [HttpGet("/wards")]
-        public async Task<IActionResult> GetWards()
+        [HttpPost("create-ghn-order")]
+        public async Task<IActionResult> CreateOrder(
+     [FromBody] UserCreateOrderRequest input)
         {
-            var provinces = await _addressService.GetProvincesAsync();
-            var hcm = provinces.FirstOrDefault(p => p.ProvinceName.Contains("Hồ Chí Minh"));
-            if (hcm == null) return NotFound("Không tìm thấy TP.HCM");
+            var result = await _addressService.CreateOrderAsync(input);
+            if(result.Success) { return Ok(result); }
+            else return BadRequest(result);
+        }
+        [HttpPost("preview-order")]
+        public async Task<IActionResult> PreviewOrder([FromBody] UserPreviewOrderRequestDTO input)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = null
+                });
 
-            var districts = await _addressService.GetDistrictsAsync(hcm.ProvinceID);
-            var q1 = districts.FirstOrDefault(d => d.DistrictName.Contains("Quận 1"));
-            if (q1 == null) return NotFound("Không tìm thấy Quận 1");
+            var result = await _addressService.PreviewOrder(input);
+            return Ok(result);
+        }
+        [HttpGet("order-log/{orderCode}")]
+        public async Task<IActionResult> GetOrderLog(string orderCode)
+        {
+            var result = await _addressService.GetDeliveryStatus(orderCode);
+            if (!result.Success)
+                return BadRequest(result);
 
-            var wards = await _addressService.GetWardsAsync(q1.DistrictID);
-            return Ok(wards);
+            return Ok(result);
         }
     }
 }
