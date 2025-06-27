@@ -33,7 +33,9 @@ namespace PaymentService.Infrastructure.Extensions
                 {
                     client.BaseAddress = new Uri(baseUrl);
                 }
+
             });
+
             services.AddHttpClient<IAccountServiceClient, AccountServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:AccountService"];

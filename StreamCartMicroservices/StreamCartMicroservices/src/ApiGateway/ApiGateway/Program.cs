@@ -33,7 +33,9 @@ builder.Configuration
 
 
 builder.Services.AddConfiguredCors(builder.Configuration);
-
+builder.Services.AddCurrentUserService();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {

@@ -41,7 +41,7 @@ namespace PaymentService.Infrastructure.Messaging.Consumers
                 await _paymentService.CreatePaymentAsync(new CreatePaymentDto
                 {
                     OrderId = message.OrderId,
-                    UserId = message.UserId,
+                    //UserId = message.UserId,
                     Amount = message.TotalAmount,
                     //CreatedAt = message.CreatedAt
                 });

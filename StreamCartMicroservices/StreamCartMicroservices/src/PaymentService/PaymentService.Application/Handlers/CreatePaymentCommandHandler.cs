@@ -8,6 +8,7 @@ using PaymentService.Application.DTOs;
 using PaymentService.Application.Events;
 using PaymentService.Application.Interfaces;
 using PaymentService.Domain.Entities;
+using Shared.Common.Services.User;
 
 namespace PaymentService.Application.Handlers
 {
@@ -17,23 +18,27 @@ namespace PaymentService.Application.Handlers
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IMessagePublisher _messagePublisher;
         private readonly ILogger<CreatePaymentCommandHandler> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
         public CreatePaymentCommandHandler(
             IPaymentRepository paymentRepository,
             IMessagePublisher messagePublisher,
             IAccountServiceClient accountServiceClient,
-            ILogger<CreatePaymentCommandHandler> logger)
+            ILogger<CreatePaymentCommandHandler> logger,
+            ICurrentUserService currentUserService)
         {
             _paymentRepository = paymentRepository;
             _messagePublisher = messagePublisher;
             _accountServiceClient = accountServiceClient;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         public async Task<PaymentDto> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
         {
             try
             {
+                //Guid userId = _currentUserService.GetUserId();
                 bool userExists = await _accountServiceClient.DoesUserExistAsync(request.UserId);
                 if (!userExists)
                 {
@@ -58,16 +63,38 @@ namespace PaymentService.Application.Handlers
                 // Save to database
                 await _paymentRepository.InsertAsync(payment);
 
-                // Publish payment created event
-                await _messagePublisher.PublishAsync(new PaymentCreated
+                // Bổ sung try-catch với timeout cho phần publish message
+                try
                 {
-                    PaymentId = payment.Id,
-                    OrderId = payment.OrderId,
-                    UserId = payment.UserId,
-                    Amount = payment.Amount,
-                    PaymentMethod = payment.PaymentMethod.ToString(),
-                    CreatedAt = payment.CreatedAt
-                }, cancellationToken);
+                    var publishTask = _messagePublisher.PublishAsync(new PaymentCreated
+                    {
+                        PaymentId = payment.Id,
+                        OrderId = payment.OrderId,
+                        UserId = payment.UserId,
+                        Amount = payment.Amount,
+                        PaymentMethod = payment.PaymentMethod.ToString(),
+                        CreatedAt = payment.CreatedAt
+                    }, cancellationToken);
+
+                    // Đặt timeout để tránh treo ứng dụng
+                    var timeoutTask = Task.Delay(5000); // 5 giây timeout
+
+                    if (await Task.WhenAny(publishTask, timeoutTask) == timeoutTask)
+                    {
+                        _logger.LogWarning("Publish payment event timeout. Payment ID: {PaymentId}", payment.Id);
+                        // Vẫn tiếp tục thực thi mà không chờ publish
+                    }
+                    else
+                    {
+                        // Hoàn thành task publish
+                        await publishTask;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Lỗi khi publish thông báo payment created. PaymentId: {PaymentId}", payment.Id);
+                    // Vẫn tiếp tục thực thi mà không throw exception
+                }
 
                 _logger.LogInformation("Created new payment {PaymentId} for order {OrderId}", payment.Id, payment.OrderId);
 

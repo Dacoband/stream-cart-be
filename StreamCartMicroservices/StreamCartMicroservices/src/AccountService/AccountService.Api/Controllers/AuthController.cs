@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Models;
 using System.Security.Claims;
 using MediatR;
+using Shared.Common.Services.User;
 
 namespace AccountService.Api.Controllers
 {
@@ -16,15 +17,17 @@ namespace AccountService.Api.Controllers
         private readonly IAuthService _authService;
         private readonly IAccountManagementService _accountService;
         private readonly IMediator _mediator;
+        private readonly ICurrentUserService _currentUserService;
 
         public AuthController(
             IAuthService authService,
             IAccountManagementService accountService,
-            IMediator mediator) 
+            IMediator mediator,ICurrentUserService currentUserService) 
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
         }
 
         [HttpPost("login")]
@@ -177,11 +180,11 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var accountId))
+                Guid userIdClaim = _currentUserService.GetUserId();
+                if (userIdClaim == Guid.Empty)
                     return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
 
-                var account = await _authService.GetCurrentUserAsync(accountId);
+                var account = await _authService.GetCurrentUserAsync(userIdClaim);
 
                 if (account == null)
                     return NotFound(ApiResponse<object>.ErrorResult("Current user not found"));

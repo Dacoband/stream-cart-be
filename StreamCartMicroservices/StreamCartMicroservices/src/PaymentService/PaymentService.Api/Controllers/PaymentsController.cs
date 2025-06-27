@@ -16,6 +16,7 @@ namespace PaymentService.Api.Controllers
 {
     [ApiController]
     [Route("api/payments")]
+    [Authorize]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
@@ -215,7 +216,6 @@ namespace PaymentService.Api.Controllers
             return Ok(summary);
         }
         [HttpPost("generate-qr-code")]
-        //[Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<string>> GenerateQrCode([FromBody] QrCodeRequestDto requestDto)
@@ -231,7 +231,7 @@ namespace PaymentService.Api.Controllers
             var createPaymentDto = new CreatePaymentDto
             {
                 OrderId = orderDetails.Id,
-                UserId = orderDetails.UserId,
+                //UserId = orderDetails.UserId,
                 Amount = orderDetails.TotalAmount,
                 PaymentMethod = PaymentMethod.BankTransfer,
                 CreatedBy = User.Identity?.Name ?? "System"
@@ -242,6 +242,7 @@ namespace PaymentService.Api.Controllers
             // cập nhật trạng thái đơn hàng 
             await _orderServiceClient.UpdateOrderPaymentStatusAsync(
                 orderDetails.Id, PaymentStatus.Pending);
+
 
             var qrCode = await _qrCodeService.GenerateQrCodeAsync(
                 orderDetails.Id,

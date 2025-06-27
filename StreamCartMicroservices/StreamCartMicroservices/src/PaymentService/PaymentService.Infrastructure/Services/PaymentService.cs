@@ -10,6 +10,7 @@ using PaymentService.Application.Queries;
 using PaymentService.Domain.Enums;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Services.User;
 
 namespace PaymentService.Infrastructure.Services
 {
@@ -17,21 +18,24 @@ namespace PaymentService.Infrastructure.Services
     {
         private readonly IMediator _mediator;
         private readonly ILogger<PaymentService> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
-        public PaymentService(IMediator mediator, ILogger<PaymentService> logger)
+        public PaymentService(IMediator mediator, ILogger<PaymentService> logger, ICurrentUserService currentUserService)
         {
             _mediator = mediator;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         public async Task<PaymentDto> CreatePaymentAsync(CreatePaymentDto createPaymentDto)
         {
             try
             {
+                Guid userId = _currentUserService.GetUserId();
                 var command = new CreatePaymentCommand
                 {
                     OrderId = createPaymentDto.OrderId,
-                    UserId = createPaymentDto.UserId,
+                    UserId = userId,
                     Amount = createPaymentDto.Amount,
                     PaymentMethod = createPaymentDto.PaymentMethod,
                     CreatedBy = createPaymentDto.CreatedBy

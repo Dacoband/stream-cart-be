@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PaymentService.Domain.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace PaymentService.Application.DTOs
@@ -13,6 +14,6 @@ namespace PaymentService.Application.DTOs
         public Guid UserId { get; set; }
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = string.Empty;
-        public string PaymentStatus { get; set; } = string.Empty;
+        public PaymentStatus PaymentStatus { get; set; } // Removed the invalid semicolon
     }
 }
