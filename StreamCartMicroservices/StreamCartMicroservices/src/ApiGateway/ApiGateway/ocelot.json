@@ -572,33 +572,33 @@
       //  "UpstreamHttpMethod": [ "PUT", "DELETE" ],
       //  "SwaggerKey": "product"
       //},
-      //{
-      //  "DownstreamPathTemplate": "/api/product-combinations/products/{productId}",
-      //  "DownstreamScheme": "http",
-      //  "DownstreamHostAndPorts": [
-      //    {
-      //      "Host": "product-service",
-      //      "Port": 80
-      //    }
-      //  ],
-      //  "UpstreamPathTemplate": "/api/product-combinations/products/{productId}",
-      //  "UpstreamHttpMethod": [ "GET" ],
-      //  "SwaggerKey": "product"
-      //},
-      //{
-      //  "DownstreamPathTemplate": "/api/product-combinations/products/{productId}/generate-combinations",
-      //  "DownstreamScheme": "http",
-      //  "DownstreamHostAndPorts": [
-      //    {
-      //      "Host": "product-service",
-      //      "Port": 80
-      //    }
-      //  ],
-      //  "UpstreamPathTemplate": "/api/product-combinations/products/{productId}/generate-combinations",
-      //  "UpstreamHttpMethod": [ "POST" ],
-      //  "SwaggerKey": "product"
+      {
+        "DownstreamPathTemplate": "/api/category/{everything}",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "product-service",
+            "Port": 80
+          }
+        ],
+        "UpstreamPathTemplate": "/api/category/{everything}",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+        "SwaggerKey": "product"
+      },
+      {
+        "DownstreamPathTemplate": "/api/flashsale/{everything}",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "product-service",
+            "Port": 80
+          }
+        ],
+        "UpstreamPathTemplate": "/api/flashsale/{everything}",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+        "SwaggerKey": "product"
 
-      //},
+      },
       {
         "DownstreamPathTemplate": "/api/product-images/{everything}",
         "DownstreamScheme": "http",
@@ -612,32 +612,32 @@
         "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
         "SwaggerKey": "product"
       },
-      //{
-      //  "DownstreamPathTemplate": "/api/product-images/{id}",
-      //  "DownstreamScheme": "http",
-      //  "DownstreamHostAndPorts": [
-      //    {
-      //      "Host": "product-service",
-      //      "Port": 80
-      //    }
-      //  ],
-      //  "UpstreamPathTemplate": "/api/product-images/{id}",
-      //  "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ],
-      //  "SwaggerKey": "product"
-      //},
-      //{
-      //  "DownstreamPathTemplate": "/api/product-images/products/{productId}",
-      //  "DownstreamScheme": "http",
-      //  "DownstreamHostAndPorts": [
-      //    {
-      //      "Host": "product-service",
-      //      "Port": 80
-      //    }
-      //  ],
-      //  "UpstreamPathTemplate": "/api/product-images/products/{productId}",
-      //  "UpstreamHttpMethod": [ "GET" ],
-      //  "SwaggerKey": "product"
-      //},
+      {
+        "DownstreamPathTemplate": "/api/cart/{everything}",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "cart-service",
+            "Port": 80
+          }
+        ],
+        "UpstreamPathTemplate": "/api/cart/{everything}",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+        "SwaggerKey": "cart"
+      },
+      {
+        "DownstreamPathTemplate": "/api/delivery/{everything}",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+          {
+            "Host": "delivery-service",
+            "Port": 80
+          }
+        ],
+        "UpstreamPathTemplate": "/api/delivery/{everything}",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+        "SwaggerKey": "delivery"
+      },
       //{
       //  "DownstreamPathTemplate": "/api/product-images/variants/{variantId}",
       //  "DownstreamScheme": "http",
@@ -770,6 +770,26 @@
             "Name": "Shop API",
             "Version": "v1",
             "Url": "http://shop-service/swagger/v1/swagger.json"
+          }
+        ]
+      },
+      {
+        "Key": "cart",
+        "Config": [
+          {
+            "Name": "Cart API",
+            "Version": "v1",
+            "Url": "http://cart-service/swagger/v1/swagger.json"
+          }
+        ]
+      },
+      {
+        "Key": "delivery",
+        "Config": [
+          {
+            "Name": "Delivery API",
+            "Version": "v1",
+            "Url": "http://delivery-service/swagger/v1/swagger.json"
           }
         ]
       }

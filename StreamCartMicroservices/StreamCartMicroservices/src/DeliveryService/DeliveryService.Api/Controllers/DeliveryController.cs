@@ -9,10 +9,10 @@ namespace DeliveryService.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class GHNAdressController : ControllerBase
+    public class DeliveryController : ControllerBase
     {
         private readonly IDeliveryAddressInterface _addressService;
-        public GHNAdressController(IDeliveryAddressInterface addressService)
+        public DeliveryController(IDeliveryAddressInterface addressService)
         {
             _addressService = addressService;
         }
