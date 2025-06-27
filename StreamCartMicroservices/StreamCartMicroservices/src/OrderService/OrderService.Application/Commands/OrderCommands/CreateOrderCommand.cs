@@ -21,5 +21,8 @@ namespace OrderService.Application.Commands.OrderCommands
         public decimal DiscountAmount { get; set; }
         public string Notes { get; set; } = string.Empty;
         public List<CreateOrderItemDto> OrderItems { get; set; } = new List<CreateOrderItemDto>();
+        public Guid? ShippingProviderId { get; set; }
+        public Guid? LivestreamId { get; set; }
+        public Guid? CreatedFromCommentId { get; set; }
     }
 }

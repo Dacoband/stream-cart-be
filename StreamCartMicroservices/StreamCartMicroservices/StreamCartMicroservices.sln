@@ -20,7 +20,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
-		src\DeliveryService\DeliveryService.Api\DeliveryService.Api.csproj = src\DeliveryService\DeliveryService.Api\DeliveryService.Api.csproj
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
@@ -55,6 +54,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Domain", "src\OrderService\OrderService.Domain\OrderService.Domain.csproj", "{DB5AB8B7-B423-D01D-E153-7B243C58A8FF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Infrastructure", "src\OrderService\OrderService.Infrastructure\OrderService.Infrastructure.csproj", "{8839DEC1-4F84-90AE-99E5-8BF253AC8297}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryService.Api", "src\DeliveryService\DeliveryService.Api\DeliveryService.Api.csproj", "{6B33AF64-6707-4775-84FF-6ADD36758A26}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryService.Application", "src\DeliveryService\DeliveryService.Application\DeliveryService.Application.csproj", "{08BE0387-893F-4CF3-A6BC-04103C78C24F}"
@@ -62,6 +62,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryService.Domain", "src\DeliveryService\DeliveryService.Domain\DeliveryService.Domain.csproj", "{6B6F2700-19DE-441C-9E69-B2A35D630B58}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryService.Infrastucture", "src\DeliveryService\DeliveryService.Infrastucture\DeliveryService.Infrastucture.csproj", "{15D518A9-4116-49EF-9621-09A1BCBF68D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Api", "src\PaymentService\PaymentService.Api\PaymentService.Api.csproj", "{B42FDAEA-A248-1780-D9CC-AAEFA64F85C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Application", "src\PaymentService\PaymentService.Application\PaymentService.Application.csproj", "{9CF0FF07-6DFF-102D-5A7D-F1CB525BDB84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Domain", "src\PaymentService\PaymentService.Domain\PaymentService.Domain.csproj", "{0BB2BA00-48D7-26A5-BA54-8F5C79D11E12}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Infrastructure", "src\PaymentService\PaymentService.Infrastructure\PaymentService.Infrastructure.csproj", "{B0D1C373-B366-827B-C738-157E0388B543}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -177,6 +185,22 @@ Global
 		{15D518A9-4116-49EF-9621-09A1BCBF68D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{15D518A9-4116-49EF-9621-09A1BCBF68D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{15D518A9-4116-49EF-9621-09A1BCBF68D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B42FDAEA-A248-1780-D9CC-AAEFA64F85C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B42FDAEA-A248-1780-D9CC-AAEFA64F85C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B42FDAEA-A248-1780-D9CC-AAEFA64F85C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B42FDAEA-A248-1780-D9CC-AAEFA64F85C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CF0FF07-6DFF-102D-5A7D-F1CB525BDB84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CF0FF07-6DFF-102D-5A7D-F1CB525BDB84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CF0FF07-6DFF-102D-5A7D-F1CB525BDB84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CF0FF07-6DFF-102D-5A7D-F1CB525BDB84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0BB2BA00-48D7-26A5-BA54-8F5C79D11E12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0BB2BA00-48D7-26A5-BA54-8F5C79D11E12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0BB2BA00-48D7-26A5-BA54-8F5C79D11E12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0BB2BA00-48D7-26A5-BA54-8F5C79D11E12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0D1C373-B366-827B-C738-157E0388B543}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0D1C373-B366-827B-C738-157E0388B543}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0D1C373-B366-827B-C738-157E0388B543}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0D1C373-B366-827B-C738-157E0388B543}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -21,7 +21,6 @@ namespace ProductService.Infrastructure.Extensions
                         npgsqlOptions.MigrationsAssembly(typeof(ProductContext).Assembly.FullName);
                     });
             });
-
             // Register generic repositories
             services.AddGenericRepositories<ProductContext>();
 

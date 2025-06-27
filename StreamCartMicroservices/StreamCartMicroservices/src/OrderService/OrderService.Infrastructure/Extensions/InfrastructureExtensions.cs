@@ -9,6 +9,7 @@ using OrderService.Infrastructure.Data;
 using OrderService.Infrastructure.Messaging.Consumers;
 using OrderService.Infrastructure.Messaging.Publishers;
 using OrderService.Infrastructure.Repositories;
+using OrderService.Infrastructure.Services;
 using Shared.Messaging.Extensions;
 using System;
 using System.Collections.Generic;
@@ -33,6 +34,7 @@ namespace OrderService.Infrastructure.Extensions
 
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+            services.AddScoped<IOrderService, OrderManagementService >();
 
             services.AddScoped<IMessagePublisher, MessagePublisher>();
 

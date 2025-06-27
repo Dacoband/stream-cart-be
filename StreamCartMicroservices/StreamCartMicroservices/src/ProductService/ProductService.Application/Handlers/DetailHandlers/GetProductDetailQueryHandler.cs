@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using ProductService.Application.DTOs.Products;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Infrastructure.Interfaces;
 using System;
@@ -18,6 +19,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
         private readonly IProductAttributeRepository _attributeRepository;
         private readonly IAttributeValueRepository _attributeValueRepository;
         private readonly IProductCombinationRepository _combinationRepository;
+        private readonly IShopServiceClient _shopServiceClient;
 
         public GetProductDetailQueryHandler(
             IProductRepository productRepository,
@@ -25,7 +27,8 @@ namespace ProductService.Application.Handlers.DetailHandlers
             IProductImageRepository imageRepository,
             IProductAttributeRepository attributeRepository,
             IAttributeValueRepository attributeValueRepository,
-            IProductCombinationRepository combinationRepository)
+            IProductCombinationRepository combinationRepository,
+            IShopServiceClient shopServiceClient)
         {
             _productRepository = productRepository;
             _variantRepository = variantRepository;
@@ -33,6 +36,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
             _attributeRepository = attributeRepository;
             _attributeValueRepository = attributeValueRepository;
             _combinationRepository = combinationRepository;
+            _shopServiceClient = shopServiceClient;
         }
 
         public async Task<ProductDetailDto?> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
@@ -137,7 +141,19 @@ namespace ProductService.Application.Handlers.DetailHandlers
             }
 
             // Get shop info (placeholder - in production you'd call a shop service)
-            var shopInfo = GetShopInfoPlaceholder(product.ShopId);
+            var shopInfo = product.ShopId.HasValue ?
+                await _shopServiceClient.GetShopByIdAsyncDetail(product.ShopId.Value) :
+                new  ShopDetailDto
+                {
+                    Id = Guid.Empty,
+                    ShopName = "Unknown Shop",
+                    RegistrationDate = DateTime.UtcNow,
+                    CompleteRate = 0,
+                    TotalReview = 0,
+                    RatingAverage = 0,
+                    LogoURL = string.Empty,
+                    TotalProduct = 0
+                };
 
             // Build final response
             return new ProductDetailDto
@@ -152,13 +168,13 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 PrimaryImage = primaryImages,
 
                 ShopId = product.ShopId ?? Guid.Empty,
-                ShopName = shopInfo.Name,
-                ShopStartTime = shopInfo.StartTime,
+                ShopName = shopInfo.ShopName,
+                ShopStartTime = shopInfo.ApprovalDate ?? shopInfo.RegistrationDate,
                 ShopCompleteRate = shopInfo.CompleteRate,
                 ShopTotalReview = shopInfo.TotalReview,
                 ShopRatingAverage = shopInfo.RatingAverage,
-                ShopLogo = shopInfo.LogoUrl,
-                ShopTotalProduct = shopInfo.TotalProducts,
+                ShopLogo = shopInfo.LogoURL,
+                ShopTotalProduct = shopInfo.TotalProduct,
 
                 Attributes = attributeDtos,
                 Variants = variantDtos

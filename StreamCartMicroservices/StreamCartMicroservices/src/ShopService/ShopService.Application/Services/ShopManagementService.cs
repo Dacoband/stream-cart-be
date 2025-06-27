@@ -637,6 +637,43 @@ namespace ShopService.Application.Services
                 return null;
             }
         }
+        public async Task<ShopDto> UpdateProductCountAsync(Guid shopId, int totalProduct, Guid updatedByAccountId)
+        {
+            try
+            {
+                // Kiểm tra shop tồn tại
+                var shop = await _shopRepository.GetByIdAsync(shopId.ToString());
+                if (shop == null)
+                {
+                    _logger.LogWarning("Không thể cập nhật số lượng sản phẩm: Shop {ShopId} không tồn tại", shopId);
+                    return null;
+                }
+
+                // Kiểm tra người thực hiện có quyền cập nhật
+                if (!await HasShopPermissionAsync(shopId, updatedByAccountId, "Owner"))
+                {
+                    _logger.LogWarning("Tài khoản {AccountId} không có quyền cập nhật số lượng sản phẩm của shop {ShopId}", updatedByAccountId, shopId);
+                    return null;
+                }
+
+                // Cập nhật số lượng sản phẩm
+                shop.UpdateProductCount(totalProduct, updatedByAccountId.ToString());
+
+                // Lưu thay đổi
+                await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
+
+                // Chuyển đổi sang DTO
+                var shopDto = MapShopToDto(shop);
+
+                _logger.LogInformation("Đã cập nhật số lượng sản phẩm của shop {ShopId} thành {TotalProduct}", shopId, totalProduct);
+                return shopDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật số lượng sản phẩm của shop {ShopId}", shopId);
+                return null;
+            }
+        }
 
         #endregion
 

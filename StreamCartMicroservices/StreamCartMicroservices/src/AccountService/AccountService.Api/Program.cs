@@ -55,8 +55,9 @@ builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddEmailServices(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
-
-
+builder.Services.AddCurrentUserService();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -110,6 +111,8 @@ if (!builder.Environment.IsEnvironment("Docker"))
 
 app.UseHttpsRedirection();
 app.UseConfiguredCors();
+app.UseRouting();
+app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

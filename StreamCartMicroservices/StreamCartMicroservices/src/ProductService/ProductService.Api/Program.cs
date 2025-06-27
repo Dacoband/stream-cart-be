@@ -46,7 +46,15 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 ReplaceConfigurationPlaceholders(builder.Configuration);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("*")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(CreateProductCommand).Assembly);
@@ -68,7 +76,7 @@ builder.Services.AddMediatR(config =>
 //});
 // Add services to the container
 builder.Services.AddInfrastructureServices(builder.Configuration);
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
 
 // Thêm các dịch vụ chung từ Shared
@@ -76,6 +84,9 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
+builder.Services.AddCurrentUserService();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization();
 //Add cronjob
 builder.Services.AddQuartz(q =>
 {
@@ -155,7 +166,11 @@ if (!app.Environment.IsEnvironment("Docker"))
     app.UseHttpsRedirection();
 }
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors("AllowSpecificOrigin");
+app.UseHttpsRedirection();
 app.UseConfiguredCors();
+app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

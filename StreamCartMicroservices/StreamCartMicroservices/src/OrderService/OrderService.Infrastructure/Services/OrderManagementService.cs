@@ -3,12 +3,14 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Application.Queries.OrderQueries;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,37 +23,66 @@ namespace OrderService.Infrastructure.Services
         private readonly IMediator _mediator;
         private readonly IOrderRepository _orderRepository;
         private readonly ILogger<OrderManagementService> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
+        private readonly IShopServiceClient _shopServiceClient;
+        private readonly ICurrentUserService _currentUserService;
 
         public OrderManagementService(
             IMediator mediator,
             IOrderRepository orderRepository,
-            ILogger<OrderManagementService> logger)
+            ILogger<OrderManagementService> logger,
+            IAccountServiceClient accountServiceClient,
+            IShopServiceClient shopServiceClient,
+            ICurrentUserService currentUserService)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _accountServiceClient = accountServiceClient;
+            _shopServiceClient = shopServiceClient;
+            _currentUserService = currentUserService;
         }
 
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto)
         {
             try
             {
-                _logger.LogInformation("Creating order for account {AccountId}", createOrderDto.AccountId);
+                var accountId = _currentUserService.GetUserId();
+                _logger.LogInformation("Creating order for account {AccountId}", accountId);
+                // Validate account exists
+                var account = await _accountServiceClient.GetAccountByIdAsync(accountId);
+                if (account == null)
+                    throw new ApplicationException($"Account with ID {accountId} not found");
+
+                // Validate shop exists 
+                var shop = await _shopServiceClient.GetShopByIdAsync(createOrderDto.ShopId);
+                if (shop == null)
+                    throw new ApplicationException($"Shop with ID {createOrderDto.ShopId} not found");
+
+                // Validate relationship (optional, depending on business rules)
+                //var isShopMember = await _shopServiceClient.IsShopMemberAsync(
+                //    createOrderDto.ShopId, accountId);
+                //if (!isShopMember)
+                //    throw new ApplicationException("Account is not authorized to create orders for this shop");
+                var shippingAddress = createOrderDto.ShippingAddress;
 
                 var command = new CreateOrderCommand
                 {
-                    AccountId = createOrderDto.AccountId,
+                    AccountId = accountId,
                     ShopId = createOrderDto.ShopId,
-                    CustomerName = string.Empty, // Not in DTO
-                    CustomerEmail = string.Empty, // Not in DTO
-                    CustomerPhone = string.Empty, // Not in DTO
+                    CustomerName = shippingAddress.FullName ?? string.Empty, 
+                    CustomerEmail = account?.Email ?? string.Empty, 
+                    CustomerPhone = shippingAddress.Phone ?? string.Empty, 
                     ShippingAddress = createOrderDto.ShippingAddress,
-                    PaymentMethod = string.Empty, // Not in DTO
-                    ShippingMethod = string.Empty, // Not in DTO
-                    ShippingFee = createOrderDto.ShippingAddress != null ? 0 : 0, // Default to zero if not specified
-                    PromoCode = string.Empty, // Not in DTO
-                    DiscountAmount = 0, // Default to zero if not specified
+                    PaymentMethod = createOrderDto.PaymentMethod ?? "COD",
+                    ShippingMethod = string.Empty, 
+                    ShippingFee = createOrderDto.ShippingFee , 
+                    PromoCode = string.Empty, 
+                    DiscountAmount = 0, 
                     Notes = createOrderDto.CustomerNotes,
+                    ShippingProviderId = createOrderDto.ShippingProviderId,
+                    LivestreamId = createOrderDto.LivestreamId,
+                    CreatedFromCommentId = createOrderDto.CreatedFromCommentId,
                     OrderItems = createOrderDto.Items?.Select(i => new CreateOrderItemDto
                     {
                         ProductId = i.ProductId,
@@ -299,12 +330,22 @@ namespace OrderService.Infrastructure.Services
         {
             try
             {
+                Guid accountId;
+                try
+                {
+                    accountId = _currentUserService.GetUserId();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return (false, "Authentication failed: User ID not found or invalid");
+                }
+
                 if (createOrderDto == null)
                 {
                     return (false, "Order data cannot be null");
                 }
 
-                if (createOrderDto.AccountId == Guid.Empty)
+                if (accountId == Guid.Empty)
                 {
                     return (false, "Account ID is required");
                 }

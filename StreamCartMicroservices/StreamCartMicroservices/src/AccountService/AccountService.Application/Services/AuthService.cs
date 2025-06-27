@@ -21,16 +21,19 @@ namespace AccountService.Application.Services
     {
         private readonly IMediator _mediator;
         private readonly IAccountRepository _accountRepository;
+        private readonly IShopServiceClient _shopServiceClient;
         private readonly JwtSettings _jwtSettings;
 
         public AuthService(
-            IMediator mediator,
-            IAccountRepository accountRepository,
-            IOptions<JwtSettings> jwtSettings)
+        IMediator mediator,
+        IAccountRepository accountRepository,
+        IOptions<JwtSettings> jwtSettings,
+        IShopServiceClient shopServiceClient)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
             _jwtSettings = jwtSettings.Value ?? throw new ArgumentNullException(nameof(jwtSettings));
+            _shopServiceClient = shopServiceClient ?? throw new ArgumentNullException(nameof(shopServiceClient));
         }
 
         public async Task<AccountDto> RegisterAsync(CreateAccountCommand command)
@@ -187,7 +190,27 @@ namespace AccountService.Application.Services
         public async Task<AccountDto> GetCurrentUserAsync(Guid accountId)
         {
             var account = await _accountRepository.GetByIdAsync(accountId.ToString());
-            return MapToAccountDto(account);
+
+            if (account == null)
+                return null;
+
+            var accountDto = MapToAccountDto(account);
+
+            
+            if (account.ShopId.HasValue && account.ShopId != Guid.Empty)
+            {
+                try
+                {
+                    var shopInfo = await _shopServiceClient.GetShopByIdAsync(account.ShopId.Value);
+                    
+                }
+                catch (Exception ex)
+                {
+                   
+                }
+            }
+
+            return accountDto;
         }
 
         private string GenerateJwtToken(Account account)
@@ -197,7 +220,7 @@ namespace AccountService.Application.Services
             
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, account.Id.ToString()),
+                new Claim("id", account.Id.ToString()),
                 new Claim(ClaimTypes.Name, account.Username),
                 new Claim(ClaimTypes.Email, account.Email),
                 new Claim(ClaimTypes.Role, account.Role.ToString()),

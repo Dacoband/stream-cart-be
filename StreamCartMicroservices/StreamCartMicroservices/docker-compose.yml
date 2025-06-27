@@ -108,6 +108,8 @@ services:
       - account-service
       - product-service
       - shop-service
+      - order-service
+      - payment-service
     restart: unless-stopped
    # Product Service (Mới thêm)
   product-service:
@@ -138,15 +140,13 @@ services:
       - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
       - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
       - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+ 
+      - ServiceUrls__ShopService=http://shop-service
+      # - ServiceUrls__AccountService=http://account-service
     depends_on:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
   shop-service:
     build:
       context: ./src
@@ -175,9 +175,89 @@ services:
       - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
       - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
       - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+ 
+      - ServiceUrls__AccountService=http://account-service
+      - ServiceUrls__ProductService=http://product-service
     depends_on:
       rabbitmq:
         condition: service_healthy
+    restart: unless-stopped
+  order-service:
+    build:
+      context: ./src
+      dockerfile: ./OrderService/OrderService.Api/Dockerfile
+    ports:
+      - "7135:80"
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+      # Service URLs
+      - ServiceUrls__ProductService=http://product-service
+      - ServiceUrls__ShopService=http://shop-service
+      - ServiceUrls__AccountService=http://account-service
+      - ServiceUrls__PaymentService=http://payment-service
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      shop-service:
+        condition: service_started
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./src
+      dockerfile: ./PaymentService/PaymentService.Api/Dockerfile
+    ports:
+      - "7021:80"
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+      # Service URLs - Liên kết với các service khác
+      - ServiceUrls__OrderService=http://order-service
+      - ServiceUrls__AccountService=http://account-service
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      order-service:
+        condition: service_started
     restart: unless-stopped
 volumes:
   postgres_data:

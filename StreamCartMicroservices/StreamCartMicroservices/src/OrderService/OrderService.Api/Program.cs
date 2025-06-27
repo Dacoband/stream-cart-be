@@ -15,7 +15,15 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 ReplaceConfigurationPlaceholders(builder.Configuration);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("*")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -26,9 +34,10 @@ builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
-
+builder.Services.AddCurrentUserService();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization();
 // Add services to the container.
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -82,9 +91,11 @@ if (!app.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-
+app.UseRouting();
+app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
 app.UseConfiguredCors();
+app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -120,3 +131,4 @@ void ReplaceConfigurationPlaceholders(IConfigurationRoot config)
         }
     }
 }
+ 

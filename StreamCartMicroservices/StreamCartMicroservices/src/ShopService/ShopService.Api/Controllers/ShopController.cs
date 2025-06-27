@@ -591,5 +591,20 @@ namespace ShopService.Api.Controllers
         }
 
         #endregion
+        [HttpPut("{id}/product-count")]
+        [Authorize(Roles = "Seller,Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ShopDto>> UpdateProductCount(
+                  Guid id, [FromBody] UpdateProductCountDto countDto)
+        {
+            var shop = await _shopManagementService.UpdateProductCountAsync(
+                id, countDto.TotalProduct, GetCurrentUserId());
+
+            if (shop == null)
+                return NotFound();
+
+            return Ok(shop);
+        }
     }   
 }

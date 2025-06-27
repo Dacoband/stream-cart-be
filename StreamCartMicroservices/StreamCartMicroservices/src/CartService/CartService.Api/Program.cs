@@ -28,7 +28,15 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("*")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(AddToCartCommand).Assembly);
@@ -80,7 +88,9 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddEmailServices(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
 
-
+builder.Services.AddCurrentUserService();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization(); 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -133,7 +143,11 @@ if (!builder.Environment.IsEnvironment("Docker"))
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors("AllowSpecificOrigin");
+app.UseHttpsRedirection();
 app.UseConfiguredCors();
+app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
