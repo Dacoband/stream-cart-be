@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Services.User;
 using ShopService.Application.Commands;
 using ShopService.Application.DTOs;
 using ShopService.Application.Interfaces;
@@ -21,11 +22,13 @@ namespace ShopService.Api.Controllers
     {
         private readonly IShopManagementService _shopManagementService;
         private readonly ILogger<ShopController> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ShopController(IShopManagementService shopManagementService, ILogger<ShopController> logger)
+        public ShopController(IShopManagementService shopManagementService, ILogger<ShopController> logger, ICurrentUserService currentUserService)
         {
             _shopManagementService = shopManagementService;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         #region Public Endpoints
@@ -110,7 +113,7 @@ namespace ShopService.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<IEnumerable<ShopDto>>> GetMyShops()
         {
-            var accountId = GetCurrentUserId();
+            var accountId = _currentUserService.GetUserId();
             if (accountId == Guid.Empty)
                 return Unauthorized();
 
@@ -134,7 +137,7 @@ namespace ShopService.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<ShopDto>> CreateShop(CreateShopDto createShopDto)
         {
-            var accountId = GetCurrentUserId();
+            var accountId = _currentUserService.GetUserId();
             if (accountId == Guid.Empty)
                 return Unauthorized();
 
