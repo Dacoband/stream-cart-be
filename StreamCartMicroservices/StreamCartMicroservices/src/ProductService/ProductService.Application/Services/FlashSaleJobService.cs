@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MassTransit;
+using Microsoft.Extensions.Logging;
 using ProductService.Application.Interfaces;
+using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,17 +18,20 @@ namespace ProductService.Application.Services
         private readonly IProductRepository _productRepo;
         private readonly IProductVariantRepository _variantRepo;
         private readonly ILogger<FlashSaleJobService> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
+
 
         public FlashSaleJobService(
             IFlashSaleRepository flashSaleRepo,
             IProductRepository productRepo,
             IProductVariantRepository variantRepo,
-            ILogger<FlashSaleJobService> logger)
+            ILogger<FlashSaleJobService> logger, IPublishEndpoint publishEndpoint)
         {
             _flashSaleRepo = flashSaleRepo;
             _productRepo = productRepo;
             _variantRepo = variantRepo;
             _logger = logger;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task UpdateDiscountPricesAsync()
@@ -46,6 +52,23 @@ namespace ProductService.Application.Services
                         {
                             product.UpdatePricing(product.BasePrice,fs.FlashSalePrice);
                             await _productRepo.ReplaceAsync(product.Id.ToString(),product);
+                            var productEvent = new ProductUpdatedEvent()
+                            {
+                                ProductId = product.Id,
+                                ProductName = product.ProductName,
+                                Price = fs.FlashSalePrice,
+                                Stock = product.StockQuantity,
+
+                            };
+                            try
+                            {
+                                await _publishEndpoint.Publish(productEvent);
+                            }
+                            catch (Exception ex)
+                            {
+
+                                throw ex;
+                            }
                         }
                     }
                     else
@@ -55,6 +78,21 @@ namespace ProductService.Application.Services
                         {
                             variant.UpdatePrice(variant.Price,fs.FlashSalePrice);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
+                            var productEvent = new ProductUpdatedEvent()
+                            {
+                                VariantId = variant.Id,
+                                Price = fs.FlashSalePrice,   
+
+                            };
+                            try
+                            {
+                                await _publishEndpoint.Publish(productEvent);
+                            }
+                            catch (Exception ex)
+                            {
+
+                                throw ex;
+                            }
                         }
                     }
                 }
@@ -66,7 +104,24 @@ namespace ProductService.Application.Services
                        
                             product.UpdatePricing(product.BasePrice, 0);
                             await _productRepo.ReplaceAsync(product.Id.ToString(), product);
-                        
+                        var productEvent = new ProductUpdatedEvent()
+                        {
+                            ProductId = product.Id,
+                            ProductName = product.ProductName,
+                            Price = product.BasePrice,
+                            Stock = product.StockQuantity,
+
+                        };
+                        try
+                        {
+                            await _publishEndpoint.Publish(productEvent);
+                        }
+                        catch (Exception ex)
+                        {
+
+                            throw ex;
+                        }
+
                     }
                     else
                     {
@@ -74,7 +129,22 @@ namespace ProductService.Application.Services
                         
                             variant.UpdatePrice(variant.Price, 0);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
-                        
+                        var productEvent = new ProductUpdatedEvent()
+                        {
+                            VariantId = variant.Id,
+                            Price = variant.Price,
+
+                        };
+                        try
+                        {
+                            await _publishEndpoint.Publish(productEvent);
+                        }
+                        catch (Exception ex)
+                        {
+
+                            throw ex;
+                        }
+
                     }
                 }
             }
