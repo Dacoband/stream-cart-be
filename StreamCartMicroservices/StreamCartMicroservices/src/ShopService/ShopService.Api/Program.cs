@@ -96,7 +96,6 @@ if (!app.Environment.IsEnvironment("Docker"))
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("AllowSpecificOrigin");
-app.UseHttpsRedirection();
 app.UseConfiguredCors();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();

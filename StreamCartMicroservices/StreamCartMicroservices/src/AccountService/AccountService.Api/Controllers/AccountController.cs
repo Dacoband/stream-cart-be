@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System.Security.Claims;
 
 namespace AccountService.Api.Controllers
@@ -15,10 +16,12 @@ namespace AccountService.Api.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IAccountManagementService _accountService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public AccountController(IAccountManagementService accountService)
+        public AccountController(IAccountManagementService accountService,ICurrentUserService currentUserService)
         {
             _accountService = accountService;
+            _currentUserService = currentUserService;
         }
 
         [HttpPut("{id}")]

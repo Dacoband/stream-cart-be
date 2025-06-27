@@ -15,11 +15,13 @@ namespace ShopService.Application.Handlers
     {
         private readonly IShopRepository _shopRepository;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IAccountServiceClient _accountServiceClient;
 
-        public CreateShopCommandHandler(IShopRepository shopRepository, IPublishEndpoint publishEndpoint)
+        public CreateShopCommandHandler(IShopRepository shopRepository, IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient)
         {
             _shopRepository = shopRepository;
             _publishEndpoint = publishEndpoint;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<ShopDto> Handle(CreateShopCommand request, CancellationToken cancellationToken)
@@ -29,7 +31,7 @@ namespace ShopService.Application.Handlers
             {
                 throw new ArgumentException("Shop name cannot be empty", nameof(request.ShopName));
             }
-
+            
             // Check if shop name is unique
             var isUnique = await _shopRepository.IsNameUniqueAsync(request.ShopName);
             if (!isUnique)
@@ -44,7 +46,7 @@ namespace ShopService.Application.Handlers
                 request.LogoURL,
                 request.CoverImageURL
             );
-
+            await _accountServiceClient.UpdateAccountShopInfoAsync(request.AccountId, shop.Id);
             // Set creator
             if (!string.IsNullOrEmpty(request.CreatedBy))
             {
@@ -55,13 +57,19 @@ namespace ShopService.Application.Handlers
             await _shopRepository.InsertAsync(shop);
 
             // Publish event
-            await _publishEndpoint.Publish(new ShopRegistered
+            try
             {
-                ShopId = shop.Id,
-                ShopName = shop.ShopName,
-                AccountId = request.AccountId,  
-                RegistrationDate = shop.RegistrationDate
-            }, cancellationToken);
+                await _publishEndpoint.Publish(new ShopRegistered
+                {
+                    ShopId = shop.Id,
+                    ShopName = shop.ShopName,
+                    AccountId = request.AccountId,
+                    RegistrationDate = shop.RegistrationDate
+                }, cancellationToken);
+            }
+            catch (Exception)
+            {
+            }
 
             // Return DTO
             return new ShopDto
