@@ -76,6 +76,7 @@ builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddMessaging(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
 //Add cronjob
 builder.Services.AddQuartz(q =>
 {

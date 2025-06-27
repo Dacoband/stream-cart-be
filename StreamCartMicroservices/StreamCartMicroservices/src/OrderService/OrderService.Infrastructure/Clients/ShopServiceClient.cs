@@ -46,6 +46,12 @@ namespace OrderService.Infrastructure.Clients
                 _logger.LogInformation("Getting shop details for ID: {ShopId}", shopId);
 
                 var response = await _httpClient.GetAsync($"/api/shops/{shopId}");
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Shop with ID {ShopId} not found", shopId);
+                    return null;
+                }
+
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();

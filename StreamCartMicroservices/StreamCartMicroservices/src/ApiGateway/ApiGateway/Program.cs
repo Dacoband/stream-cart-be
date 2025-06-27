@@ -5,7 +5,6 @@ using Ocelot.Cache.CacheManager;
 using Shared.Common.Extensions;
 using MMLib.SwaggerForOcelot.DependencyInjection;
 using System.Text.Json.Serialization;
-using ApiGateway.Middleware;
 using dotenv.net;
 
 var builder = WebApplication.CreateBuilder(args);

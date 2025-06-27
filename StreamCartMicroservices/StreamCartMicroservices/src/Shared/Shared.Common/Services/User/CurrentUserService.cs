@@ -27,15 +27,58 @@ namespace Shared.Common.Services.User
 
         public Guid GetUserId()
         {
-            var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)
-                               ?? _httpContextAccessor.HttpContext?.User.FindFirst("nameid");
-
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            try
             {
-                throw new UnauthorizedAccessException("User ID not found in token or is not a valid GUID");
-            }
+                // Logging để debug
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext == null)
+                {
+                    Console.WriteLine("HttpContext is null");
+                    throw new UnauthorizedAccessException("HttpContext is null");
+                }
 
-            return userId;
+                var user = httpContext.User;
+                if (user == null)
+                {
+                    Console.WriteLine("User is null");
+                    throw new UnauthorizedAccessException("User is null");
+                }
+
+                if (!user.Identity.IsAuthenticated)
+                {
+                    Console.WriteLine("User is not authenticated");
+                    throw new UnauthorizedAccessException("User is not authenticated");
+                }
+
+                // In ra tất cả các claims để debug
+                foreach (var claim in user.Claims)
+                {
+                    Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+                }
+
+                var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)
+                                  ?? user.FindFirst("id")
+                                  ?? user.FindFirst("sub");
+
+                if (userIdClaim == null)
+                {
+                    Console.WriteLine("UserId claim not found");
+                    return Guid.Empty;
+                }
+
+                if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                {
+                    Console.WriteLine($"Failed to parse {userIdClaim.Value} as GUID");
+                    return Guid.Empty;
+                }
+
+                return userId;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting user ID: {ex.Message}");
+                return Guid.Empty;
+            }
         }
 
         public string GetUsername()

@@ -60,10 +60,10 @@ namespace OrderService.Infrastructure.Services
                     throw new ApplicationException($"Shop with ID {createOrderDto.ShopId} not found");
 
                 // Validate relationship (optional, depending on business rules)
-                var isShopMember = await _shopServiceClient.IsShopMemberAsync(
-                    createOrderDto.ShopId, accountId);
-                if (!isShopMember)
-                    throw new ApplicationException("Account is not authorized to create orders for this shop");
+                //var isShopMember = await _shopServiceClient.IsShopMemberAsync(
+                //    createOrderDto.ShopId, accountId);
+                //if (!isShopMember)
+                //    throw new ApplicationException("Account is not authorized to create orders for this shop");
                 var shippingAddress = createOrderDto.ShippingAddress;
 
                 var command = new CreateOrderCommand
@@ -330,13 +330,22 @@ namespace OrderService.Infrastructure.Services
         {
             try
             {
-                var accountId = _currentUserService.GetUserId();
+                Guid accountId;
+                try
+                {
+                    accountId = _currentUserService.GetUserId();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return (false, "Authentication failed: User ID not found or invalid");
+                }
+
                 if (createOrderDto == null)
                 {
                     return (false, "Order data cannot be null");
                 }
 
-                if ( accountId == Guid.Empty)
+                if (accountId == Guid.Empty)
                 {
                     return (false, "Account ID is required");
                 }
