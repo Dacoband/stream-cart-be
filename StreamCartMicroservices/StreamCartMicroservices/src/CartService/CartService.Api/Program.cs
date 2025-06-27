@@ -131,7 +131,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account Service API v1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Cart Service API v1");
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     c.DefaultModelsExpandDepth(0);
 });
