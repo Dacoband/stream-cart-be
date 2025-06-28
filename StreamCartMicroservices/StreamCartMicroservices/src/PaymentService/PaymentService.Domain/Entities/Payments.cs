@@ -75,7 +75,18 @@ namespace PaymentService.Domain.Entities
             Status = PaymentStatus.Pending;
             Fee = 0;
         }
+        public void UpdateQrCode(string qrCode, string? modifier = null)
+        {
+            if (string.IsNullOrEmpty(qrCode))
+                throw new ArgumentException("QR Code cannot be empty", nameof(qrCode));
 
+            QrCode = qrCode;
+
+            if (!string.IsNullOrWhiteSpace(modifier))
+                SetModifier(modifier);
+            else
+                LastModifiedAt = DateTime.UtcNow;
+        }
         public void MarkAsSuccessful(string qrCode, decimal fee = 0, string? modifier = null)
         {
             if (Status != PaymentStatus.Pending)
