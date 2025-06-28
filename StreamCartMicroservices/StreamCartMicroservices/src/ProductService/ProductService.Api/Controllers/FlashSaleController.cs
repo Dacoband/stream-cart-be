@@ -12,7 +12,7 @@ using System.Security.Claims;
 
 namespace ProductService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/flashsales")]
     [ApiController]
     public class FlashSaleController : Controller
     {

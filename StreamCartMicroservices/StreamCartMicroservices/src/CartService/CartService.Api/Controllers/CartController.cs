@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace CartService.Api.Controllers
 {
 
-    [Route("api/[controller]")]
+    [Route("api/carts")]
     [ApiController]
     public class CartController : ControllerBase
     {

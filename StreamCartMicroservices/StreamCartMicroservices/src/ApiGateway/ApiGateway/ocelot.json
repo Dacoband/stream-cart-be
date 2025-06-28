@@ -872,6 +872,58 @@
       "UpstreamPathTemplate": "/swagger/payment/{everything}",
       "UpstreamHttpMethod": [ "GET" ],
       "SwaggerKey": "payment"
+    },
+    {
+      "DownstreamPathTemplate": "/api/categorys/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "product-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/categorys/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "product"
+    },
+    {
+      "DownstreamPathTemplate": "/api/flashsales/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "product-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/flashsales/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "product"
+    },
+    {
+      "DownstreamPathTemplate": "/api/carts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "cart-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/carts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "cart"
+    },
+    {
+      "DownstreamPathTemplate": "/api/deliveries/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "delivery-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/deliveries/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "delivery"
     }
   ],
   "SwaggerEndPoints": [
@@ -922,6 +974,26 @@
           "Name": "Payment API",
           "Version": "v1",
           "Url": "http://payment-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "cart",
+      "Config": [
+        {
+          "Name": "Cart API",
+          "Version": "v1",
+          "Url": "http://cart-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "delivery",
+      "Config": [
+        {
+          "Name": "Delivery API",
+          "Version": "v1",
+          "Url": "http://delivery-service/swagger/v1/swagger.json"
         }
       ]
     }
