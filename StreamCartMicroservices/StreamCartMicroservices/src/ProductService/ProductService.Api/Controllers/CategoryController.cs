@@ -11,7 +11,7 @@ using System.Security.Claims;
 
 namespace ProductService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/categorys")]
     [ApiController]
     public class CategoryController : ControllerBase
     {
