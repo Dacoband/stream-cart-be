@@ -84,12 +84,13 @@ namespace ShopService.Infrastructure.Repositories
         }
         public async Task<IEnumerable<Shop>> GetShopsByAccountIdAsync(Guid accountId)
         {
-            var shops = await _context.Database
-                .SqlQueryRaw<Shop>(@"
+            // Use DbSet<Shop> with FromSqlRaw to ensure proper column mapping
+            var shops = await _context.Shops
+                .FromSqlRaw(@"
             SELECT s.* FROM shops s
             INNER JOIN accounts a ON a.shop_id = s.id
             WHERE a.id = {0} AND s.is_deleted = false AND a.is_deleted = false",
-                    accountId)
+                        accountId)
                 .ToListAsync();
 
             return shops;
