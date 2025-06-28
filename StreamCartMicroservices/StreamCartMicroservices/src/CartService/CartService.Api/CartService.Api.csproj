@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="Dockerfile" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="dotenv.net" Version="3.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
       <PrivateAssets>all</PrivateAssets>
@@ -18,6 +22,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CartService.Application\CartService.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update=".env">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
