@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -9,6 +9,8 @@ using OrderService.Application.DTOs.OrderItemDTOs;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Domain.Enums;
 using System.Collections.Generic;
+using Shared.Messaging.Event.OrderEvents;
+using MassTransit;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
 {
@@ -16,13 +18,16 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
     {
         private readonly IOrderRepository _orderRepository;
         private readonly ILogger<UpdateOrderStatusCommandHandler> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public UpdateOrderStatusCommandHandler(
             IOrderRepository orderRepository,
-            ILogger<UpdateOrderStatusCommandHandler> logger)
+            ILogger<UpdateOrderStatusCommandHandler> logger,
+            IPublishEndpoint publishEndpoint)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<OrderDto> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -38,19 +43,26 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     _logger.LogWarning("Order with ID {OrderId} not found", request.OrderId);
                     throw new ApplicationException($"Order with ID {request.OrderId} not found");
                 }
+                var message = "";
                 switch (request.NewStatus)
                 {
                     case OrderStatus.Processing:
                         order.Process(request.ModifiedBy);
+                        message = "đang được xử lý bởi hệ thống";
                         break;
                     case OrderStatus.Shipped:
                         order.Ship(order.TrackingCode, request.ModifiedBy);
+                        message = "đang được giao đến bạn";
                         break;
                     case OrderStatus.Delivered:
                         order.Deliver(request.ModifiedBy);
+                        message = "đã được giao thành công";
+
                         break;
                     case OrderStatus.Cancelled:
                         order.Cancel(request.ModifiedBy);
+                        message = "đã bị hủy";
+
                         break;
                     default:
                         _logger.LogWarning("Unsupported order status transition to {NewStatus}", request.NewStatus);
@@ -117,6 +129,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 };
 
                 _logger.LogInformation("Order status updated successfully for order {OrderId}", request.OrderId);
+                //pubish OrderChangeEvent to NotificationSevice
+                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                {
+                    OrderCode = order.OrderCode,
+                    Message = message,
+                    UserId = request.ModifiedBy,
+                };
+                await _publishEndpoint.Publish(orderChangEvent);
                 return orderDto;
             }
             catch (Exception ex)

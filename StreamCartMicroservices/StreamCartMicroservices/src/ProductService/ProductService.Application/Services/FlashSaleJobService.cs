@@ -112,6 +112,7 @@ namespace ProductService.Application.Services
                             Stock = product.StockQuantity,
 
                         };
+                        
                         try
                         {
                             await _publishEndpoint.Publish(productEvent);
