@@ -1,4 +1,5 @@
-﻿using ProductService.Application.DTOs;
+﻿using Microsoft.AspNetCore.Http;
+using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
@@ -24,6 +25,9 @@ namespace ProductService.Application.Interfaces
         Task<ProductDto> UpdateProductStatusAsync(Guid id, bool isActive, string updatedBy);
         Task<ProductDto> UpdateProductStockAsync(Guid id, int quantity, string updatedBy);
         Task<bool> CheckProductStockAsync(Guid id, int requestedQuantity);
-        Task<ProductDetailDto?> GetProductDetailAsync(Guid id);
+        //Task<ProductDetailDto?> GetProductDetailAsync(Guid id);
+        Task<ProductDto> CreateCompleteProductAsync(CompleteProductDto completeProductDto, string createdBy);
+
+
     }
 }

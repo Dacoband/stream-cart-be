@@ -1,11 +1,12 @@
+﻿using Microsoft.Extensions.Logging;
+using OrderService.Application.DTOs;
+using OrderService.Application.Interfaces;
+using Shared.Common.Settings;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using OrderService.Application.DTOs;
-using OrderService.Application.Interfaces;
 
 namespace OrderService.Infrastructure.Clients
 {
@@ -241,6 +242,38 @@ namespace OrderService.Infrastructure.Clients
             }
 
             return defaultValue;
+        }
+        public async Task<bool> UpdateShopCompletionRateAsync(Guid shopId, decimal changeAmount, Guid updatedByAccountId)
+        {
+            try
+            {
+                var request = new
+                {
+                    RateChange = changeAmount,
+                    UpdatedByAccountId = updatedByAccountId
+                };
+
+                var response = await _httpClient.PutAsJsonAsync($"api/shops/{shopId}/completion-rate", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật tỷ lệ hoàn thành cho shop {ShopId}", shopId);
+                return false;
+            }
+        }
+        public async Task<bool> DoesShopExistAsync(Guid shopId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/shops/{shopId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if shop {ShopId} exists", shopId);
+                return false;
+            }
         }
     }
 }
