@@ -107,14 +107,12 @@ namespace AccountService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
 
-            // Get the seller's account ID from the claims
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var sellerAccountId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
 
             try
             {
-                // Check username and email uniqueness
                 if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
                 {
                     return BadRequest(ApiResponse<object>.ErrorResult("Username already exists"));
@@ -124,8 +122,6 @@ namespace AccountService.Api.Controllers
                 {
                     return BadRequest(ApiResponse<object>.ErrorResult("Email already exists"));
                 }
-
-                // Create command
                 var command = new CreateAccountCommand
                 {
                     Username = createAccountDto.Username,
@@ -136,10 +132,8 @@ namespace AccountService.Api.Controllers
                     AvatarURL = createAccountDto.AvatarURL
                 };
 
-                // Create moderator account
                 var createdAccount = await _accountService.CreateModeratorAccountAsync(command, shopId, sellerAccountId);
 
-                // Return success response
                 return CreatedAtAction(
                     nameof(GetAccountById),
                     new { id = createdAccount.Id },
@@ -296,9 +290,50 @@ namespace AccountService.Api.Controllers
             }
         }
 
-        public class UpdateShopInfoDto
+        [HttpGet("by-shop/{shopId}")]
+        [Authorize(Roles = "Seller,ITAdmin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ShopAccountDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAccountByShopId(Guid shopId)
         {
-            public Guid ShopId { get; set; }
+            try
+            {
+                var shopAccounts = await _accountService.GetAccountsByShopIdAsync(shopId);
+
+                if (shopAccounts?.Any() != true)
+                    return NotFound(ApiResponse<object>.ErrorResult($"No accounts found for shop with ID: {shopId}"));
+
+                var result = shopAccounts.Select(a => new ShopAccountDto
+                {
+                    Id = a.Id,
+                    Fullname = a.Fullname ?? string.Empty,
+                    Role = a.Role
+                }).ToList();
+
+                return Ok(ApiResponse<IEnumerable<ShopAccountDto>>.SuccessResult(result, "Accounts retrieved successfully"));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ApiResponse<object>.ErrorResult(ex.Message).ToString());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.ErrorResult($"Error retrieving accounts: {ex.Message}"));
+            }
         }
+    }
+    public class UpdateShopInfoDto
+    {
+        public Guid ShopId { get; set; }
+    }
+
+    public class ShopAccountDto
+    {
+        public Guid Id { get; set; }
+        public string Fullname { get; set; } = string.Empty;
+        public RoleType Role { get; set; }
     }
 }

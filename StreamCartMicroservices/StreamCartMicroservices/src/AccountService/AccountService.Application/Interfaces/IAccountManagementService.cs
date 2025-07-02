@@ -24,5 +24,6 @@ namespace AccountService.Application.Interfaces
         Task<AccountDto> CreateOperationManagerAccountAsync(CreateAccountCommand command, Guid createdByITAdminAccountId);
         Task<AccountDto> UpdateAccountStatusAsync(Guid accountId, bool isActive, Guid updatedByAccountId);
         Task<bool> CanManageAccountStatusAsync(Guid accountId, Guid targetAccountId);
+        Task<IEnumerable<AccountDto>> GetAccountsByShopIdAsync(Guid shopId);
     }
 }
