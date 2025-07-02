@@ -46,6 +46,13 @@ namespace PaymentService.Application.Handlers
                 // Update status based on the requested new status
                 switch (request.NewStatus)
                 {
+                    case PaymentStatus.Pending:
+                        // Cập nhật QR code nếu có
+                        if (!string.IsNullOrEmpty(request.QrCode))
+                        {
+                            payment.UpdateQrCode(request.QrCode, request.UpdatedBy);
+                        }
+                        break;
                     case PaymentStatus.Paid:
                         if (string.IsNullOrEmpty(request.QrCode))
                             throw new ArgumentException("QR Code is required for successful payments");
@@ -120,5 +127,6 @@ namespace PaymentService.Application.Handlers
                 throw;
             }
         }
+
     }
 }

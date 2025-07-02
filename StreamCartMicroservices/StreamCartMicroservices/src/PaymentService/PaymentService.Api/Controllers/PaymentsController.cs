@@ -227,14 +227,20 @@ namespace PaymentService.Api.Controllers
             var orderDetails = await _orderServiceClient.GetOrderByIdAsync(requestDto.OrderId);
             if (orderDetails == null)
                 return NotFound($"Order with ID {requestDto.OrderId} not found");
-
+            var qrCode = await _qrCodeService.GenerateQrCodeAsync(
+                orderDetails.Id,
+                orderDetails.TotalAmount,
+                orderDetails.UserId,
+                PaymentMethod.BankTransfer
+            );
             var createPaymentDto = new CreatePaymentDto
             {
                 OrderId = orderDetails.Id,
                 //UserId = orderDetails.UserId,
                 Amount = orderDetails.TotalAmount,
                 PaymentMethod = PaymentMethod.BankTransfer,
-                CreatedBy = User.Identity?.Name ?? "System"
+                CreatedBy = User.Identity?.Name ?? "System",
+                QrCode = qrCode
             };
 
             var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
@@ -244,21 +250,16 @@ namespace PaymentService.Api.Controllers
                 orderDetails.Id, PaymentStatus.Pending);
 
 
-            var qrCode = await _qrCodeService.GenerateQrCodeAsync(
-                orderDetails.Id,
-                orderDetails.TotalAmount,
-                orderDetails.UserId,
-                PaymentMethod.BankTransfer 
-            );
+
 
             // 4. Cập nhật QR code cho Payment nếu cần
-                var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
-                {
-                    NewStatus = PaymentStatus.Pending,
-                    QrCode = qrCode,
-                    UpdatedBy = User.Identity?.Name ?? "System"
-                };
-                await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
+            var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
+            {
+                NewStatus = PaymentStatus.Pending,
+                QrCode = qrCode,
+                UpdatedBy = User.Identity?.Name ?? "System"
+            };
+            await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
 
             return Ok(new
             {
