@@ -26,6 +26,8 @@ namespace OrderService.Application.Interfaces
         /// <param name="shopId">Shop ID</param>
         /// <returns>Shop address information</returns>
         Task<AddressOfShop> GetShopAddressAsync(Guid shopId);
+        Task<bool> UpdateShopCompletionRateAsync(Guid shopId, decimal changeAmount, Guid updatedByAccountId);
+        Task<bool> DoesShopExistAsync(Guid shopId);
 
     }
 }

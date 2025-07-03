@@ -41,6 +41,9 @@ namespace ProductService.Domain.Entities
         public int QuantitySold { get; private set; }
 
         public Guid? ShopId { get; private set; }
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+
         public virtual ICollection<FlashSale> FlashSales { get; set; } = new List<FlashSale>();
 
 

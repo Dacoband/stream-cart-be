@@ -270,5 +270,28 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error retrieving product details: {ex.Message}"));
             }
         }
+        [HttpPost("complete")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ProductDto>> CreateCompleteProduct([FromBody] CompleteProductDto completeProductDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var createdBy = User.Identity?.Name ?? "Anonymous";
+                var result = await _productService.CreateCompleteProductAsync(completeProductDto, createdBy);
+                return CreatedAtAction(nameof(GetProductById), new { id = result.Id }, result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

@@ -37,6 +37,7 @@ builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddCurrentUserService();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization();
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -76,6 +77,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
 
 var app = builder.Build();
 

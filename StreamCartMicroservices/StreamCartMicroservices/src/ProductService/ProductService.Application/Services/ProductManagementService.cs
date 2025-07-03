@@ -139,5 +139,15 @@ namespace ProductService.Application.Services
             var query = new GetProductDetailQuery { ProductId = id };
             return await _mediator.Send(query);
         }
+        public async Task<ProductDto> CreateCompleteProductAsync(CompleteProductDto completeProductDto, string createdBy)
+        {
+            var command = new CreateCompleteProductCommand
+            {
+                CompleteProduct = completeProductDto,
+                CreatedBy = createdBy
+            };
+
+            return await _mediator.Send(command);
+        }
     }
 }
