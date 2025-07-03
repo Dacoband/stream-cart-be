@@ -20,7 +20,7 @@ namespace CartService.Api.Controllers
             _mediator = mediator;
         }
         [HttpPost]
-        //[Authorize]
+        [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(ApiResponse<CreateCartDTO>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> AddToCart([FromBody] CreateCartDTO request)
@@ -53,7 +53,7 @@ namespace CartService.Api.Controllers
             }
         }
         [HttpGet]
-        //[Authorize(Roles ="Customer")]
+        [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(ApiResponse<CartResponeDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetMyCart()
@@ -77,7 +77,7 @@ namespace CartService.Api.Controllers
             }
         }
         [HttpGet("/PreviewOrder")]
-        //[Authorize(Roles ="Customer")]
+        [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(ApiResponse<PreviewOrderResponseDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> PreviewOrder([FromQuery]PreviewOrderRequestDTO request)
@@ -120,7 +120,7 @@ namespace CartService.Api.Controllers
             }
         }
         [HttpPut]
-        //[Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(ApiResponse<PreviewOrderResponseDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemDTO request)

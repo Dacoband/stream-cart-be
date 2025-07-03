@@ -1,11 +1,14 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
+using OrderService.Application.Events;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Enums;
+using Shared.Messaging.Event.OrderEvents;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -18,15 +21,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IOrderRepository _orderRepository;
         private readonly IProductServiceClient _productServiceClient; 
         private readonly ILogger<CancelOrderCommandHandler> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public CancelOrderCommandHandler(
             IOrderRepository orderRepository,
             IProductServiceClient productServiceClient, 
-            ILogger<CancelOrderCommandHandler> logger)
+            ILogger<CancelOrderCommandHandler> logger, IPublishEndpoint publishEndpoint)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<OrderDto> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
@@ -123,7 +128,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     ActualDeliveryDate = order.ActualDeliveryDate,
                     Items = orderItemDtos
                 };
-
+                //pubish OrderChangeEvent to NotificationSevice
+                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                {
+                    OrderCode = order.OrderCode,
+                    Message = "đã bị hủy",
+                    UserId = request.CancelledBy,
+                };
+                await _publishEndpoint.Publish(orderChangEvent);
                 _logger.LogInformation("Order {OrderId} cancelled successfully", request.OrderId);
                 return orderDto;
             }

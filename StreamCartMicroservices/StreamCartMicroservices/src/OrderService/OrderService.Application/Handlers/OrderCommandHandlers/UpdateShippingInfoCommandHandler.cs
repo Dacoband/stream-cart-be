@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -11,6 +11,8 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using System.Collections.Generic;
 using OrderService.Application.Interfaces.IServices;
+using Shared.Messaging.Event.OrderEvents;
+using MassTransit;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
 {
@@ -19,15 +21,18 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IOrderRepository _orderRepository;
         private readonly IProductServiceClient _productServiceClient;
         private readonly ILogger<UpdateShippingInfoCommandHandler> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public UpdateShippingInfoCommandHandler(
             IOrderRepository orderRepository,
             IProductServiceClient productServiceClient,
-            ILogger<UpdateShippingInfoCommandHandler> logger)
+            ILogger<UpdateShippingInfoCommandHandler> logger,
+            IPublishEndpoint publishEndpoint)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<OrderDto> Handle(UpdateShippingInfoCommand request, CancellationToken cancellationToken)
@@ -96,6 +101,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 };
 
                 _logger.LogInformation("Shipping information updated successfully for order {OrderId}", request.OrderId);
+                //pubish OrderChangeEvent to NotificationSevice
+                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                {
+                    OrderCode = order.OrderCode,
+                    Message = "đã được thay đổi địa chỉ gioa hàng thành công",
+                    UserId = request.ModifiedBy,
+                };
+                await _publishEndpoint.Publish(orderChangEvent);
                 return orderDto;
             }
             catch (Exception ex)

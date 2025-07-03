@@ -24,7 +24,12 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<List<FlashSale>> GetAllActiveFlashSalesAsync()
         {
-            return await _dbSet.Where(x=> x.IsDeleted == false ).ToListAsync();
+            try {
+                return await _dbSet.Where(x => x.IsDeleted == false).ToListAsync();
+            } catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public async Task<List<FlashSale>> GetByTimeAndProduct(DateTime startTime, DateTime endTime, Guid productId, Guid? variantId)
