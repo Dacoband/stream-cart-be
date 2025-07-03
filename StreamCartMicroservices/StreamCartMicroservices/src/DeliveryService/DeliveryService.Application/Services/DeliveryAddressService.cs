@@ -396,5 +396,26 @@ namespace DeliveryService.Application.Services
                 Data = new OrderLogResponse { Logs = logs }
             };
         }
+
+        public async Task<string> CancelDeliveryOrder(string deliveryId)
+        {
+            var client = _httpClientFactory.CreateClient();
+            var payload = new
+            {
+                order_codes = new[] { deliveryId }
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/switch-status/cancel")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("Token", _ghnSettings.Token);
+            request.Headers.Add("ShopId", _ghnSettings.ShopId);
+
+            var apiResponse = await client.SendAsync(request);
+            var json = await apiResponse.Content.ReadAsStringAsync();
+
+            return json;
+        }
     }
     }

@@ -2,6 +2,7 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Shared.Messaging.Consumers;
+using Shared.Messaging.Event.FlashSaleEvents;
 using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Collections.Generic;
@@ -15,8 +16,9 @@ namespace CartService.Application.Consumers
     {
         private readonly ICartItemRepository _cartItemRepository;
         private readonly ILogger<ProductUpdatedConsumer> _logger;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public ProductUpdatedConsumer(ICartItemRepository cartItemRepository, ILogger<ProductUpdatedConsumer> logger)
+        public ProductUpdatedConsumer(ICartItemRepository cartItemRepository, ILogger<ProductUpdatedConsumer> logger, IPublishEndpoint publishEndpoint)
         {
             _cartItemRepository = cartItemRepository;
             _logger = logger;
@@ -37,6 +39,15 @@ namespace CartService.Application.Consumers
                 item.Attributes = msg.Attributes ?? item.Attributes;
                 item.ProductStatus = msg.ProductStatus ?? item.ProductStatus;
                 await _cartItemRepository.ReplaceAsync(item.Id.ToString(), item);
+                var flashSaleEvent = new FlashSaleStartEvent()
+                {
+                    ProductId = item.ProductId,
+                    VariantId = msg.VariantId,
+                    ProductName = item.ProductName,
+                    UserId = item.Cart.CreatedBy,
+                    Discount =msg.Price ?? 0,
+                };
+               await _publishEndpoint.Publish(flashSaleEvent);
                 _logger.LogInformation("Updated CartItem: Id={CartItemId}, ProductName={ProductName}, Price={PriceSnapShot}, Stock={Stock}",
                    item.Id, item.ProductName, item.PriceSnapShot, item.Stock);
             }

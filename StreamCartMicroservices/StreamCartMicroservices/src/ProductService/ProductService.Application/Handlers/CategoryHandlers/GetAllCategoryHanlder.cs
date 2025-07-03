@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Handlers.CategoryHandlers
 {
-    public class GetAllCategoryHanlder : IRequestHandler<GetAllCategoryQuery, ApiResponse<ICollection<CategoryDetailDTO>>>
+    public class GetAllCategoryHanlder : IRequestHandler<GetAllCategoryQuery, ApiResponse<ListCategoryDTO>>
     {
         private readonly ICategoryService _categoryService;
 
@@ -19,13 +19,14 @@ namespace ProductService.Application.Handlers.CategoryHandlers
         {
             _categoryService = categoryService;
         }
-        public async Task<ApiResponse<ICollection<CategoryDetailDTO>>> Handle(GetAllCategoryQuery request, CancellationToken cancellationToken)
+        public async Task<ApiResponse<ListCategoryDTO>> Handle(GetAllCategoryQuery request, CancellationToken cancellationToken)
         {
             var filter = new FilterCategoryDTO
             {
                 CategoryName = request.CategoryName,
                 PageIndex = request.PageIndex,
-                PageSize = request.PageSize
+                PageSize = request.PageSize,
+                IsDeleted = request.IsDeleted,
             };
 
             var result = await _categoryService.GetAllCategory(filter);

@@ -1,4 +1,5 @@
-﻿using ProductService.Application.DTOs.FlashSale;
+﻿using Appwrite.Models;
+using ProductService.Application.DTOs.FlashSale;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Interfaces;
@@ -66,18 +67,18 @@ namespace ProductService.Application.Services
                     return response;
                 }
 
-                var existingFlashSale = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, null);
-                if (existingFlashSale != null)
+                var existingFlashSale  = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, null);
+                if (existingFlashSale != null && existingFlashSale.Count > 0)
                 {
                     response.Success = false;
                     response.Message = "Chỉ có thể áp dụng 1 FlashSale cho cùng 1 thời điểm";
                     return response;
                 }
-
+                request.ConvertToUtc();
                 var flashSaleCreated = new FlashSale()
                 {
                     ProductId = request.ProductId,
-                    VariantId = Guid.Empty,
+                    VariantId = Guid.NewGuid(),
                     FlashSalePrice = request.FLashSalePrice,
                     QuantityAvailable = request.QuantityAvailable ?? existingProduct.StockQuantity,
                     QuantitySold = 0,
@@ -85,6 +86,7 @@ namespace ProductService.Application.Services
                     EndTime = request.EndTime,
                 };
                 flashSaleCreated.SetCreator(userId);
+                
                 await _flashSaleRepository.InsertAsync(flashSaleCreated);
                 var result = new DetailFlashSaleDTO()
                 {
@@ -245,7 +247,7 @@ namespace ProductService.Application.Services
                 // Lọc theo VariantId
                 if (filter.VariantId != null && filter.VariantId.Any())
                 {
-                    query = query.Where(f => filter.VariantId.Contains(f.VariantId));
+                    query = query.Where(f => filter.VariantId.Contains((Guid)f.VariantId));
                 }
 
                 // Lọc theo StartDate
@@ -281,6 +283,7 @@ namespace ProductService.Application.Services
                 var pageIndex = filter.PageIndex ?? 0;
                 var pageSize = filter.PageSize ?? 10;
                 query = query.Skip(pageIndex * pageSize).Take(pageSize);
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
                 // Map DTO
                 response.Data = query.Select(f => new DetailFlashSaleDTO
@@ -292,8 +295,8 @@ namespace ProductService.Application.Services
                     QuantityAvailable = f.QuantityAvailable,
                     QuantitySold = f.QuantitySold,
                     IsActive = f.IsValid(),
-                    StartTime = f.StartTime,
-                    EndTime = f.EndTime
+                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
+                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
                 }).ToList();
 
                 return response;
@@ -321,6 +324,8 @@ namespace ProductService.Application.Services
                 return response;
             
             }
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
             DetailFlashSaleDTO result = new DetailFlashSaleDTO()
             {
                 Id = flashSale.Id,
@@ -328,8 +333,8 @@ namespace ProductService.Application.Services
                 VariantId = flashSale.VariantId,
                 FlashSalePrice = flashSale.FlashSalePrice,
                 QuantityAvailable = flashSale.QuantityAvailable,
-                StartTime = flashSale.StartTime,
-                EndTime = flashSale.EndTime,
+                StartTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.StartTime, tz),
+                EndTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.EndTime, tz),
                 IsActive = flashSale.IsValid(),
                 QuantitySold = flashSale.QuantitySold,
             };

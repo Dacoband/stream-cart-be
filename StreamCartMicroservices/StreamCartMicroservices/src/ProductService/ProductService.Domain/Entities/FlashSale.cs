@@ -20,9 +20,8 @@ namespace ProductService.Domain.Entities
         [Column("ProductID")]
         public Guid ProductId { get; set; }
 
-        [Required]
         [Column("VariantID")]
-        public Guid VariantId { get; set; }
+        public Guid? VariantId { get; set; }
 
         [Column("FlashSalePrice", TypeName = "decimal(10,2)")]
         public decimal FlashSalePrice { get; set; }
@@ -45,7 +44,5 @@ namespace ProductService.Domain.Entities
 
         public virtual Product Product { get; set; }
 
-        [ForeignKey("VariantId")]
-        public virtual ProductVariant ProductVariant { get; set; }
     }
 }
