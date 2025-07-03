@@ -10,7 +10,6 @@ namespace ProductService.Domain.Entities
         public decimal Price { get; private set; }
         public decimal? FlashSalePrice { get; private set; }
         public int Stock { get; private set; }
-        public virtual ICollection<FlashSale> FlashSales { get; set; } = new List<FlashSale>();
 
 
         // Required by EF Core

@@ -66,8 +66,8 @@ namespace ProductService.Application.Services
                     return response;
                 }
 
-                var existingFlashSale = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, null);
-                if (existingFlashSale != null)
+                var existingFlashSale  = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, null);
+                if (existingFlashSale != null && existingFlashSale.Count > 0)
                 {
                     response.Success = false;
                     response.Message = "Chỉ có thể áp dụng 1 FlashSale cho cùng 1 thời điểm";
@@ -77,7 +77,7 @@ namespace ProductService.Application.Services
                 var flashSaleCreated = new FlashSale()
                 {
                     ProductId = request.ProductId,
-                    VariantId = Guid.Empty,
+                    VariantId = Guid.NewGuid(),
                     FlashSalePrice = request.FLashSalePrice,
                     QuantityAvailable = request.QuantityAvailable ?? existingProduct.StockQuantity,
                     QuantitySold = 0,
@@ -245,7 +245,7 @@ namespace ProductService.Application.Services
                 // Lọc theo VariantId
                 if (filter.VariantId != null && filter.VariantId.Any())
                 {
-                    query = query.Where(f => filter.VariantId.Contains(f.VariantId));
+                    query = query.Where(f => filter.VariantId.Contains((Guid)f.VariantId));
                 }
 
                 // Lọc theo StartDate

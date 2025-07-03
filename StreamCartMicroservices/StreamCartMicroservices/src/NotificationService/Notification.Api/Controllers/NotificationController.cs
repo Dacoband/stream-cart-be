@@ -1,4 +1,4 @@
-﻿using MassTransit.Futures.Contracts;
+﻿ using MassTransit.Futures.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

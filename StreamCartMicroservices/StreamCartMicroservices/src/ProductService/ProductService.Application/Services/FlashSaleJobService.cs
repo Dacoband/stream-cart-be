@@ -45,7 +45,7 @@ namespace ProductService.Application.Services
 
                 if (isRunning)
                 {
-                    if (fs.VariantId == Guid.Empty)
+                    if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
                         if (product != null && product.DiscountPrice != fs.FlashSalePrice)
@@ -98,53 +98,59 @@ namespace ProductService.Application.Services
                 }
                 else if (isEnded)
                 {
-                    if (fs.VariantId == Guid.Empty)
+                    if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                       
+                            if(product != null) {
+
                             product.UpdatePricing(product.BasePrice, 0);
                             await _productRepo.ReplaceAsync(product.Id.ToString(), product);
-                        var productEvent = new ProductUpdatedEvent()
-                        {
-                            ProductId = product.Id,
-                            ProductName = product.ProductName,
-                            Price = product.BasePrice,
-                            Stock = product.StockQuantity,
+                            var productEvent = new ProductUpdatedEvent()
+                            {
+                                ProductId = product.Id,
+                                ProductName = product.ProductName,
+                                Price = product.BasePrice,
+                                Stock = product.StockQuantity,
 
-                        };
-                        
-                        try
-                        {
-                            await _publishEndpoint.Publish(productEvent);
-                        }
-                        catch (Exception ex)
-                        {
+                            };
 
-                            throw ex;
+                            try
+                            {
+                                await _publishEndpoint.Publish(productEvent);
+                            }
+                            catch (Exception ex)
+                            {
+
+                                throw ex;
+                            }
+
                         }
 
                     }
                     else
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
-                        
+                        if (variant != null) {
                             variant.UpdatePrice(variant.Price, 0);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
-                        var productEvent = new ProductUpdatedEvent()
-                        {
-                            VariantId = variant.Id,
-                            Price = variant.Price,
+                            var productEvent = new ProductUpdatedEvent()
+                            {
+                                VariantId = variant.Id,
+                                Price = variant.Price,
 
-                        };
-                        try
-                        {
-                            await _publishEndpoint.Publish(productEvent);
-                        }
-                        catch (Exception ex)
-                        {
+                            };
+                            try
+                            {
+                                await _publishEndpoint.Publish(productEvent);
+                            }
+                            catch (Exception ex)
+                            {
 
-                            throw ex;
+                                throw ex;
+                            }
+
                         }
+                            
 
                     }
                 }

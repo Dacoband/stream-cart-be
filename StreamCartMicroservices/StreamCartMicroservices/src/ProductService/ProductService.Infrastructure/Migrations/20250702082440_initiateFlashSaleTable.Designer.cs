@@ -12,8 +12,8 @@ using ProductService.Infrastructure.Data;
 namespace ProductService.Infrastructure.Migrations
 {
     [DbContext(typeof(ProductContext))]
-    [Migration("20250616113244_RemoveLivestreamIdFromProduct")]
-    partial class RemoveLivestreamIdFromProduct
+    [Migration("20250702082440_initiateFlashSaleTable")]
+    partial class initiateFlashSaleTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -63,6 +63,109 @@ namespace ProductService.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("AttributeValues", (string)null);
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IconURL")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ParentCategoryID")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCategoryID");
+
+                    b.ToTable("Category", (string)null);
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.FlashSale", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("EndTime");
+
+                    b.Property<decimal>("FlashSalePrice")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("FlashSalePrice");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProductID");
+
+                    b.Property<int>("QuantityAvailable")
+                        .HasColumnType("integer")
+                        .HasColumnName("QuantityAvailable");
+
+                    b.Property<int>("QuantitySold")
+                        .HasColumnType("integer")
+                        .HasColumnName("QuantitySold");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("StartTime");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("VariantID");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("Flash-Sales", (string)null);
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Product", b =>
@@ -365,6 +468,28 @@ namespace ProductService.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ProductService.Domain.Entities.Category", b =>
+                {
+                    b.HasOne("ProductService.Domain.Entities.Category", "ParentCategory")
+                        .WithMany("SubCategories")
+                        .HasForeignKey("ParentCategoryID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.FlashSale", b =>
+                {
+                    b.HasOne("ProductService.Domain.Entities.Product", "Product")
+                        .WithMany("FlashSales")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_FlashSales_Products");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("ProductService.Domain.Entities.ProductCombination", b =>
                 {
                     b.HasOne("ProductService.Domain.Entities.AttributeValue", null)
@@ -401,6 +526,16 @@ namespace ProductService.Infrastructure.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("SubCategories");
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.Product", b =>
+                {
+                    b.Navigation("FlashSales");
                 });
 #pragma warning restore 612, 618
         }

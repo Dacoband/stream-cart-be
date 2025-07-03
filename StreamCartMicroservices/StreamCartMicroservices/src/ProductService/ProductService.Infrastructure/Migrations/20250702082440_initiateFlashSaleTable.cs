@@ -6,24 +6,24 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ProductService.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitiateProductService : Migration
+    public partial class initiateFlashSaleTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+           
             migrationBuilder.CreateTable(
-                name: "Category",
+                name: "Flash-Sales",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CategoryID = table.Column<Guid>(type: "uuid", nullable: false),
-                    CategoryName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    IconURL = table.Column<string>(type: "text", nullable: true),
-                    Slug = table.Column<string>(type: "text", nullable: true),
-                    DisplayOrder = table.Column<int>(type: "integer", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    ParentCategoryID = table.Column<Guid>(type: "uuid", nullable: true),
+                    ProductID = table.Column<Guid>(type: "uuid", nullable: false),
+                    VariantID = table.Column<Guid>(type: "uuid", nullable: true),
+                    FlashSalePrice = table.Column<decimal>(type: "numeric(10,2)", nullable: false),
+                    QuantityAvailable = table.Column<int>(type: "integer", nullable: false),
+                    QuantitySold = table.Column<int>(type: "integer", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "text", nullable: false),
                     LastModifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -32,26 +32,36 @@ namespace ProductService.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Category", x => x.Id);
+                    table.PrimaryKey("PK_Flash-Sales", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Category_Category_ParentCategoryID",
-                        column: x => x.ParentCategoryID,
-                        principalTable: "Category",
-                        principalColumn: "Id",
+                        name: "FK_FlashSales_Products",
+                        column: x => x.ProductID,
+                        principalTable: "products",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            
+
+           
+
             migrationBuilder.CreateIndex(
-                name: "IX_Category_ParentCategoryID",
-                table: "Category",
-                column: "ParentCategoryID");
+                name: "IX_Flash-Sales_ProductID",
+                table: "Flash-Sales",
+                column: "ProductID");
+
+           
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            
+
             migrationBuilder.DropTable(
-                name: "Category");
+                name: "Flash-Sales");
+
+           
         }
     }
 }

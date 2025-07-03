@@ -62,21 +62,25 @@ namespace ProductService.Application.Services
             }
         }
 
-        public async Task<ApiResponse<ICollection<CategoryDetailDTO>>> GetAllCategory(FilterCategoryDTO filter)
+        public async Task<ApiResponse<ListCategoryDTO>> GetAllCategory(FilterCategoryDTO filter)
         {
-            var result = new ApiResponse<ICollection<CategoryDetailDTO>>()
+            var result = new ApiResponse<ListCategoryDTO>()
             {
                 Success = true,
                 Message = "Lấy danh mục ản phẩm thành công"
             };
             var categories =(ICollection<Category>) await _categoryRepo.GetAllAsync();
+            if (filter.IsDeleted.HasValue)
+            {
+                categories = categories.Where(x => x.IsDeleted == filter.IsDeleted).ToList();
+            }
             if (!string.IsNullOrWhiteSpace(filter.CategoryName))
             {
                 categories = categories
                     .Where(x => x.CategoryName.ToLower().Contains(filter.CategoryName.ToLower()))
                     .ToList();
             }
-            var categoryTree = BuildCategoryTree(categories,null);
+            var categoryTree = BuildCategoryTree(categories,null, filter.IsDeleted);
             if (categoryTree == null)
             {
                 result.Success = false;
@@ -86,11 +90,14 @@ namespace ProductService.Application.Services
             int pageIndex = filter.PageIndex ?? 1;
             int pageSize = filter.PageSize ?? categoryTree.Count;
            
-            categoryTree = categoryTree
+            categoryTree = categoryTree.OrderBy(c => c.CategoryName)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            result.Data = categoryTree;
+            result.Data = new ListCategoryDTO() { 
+                Categories = categoryTree.ToList(),
+                TotalItem = categoryTree.Count,
+            };
 
             return result;
 
@@ -117,7 +124,8 @@ namespace ProductService.Application.Services
                 Description = category.Description,
                 IconURL = category.IconURL,
                 Slug = category.Slug,
-                SubCategories = BuildCategoryTree(category.SubCategories, id),
+                SubCategories = BuildCategoryTree(category.SubCategories, id,null),
+                IsDeleted = category.IsDeleted,
             };
             result.Data = categoryDetailDTO;
             return result;
@@ -230,17 +238,21 @@ namespace ProductService.Application.Services
 
         }
 
-        private ICollection<CategoryDetailDTO> BuildCategoryTree(ICollection<Category> categories, Guid? parent) {
-            return categories.Where(x => x.ParentCategoryID == parent && x.IsDeleted == false).Select(x => new CategoryDetailDTO()
-            {
-                CategoryId = x.Id.ToString(),
-                CategoryName = x.CategoryName,
-                Description = x.Description,
-                IconURL = x.IconURL,
-                Slug = x.Slug,
-                SubCategories = BuildCategoryTree(categories, x.Id)
-            }).ToList();
-        
+        private ICollection<CategoryDetailDTO> BuildCategoryTree(ICollection<Category> categories, Guid? parent, bool? isDeleted) {
+            return categories
+        .Where(x => x.ParentCategoryID == parent && (isDeleted == null || x.IsDeleted == isDeleted))
+        .OrderBy(c => c.CategoryName)
+        .Select(x => new CategoryDetailDTO
+        {
+            CategoryId = x.Id.ToString(),
+            CategoryName = x.CategoryName,
+            Description = x.Description,
+            IconURL = x.IconURL,
+            Slug = x.Slug,
+            SubCategories = BuildCategoryTree(categories, x.Id, isDeleted),
+            IsDeleted = x.IsDeleted,
+        }).ToList();
+
         }
     }
 }
