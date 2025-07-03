@@ -1,11 +1,8 @@
-﻿using AutoMapper;
-using MassTransit.Transports;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
-using OrderService.Application.DTOs.WalletDTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
@@ -29,17 +26,14 @@ namespace OrderService.Infrastructure.Services
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ICurrentUserService _currentUserService;
-        private readonly IWalletServiceClient _walletServiceClient;
-        private readonly IMapper _mapper;
+
         public OrderManagementService(
             IMediator mediator,
             IOrderRepository orderRepository,
             ILogger<OrderManagementService> logger,
             IAccountServiceClient accountServiceClient,
             IShopServiceClient shopServiceClient,
-            ICurrentUserService currentUserService, 
-            IMapper mapper,
-            IWalletServiceClient walletServiceClient)
+            ICurrentUserService currentUserService)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -47,8 +41,6 @@ namespace OrderService.Infrastructure.Services
             _accountServiceClient = accountServiceClient;
             _shopServiceClient = shopServiceClient;
             _currentUserService = currentUserService;
-            _mapper = mapper;
-            _walletServiceClient = walletServiceClient;
         }
 
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto)
@@ -78,15 +70,15 @@ namespace OrderService.Infrastructure.Services
                 {
                     AccountId = accountId,
                     ShopId = createOrderDto.ShopId,
-                    CustomerName = shippingAddress.FullName ?? string.Empty,
-                    CustomerEmail = account?.Email ?? string.Empty,
-                    CustomerPhone = shippingAddress.Phone ?? string.Empty,
+                    CustomerName = shippingAddress.FullName ?? string.Empty, 
+                    CustomerEmail = account?.Email ?? string.Empty, 
+                    CustomerPhone = shippingAddress.Phone ?? string.Empty, 
                     ShippingAddress = createOrderDto.ShippingAddress,
                     PaymentMethod = createOrderDto.PaymentMethod ?? "COD",
-                    ShippingMethod = string.Empty,
-                    ShippingFee = createOrderDto.ShippingFee,
-                    PromoCode = string.Empty,
-                    DiscountAmount = 0,
+                    ShippingMethod = string.Empty, 
+                    ShippingFee = createOrderDto.ShippingFee , 
+                    PromoCode = string.Empty, 
+                    DiscountAmount = 0, 
                     Notes = createOrderDto.CustomerNotes,
                     ShippingProviderId = createOrderDto.ShippingProviderId,
                     LivestreamId = createOrderDto.LivestreamId,
@@ -207,8 +199,8 @@ namespace OrderService.Infrastructure.Services
                 var command = new UpdateOrderStatusCommand
                 {
                     OrderId = orderId,
-                    NewStatus = newStatus,
-                    ModifiedBy = modifiedBy
+                    NewStatus = newStatus,  
+                    ModifiedBy = modifiedBy    
                 };
 
                 return await _mediator.Send(command);
@@ -229,8 +221,8 @@ namespace OrderService.Infrastructure.Services
                 var command = new UpdatePaymentStatusCommand
                 {
                     OrderId = orderId,
-                    NewStatus = newStatus,
-                    ModifiedBy = modifiedBy
+                    NewStatus = newStatus,  
+                    ModifiedBy = modifiedBy       
                 };
 
                 return await _mediator.Send(command);
@@ -281,8 +273,8 @@ namespace OrderService.Infrastructure.Services
                     OrderId = orderId,
                     ShippingAddress = shippingAddress,
                     ShippingMethod = shippingMethod,
-                    ShippingFee = shippingFee.HasValue ? (decimal)shippingFee : 0m,
-                    ModifiedBy = modifiedBy ?? string.Empty
+                    ShippingFee = shippingFee.HasValue ? (decimal)shippingFee : 0m, 
+                    ModifiedBy = modifiedBy ?? string.Empty   
                 };
 
                 return await _mediator.Send(command);
@@ -335,7 +327,6 @@ namespace OrderService.Infrastructure.Services
         }
 
         public async Task<(bool IsValid, string ErrorMessage)> ValidateOrderAsync(CreateOrderDto createOrderDto)
-       
         {
             try
             {
@@ -403,82 +394,5 @@ namespace OrderService.Infrastructure.Services
                 return (false, $"Validation error: {ex.Message}");
             }
         }
-
-
-
-
-        /// <summary>
-        public async Task<OrderDto> ConfirmOrderDeliveredAsync(Guid orderId, Guid customerId)
-        {
-            try
-            {
-                var order = await _orderRepository.GetByIdAsync(orderId.ToString());
-                if (order == null)
-                {
-                    _logger.LogWarning("Không tìm thấy đơn hàng {OrderId}", orderId);
-                    return null;
-                }
-
-                if (order.AccountId != customerId)
-                {
-                    _logger.LogWarning("Khách hàng {CustomerId} không có quyền xác nhận đơn hàng {OrderId}", customerId, orderId);
-                    return null;
-                }
-
-                if (order.OrderStatus != OrderStatus.Shipped)
-                {
-                    _logger.LogWarning("Đơn hàng {OrderId} không ở trạng thái đã giao, không thể xác nhận", orderId);
-                    return null;
-                }
-
-                // Cập nhật trạng thái đơn hàng
-                order.UpdateStatus(OrderStatus.Delivered, customerId.ToString());
-                await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
-
-                // Xử lý thanh toán cho shop
-                await ProcessPaymentToShopAsync(order);
-
-                // Chuyển đổi sang DTO
-                return _mapper.Map<OrderDto>(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi xác nhận đơn hàng {OrderId}", orderId);
-                throw;
-            }
-        }
-        private async Task ProcessPaymentToShopAsync(Orders order)
-        {
-            // Tính toán số tiền thanh toán cho shop (trừ 10% phí)
-            decimal totalAmount = order.TotalPrice;
-            decimal fee = totalAmount * 0.1m; // 10% phí
-            decimal amountToShop = totalAmount - fee;
-
-            // Gửi yêu cầu thanh toán đến WalletService
-            var paymentRequest = new ShopPaymentRequest
-            {
-                OrderId = order.Id,
-                ShopId = order.ShopId,
-                Amount = amountToShop,
-                Fee = fee,
-                TransactionType = "OrderComplete",
-                TransactionReference = order.Id.ToString(),
-                Description = $"Thanh toán đơn hàng #{order.OrderCode}"
-            };
-
-            await _walletServiceClient.ProcessShopPaymentAsync(paymentRequest);
-
-            //// Cập nhật tỷ lệ hoàn thành đơn hàng của shop
-            //await _shopServiceClient.UpdateShopCompletionRateAsync(new UpdateShopCompletionRequest
-            //{
-            //    ShopId = order.ShopId,
-            //    RateChange = 0.5m, // Tăng 0.5% cho mỗi đơn hàng hoàn thành
-            //    UpdatedByAccountId = Guid.Parse(_systemAccountId)
-            //});
-        }
-
-
     }
-
-
 }

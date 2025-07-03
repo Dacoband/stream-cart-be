@@ -1,14 +1,13 @@
-﻿using MassTransit;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Common.Extensions;
 using ShopService.Application.Interfaces;
-using ShopService.Application.Services;
 using ShopService.Infrastructure.Data;
 using ShopService.Infrastructure.Messaging.Consumers;
 using ShopService.Infrastructure.Messaging.Publishers;
 using ShopService.Infrastructure.Repositories;
+using Shared.Common.Extensions;
+using MassTransit;
 
 namespace ShopService.Infrastructure.Extensions
 {
@@ -31,9 +30,8 @@ namespace ShopService.Infrastructure.Extensions
             
             // Register message publisher
             services.AddScoped<IMessagePublisher, MessagePublisher>();
-            services.AddScoped<IWalletRepository, WalletRepository>();
-            services.AddScoped<IWalletService, WalletService>();
-
+            
+ 
 
             return services;
         }

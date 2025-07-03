@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using ProductService.Application.DTOs;
+﻿using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
@@ -26,8 +25,11 @@ namespace ProductService.Application.Interfaces
         Task<ProductDto> UpdateProductStockAsync(Guid id, int quantity, string updatedBy);
         Task<bool> CheckProductStockAsync(Guid id, int requestedQuantity);
         Task<ProductDetailDto?> GetProductDetailAsync(Guid id);
+<<<<<<< HEAD
         Task<ProductDto> CreateCompleteProductAsync(CompleteProductDto completeProductDto, string createdBy);
 
 
+=======
+>>>>>>> parent of 8435c1b (thanh toán 2 luồng cơ bản và tạo product 6 bảng)
     }
 }

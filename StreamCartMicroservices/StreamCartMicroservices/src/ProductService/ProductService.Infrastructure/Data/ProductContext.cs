@@ -77,9 +77,6 @@ namespace ProductService.Infrastructure.Data
 
                 entity.Property(e => e.ShopId)
                     .HasColumnName("shop_id");
-                entity.Property(p => p.StartTime);
-
-                entity.Property(p => p.EndTime);
 
                 entity.Property(e => e.IsActive)
                     .HasColumnName("is_active");

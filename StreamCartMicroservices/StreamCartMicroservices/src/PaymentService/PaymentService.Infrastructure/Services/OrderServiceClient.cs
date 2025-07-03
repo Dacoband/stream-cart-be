@@ -127,8 +127,7 @@ namespace PaymentService.Infrastructure.Services
                         UserId = internalOrder.AccountId,
                         TotalAmount = internalOrder.FinalAmount,
                         // Convert the numeric enum to our enum type
-                        PaymentStatus = (PaymentStatus)internalOrder.PaymentStatus,
-                        Status = internalOrder.OrderStatus 
+                        PaymentStatus = (PaymentStatus)internalOrder.PaymentStatus
                     };
                 }
                 catch (JsonException jsonEx)
@@ -172,7 +171,6 @@ namespace PaymentService.Infrastructure.Services
             public Guid AccountId { get; set; }
             public decimal FinalAmount { get; set; }
             public PaymentStatus PaymentStatus { get; set; }  // This is the key change - accepting as int
-            public  OrderStatus OrderStatus { get; set; } 
         }
     }
 
