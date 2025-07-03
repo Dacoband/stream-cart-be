@@ -33,7 +33,6 @@ namespace OrderService.Infrastructure.Data
         {
         }
 
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -61,7 +60,6 @@ namespace OrderService.Infrastructure.Data
 
                 entity.Property(e => e.OrderStatus)
                     .HasColumnName("order_status")
-                    .IsRequired()
                     .HasConversion<string>();
 
                 entity.Property(e => e.TotalPrice)
@@ -309,7 +307,5 @@ namespace OrderService.Infrastructure.Data
                 .HasPostgresEnum<OrderStatus>()
                 .HasPostgresEnum<PaymentStatus>();
         }
-
     }
 }
-

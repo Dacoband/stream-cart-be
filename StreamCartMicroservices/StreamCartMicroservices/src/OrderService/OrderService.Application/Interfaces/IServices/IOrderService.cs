@@ -118,6 +118,5 @@ namespace OrderService.Application.Interfaces.IServices
         /// <param name="createOrderDto">Order creation data</param>
         /// <returns>Validation result</returns>
         Task<(bool IsValid, string ErrorMessage)> ValidateOrderAsync(CreateOrderDto createOrderDto);
-        Task<OrderDto> ConfirmOrderDeliveredAsync(Guid orderId, Guid customerId);
     }
 }

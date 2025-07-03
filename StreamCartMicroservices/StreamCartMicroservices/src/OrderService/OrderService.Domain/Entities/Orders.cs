@@ -58,46 +58,7 @@ namespace OrderService.Domain.Entities
         private readonly List<OrderItem> _items = new List<OrderItem>();
 
         #endregion
-        /// <summary>
-        /// Confirms the order and updates to Pending status
-        /// </summary>
-        public void Confirm(string modifiedBy)
-        {
-            if (OrderStatus != OrderStatus.Waiting)
-            {
-                throw new InvalidOperationException($"Cannot confirm order with status {OrderStatus}");
-            }
 
-            OrderStatus = OrderStatus.Pending;
-            SetModifier(modifiedBy);    
-        }
-        public void UpdateStatus (OrderStatus newStatus, string modifiedBy)
-        {
-            if (newStatus == OrderStatus.Waiting)
-            {
-                throw new InvalidOperationException("Cannot update order status to Waiting");
-            }
-            if (newStatus == OrderStatus.Cancelled && OrderStatus == OrderStatus.Delivered)
-            {
-                throw new InvalidOperationException("Cannot cancel an order that has already been delivered");
-            }
-            OrderStatus = newStatus;
-            SetModifier(modifiedBy);
-        }
-
-        /// <summary>
-        /// Auto-cancels an unconfirmed order due to shop timeout
-        /// </summary>
-        public void AutoCancel(string modifiedBy)
-        {
-            if (OrderStatus != OrderStatus.Waiting)
-            {
-                throw new InvalidOperationException($"Cannot auto-cancel order with status {OrderStatus}");
-            }
-
-            OrderStatus = OrderStatus.Cancelled;
-            SetModifier(modifiedBy);
-        }
         #region Constructors
         protected Orders()
         {

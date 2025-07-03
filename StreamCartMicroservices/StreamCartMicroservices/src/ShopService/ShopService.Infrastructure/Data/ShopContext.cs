@@ -9,7 +9,6 @@ namespace ShopService.Infrastructure.Data
     {
         // Add all required DbSet properties
         public DbSet<Shop> Shops { get; set; }
-        public DbSet<Wallet> Wallets { get; set; }
 
         public ShopContext(DbContextOptions<ShopContext> options) : base(options)
         {
@@ -117,72 +116,6 @@ namespace ShopService.Infrastructure.Data
 
                 entity.HasIndex(e => e.RatingAverage)
                     .HasDatabaseName("ix_shops_rating_average");
-
-                // Soft delete filter
-                entity.HasQueryFilter(e => !e.IsDeleted);
-            });
-
-            modelBuilder.Entity<Wallet>(entity =>
-            {
-                entity.ToTable("wallets");
-
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.Id)
-                    .HasColumnName("id");
-
-                entity.Property(e => e.OwnerType)
-                    .HasColumnName("owner_type")
-                    .IsRequired()
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.Balance)
-                    .HasColumnName("balance")
-                    .HasColumnType("decimal(18,2)")
-                    .HasDefaultValue(0);
-
-                entity.Property(e => e.CreatedAt)
-                    .HasColumnName("created_at");
-
-                entity.Property(e => e.UpdatedAt)
-                    .HasColumnName("updated_at");
-
-                entity.Property(e => e.BankName)
-                    .HasColumnName("bank_name")
-                    .HasMaxLength(200);
-
-                entity.Property(e => e.BankAccountNumber)
-                    .HasColumnName("bank_account_number")
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.ShopId)
-                    .HasColumnName("shop_id");
-                
-                entity.HasOne<Shop>()
-                    .WithOne() 
-                    .HasForeignKey<Wallet>(w => w.ShopId)
-                    .HasConstraintName("fk_wallets_shops")
-                    .OnDelete(DeleteBehavior.Cascade); 
-
-                
-                entity.Property(e => e.CreatedBy)
-                    .HasColumnName("created_by")
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.LastModifiedAt)
-                    .HasColumnName("last_modified_at");
-
-                entity.Property(e => e.LastModifiedBy)
-                    .HasColumnName("last_modified_by")
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.IsDeleted)
-                    .HasColumnName("is_deleted");
-
-                
-                entity.HasIndex(e => e.ShopId)
-                    .HasDatabaseName("ix_wallets_shop_id")
-                    .IsUnique(); // Ensure each shop has only one wallet
 
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);

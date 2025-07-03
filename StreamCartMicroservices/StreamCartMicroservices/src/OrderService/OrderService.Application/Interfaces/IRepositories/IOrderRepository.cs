@@ -100,7 +100,6 @@ namespace OrderService.Application.Interfaces.IRepositories
         /// <param name="endDate">Optional end date filter</param>
         /// <returns>Order statistics</returns>
         Task<OrderStatistics> GetOrderStatisticsAsync(Guid shopId, DateTime? startDate = null, DateTime? endDate = null);
-        Task<IEnumerable<Orders>> GetShippedOrdersBeforeDateAsync(DateTime thresholdDate);
     }
 
     /// <summary>
@@ -142,6 +141,5 @@ namespace OrderService.Application.Interfaces.IRepositories
         /// Number of items sold
         /// </summary>
         public int TotalItemsSold { get; set; }
-
     }
 }

@@ -6,33 +6,33 @@ namespace OrderService.Domain.Enums
     public enum OrderStatus
     {
         /// <summary>
-        /// Order has been created but waiting for shop confirmation
+        /// Order has been created but not yet processed
         /// </summary>
-        Waiting = 0,
-
-        /// <summary>
-        /// Order has been confirmed by shop and is being processed
-        /// </summary>
-        Pending = 1,
-
+        Pending = 0,
+        
         /// <summary>
         /// Order is being processed by the shop
         /// </summary>
-        Processing = 2,
-
+        Processing = 1,
+        
         /// <summary>
-        /// Order has been shipped
+        /// Order has been shipped to the customer
         /// </summary>
-        Shipped = 3,
-
+        Shipped = 2,
+        
         /// <summary>
-        /// Order has been delivered
+        /// Order has been delivered to the customer
         /// </summary>
-        Delivered = 4,
-
+        Delivered = 3,
+        
         /// <summary>
         /// Order has been cancelled
         /// </summary>
-        Cancelled = 5
+        Cancelled = 4,
+        
+        /// <summary>
+        /// Order has been returned by the customer
+        /// </summary>
+        Returned = 5
     }
 }

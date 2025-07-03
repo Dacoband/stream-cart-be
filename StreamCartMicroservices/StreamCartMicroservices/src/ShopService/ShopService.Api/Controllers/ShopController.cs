@@ -609,41 +609,5 @@ namespace ShopService.Api.Controllers
 
             return Ok(shop);
         }
-        /// <summary>
-        /// Cập nhật tỷ lệ hoàn thành đơn hàng của shop
-        /// </summary>
-        /// <param name="id">ID của shop</param>
-        /// <param name="request">Thông tin cập nhật</param>
-        /// <returns>Shop đã cập nhật</returns>
-        [HttpPut("{id}/completion-rate")]
-        [Authorize(Roles = "Admin,System")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ShopDto>> UpdateCompletionRate(Guid id, [FromBody] UpdateCompletionRateDto request)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
-                var shop = await _shopManagementService.UpdateShopCompletionRateAsync(
-                    id,
-                    request.RateChange,
-                    request.UpdatedByAccountId);
-
-                if (shop == null)
-                    return NotFound(new { error = "Shop không tồn tại" });
-
-                return Ok(shop);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi cập nhật tỷ lệ hoàn thành của shop {ShopId}", id);
-                return StatusCode(500, new { error = "Đã xảy ra lỗi khi cập nhật tỷ lệ hoàn thành của shop" });
-            }
-        }
     }   
 }

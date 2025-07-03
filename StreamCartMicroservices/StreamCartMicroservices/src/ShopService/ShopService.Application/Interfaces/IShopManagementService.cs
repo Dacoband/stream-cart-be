@@ -239,6 +239,5 @@ namespace ShopService.Application.Interfaces
         /// <param name="updatedByAccountId">ID của người cập nhật</param>
         /// <returns>Shop đã cập nhật</returns>
         Task<ShopDto> UpdateProductCountAsync(Guid shopId, int totalProduct, Guid updatedByAccountId);
-        Task<ShopDto> UpdateShopCompletionRateAsync(Guid shopId, decimal rateChange, Guid updatedByAccountId);
     }
 }
