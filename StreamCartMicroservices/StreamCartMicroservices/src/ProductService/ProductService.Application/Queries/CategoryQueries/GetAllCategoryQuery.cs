@@ -9,10 +9,11 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Queries.CategoryQueries
 {
-    public class GetAllCategoryQuery : IRequest<ApiResponse<ICollection<CategoryDetailDTO>>>
+    public class GetAllCategoryQuery : IRequest<ApiResponse<ListCategoryDTO>>
     {
         public string? CategoryName { get; set; }
         public int? PageIndex { get; set; }
         public int? PageSize { get; set; } 
+        public bool? IsDeleted { get; set; }
     }
 }

@@ -17,6 +17,7 @@ namespace ProductService.Application.DTOs.Category
 
         public string? Slug { get; set; }
         public ICollection<CategoryDetailDTO>? SubCategories { get; set; }
+        public bool? IsDeleted { get; set; }
 
 
     }

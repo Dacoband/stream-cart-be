@@ -97,7 +97,7 @@ builder.Services.AddQuartz(q =>
     q.AddTrigger(t => t
         .ForJob(jobKey)
         .WithIdentity("UpdateFlashSaleDiscountTrigger")
-        .WithCronSchedule("*/10 * * * * ?"));
+.WithCronSchedule("0 * * * * ?"));
 });
 
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);

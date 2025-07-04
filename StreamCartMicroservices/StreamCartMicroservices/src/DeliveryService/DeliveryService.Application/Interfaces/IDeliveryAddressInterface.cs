@@ -14,6 +14,7 @@ namespace DeliveryService.Application.Interfaces
         public Task<ApiResponse<CreateOrderResult>> CreateOrderAsync(UserCreateOrderRequest input);
         public Task<ApiResponse<PreviewOrderResponse>> PreviewOrder(UserPreviewOrderRequestDTO input);
         public Task<ApiResponse<OrderLogResponse>> GetDeliveryStatus(string deliveryId);
+        public Task<string> CancelDeliveryOrder(string deliveryId);
 
     }
 }

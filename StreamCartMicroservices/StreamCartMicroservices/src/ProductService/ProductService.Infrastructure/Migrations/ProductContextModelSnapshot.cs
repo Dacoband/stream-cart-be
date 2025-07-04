@@ -154,15 +154,13 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("StartTime");
 
-                    b.Property<Guid>("VariantId")
+                    b.Property<Guid?>("VariantId")
                         .HasColumnType("uuid")
                         .HasColumnName("VariantID");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("VariantId");
 
                     b.ToTable("Flash-Sales", (string)null);
                 });
@@ -486,16 +484,7 @@ namespace ProductService.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_FlashSales_Products");
 
-                    b.HasOne("ProductService.Domain.Entities.ProductVariant", "ProductVariant")
-                        .WithMany("FlashSales")
-                        .HasForeignKey("VariantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_FlashSales_ProductVariants");
-
                     b.Navigation("Product");
-
-                    b.Navigation("ProductVariant");
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.ProductCombination", b =>
@@ -542,11 +531,6 @@ namespace ProductService.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Product", b =>
-                {
-                    b.Navigation("FlashSales");
-                });
-
-            modelBuilder.Entity("ProductService.Domain.Entities.ProductVariant", b =>
                 {
                     b.Navigation("FlashSales");
                 });

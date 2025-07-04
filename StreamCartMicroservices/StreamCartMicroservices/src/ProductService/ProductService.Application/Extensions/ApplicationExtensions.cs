@@ -94,7 +94,7 @@ namespace ProductService.Application.Extensions
             //Category 
             services.AddScoped<ICategoryService,CategoryService>();
             services.AddScoped<IRequestHandler<CreateCategoryCommand, ApiResponse<Category>>,CreateCategoryHandler>();
-            services.AddScoped<IRequestHandler<GetAllCategoryQuery, ApiResponse<ICollection<CategoryDetailDTO>>>, GetAllCategoryHanlder>();
+            services.AddScoped<IRequestHandler<GetAllCategoryQuery, ApiResponse<ListCategoryDTO>>, GetAllCategoryHanlder>();
             services.AddScoped<IRequestHandler<GetDetailCategoryQuery, ApiResponse<CategoryDetailDTO>>, GetDetailCategoryHandler>();
             services.AddScoped<IRequestHandler<UpdateCategoryCommand, ApiResponse<Category>>, UpdateCategoryHandler>();
             services.AddScoped<IRequestHandler<DeleteCategoryCommand, ApiResponse<bool>>, DeleteCategoryHandler>();

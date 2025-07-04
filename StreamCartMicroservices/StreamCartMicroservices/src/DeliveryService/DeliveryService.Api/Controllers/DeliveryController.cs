@@ -47,5 +47,19 @@ namespace DeliveryService.Api.Controllers
 
             return Ok(result);
         }
+        [HttpPost("cancel")]
+        public async Task<IActionResult> CancelOrder([FromBody] string request)
+        {
+            var result = await _addressService.CancelDeliveryOrder(request);
+            return Ok(result);
+        }
+
+        [HttpPost("order-status")]
+        public async Task<IActionResult> ReceiveOrderStatusUpdate([FromBody] GhnOrderStatusWebhookDto input)
+        {
+            // TODO: Xử lý thông tin GHN gửi về
+
+            return Ok(); // GHN yêu cầu trả về 200 OK
+        }
     }
 }

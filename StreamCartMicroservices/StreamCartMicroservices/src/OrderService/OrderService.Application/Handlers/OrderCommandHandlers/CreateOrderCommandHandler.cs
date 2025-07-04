@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
@@ -8,6 +9,7 @@ using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
+using Shared.Messaging.Event.OrderEvents;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -23,12 +25,13 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly ILogger<CreateOrderCommandHandler> _logger;
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public CreateOrderCommandHandler(
             IOrderRepository orderRepository,
             IOrderItemRepository orderItemRepository,
             IProductServiceClient productServiceClient,
-            ILogger<CreateOrderCommandHandler> logger,IAccountServiceClient accountServiceClient, IShopServiceClient shopServiceClient)
+            ILogger<CreateOrderCommandHandler> logger,IAccountServiceClient accountServiceClient, IShopServiceClient shopServiceClient, IPublishEndpoint publishEndpoint)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _orderItemRepository = orderItemRepository ?? throw new ArgumentNullException(nameof(orderItemRepository));
@@ -36,6 +39,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _accountServiceClient = accountServiceClient ?? throw new ArgumentNullException(nameof(accountServiceClient));
             _shopServiceClient = shopServiceClient;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -176,6 +180,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 };
 
                 _logger.LogInformation("Order created successfully with ID {OrderId} and Code {OrderCode}", order.Id, order.OrderCode);
+                //pubish OrderChangeEvent to NotificationSevice
+                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                {
+                    OrderCode = order.OrderCode,
+                    Message ="được tạo mới thành công",
+                    UserId = request.AccountId.ToString(),
+                };
+                await _publishEndpoint.Publish(orderChangEvent);
                 return orderDto;
             }
             catch (Exception ex)
