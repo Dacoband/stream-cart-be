@@ -1,358 +1,256 @@
-﻿#version: '3.8'
+# YAML anchors for common configurations
+x-common-variables: &common-variables
+  ASPNETCORE_URLS: ${ASPNETCORE_URLS}
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+  ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  RabbitMQ__Host: ${RABBITMQ_HOST}
+  RabbitMQ__Username: ${RABBITMQ_USERNAME}
+  RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+  JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+  JwtSettings__Issuer: ${JWT_ISSUER}
+  JwtSettings__Audience: ${JWT_AUDIENCE}
+  JwtSettings__ExpiryMinutes: ${JWT_EXPIRY_MINUTES}
+  EMAIL_API_KEY: ${EMAIL_API_KEY}
+  EMAIL_SECRET_KEY: ${EMAIL_SECRET_KEY}
+  EMAIL_FROM_EMAIL: ${EMAIL_FROM_EMAIL}
+  EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER}
+  APPWRITE_PROJECT_ID: ${APPWRITE_PROJECT_ID}
+  APPWRITE_ENDPOINT: ${APPWRITE_ENDPOINT}
+  APPWRITE_BUCKET_ID: ${APPWRITE_BUCKET_ID}
+  APPWRITE_API_KEY: ${APPWRITE_API_KEY}
+
+x-microservice-common: &microservice-common
+  environment:
+    <<: *common-variables
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
+x-microservice-healthcheck: &microservice-healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
 services:
-  # postgres:
-  #   image: postgres:latest
-  #   environment:
-  #     - POSTGRES_DB=${POSTGRES_DB}
-  #     - POSTGRES_USER=${POSTGRES_USER}
-  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-      
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-      
-  account-service:
-    build: 
-     context: ./src  
-     dockerfile: ./AccountService/AccountService.Api/Dockerfile 
-    ports:
-      - "7022:80"
-    environment:
-        - ASPNETCORE_URLS=http://+:80
-        - ASPNETCORE_ENVIRONMENT=Production  # Set to Production
-        # - ASPNETCORE_HTTPS_PORT=7022
-        # - ASPNETCORE_Kestrel__Certificates__Default__Password=12345
-        # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx 
-        - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-        - RabbitMQ__Host=rabbitmq
-        - RabbitMQ__Username=${RABBITMQ_USERNAME}
-        - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-        - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-        - JwtSettings__Issuer=${JWT_ISSUER}
-        - JwtSettings__Audience=${JWT_AUDIENCE}
-        - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-        - EMAIL_API_KEY=${EMAIL_API_KEY}
-        - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-        - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-        - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-        - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      start_period: 10s
 
-        # Appwrite Settings
-        - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-        - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-        - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-        - APPWRITE_API_KEY=${APPWRITE_API_KEY}
-    # volumes:
-    #    - ${USERPROFILE}/.aspnet/https:/https:ro 
+  # Core Microservices
+  account-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./AccountService/AccountService.Api/Dockerfile
+    ports:
+      - "${ACCOUNT_SERVICE_PORT}:80"
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  product-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./ProductService/ProductService.Api/Dockerfile
+    ports:
+      - "${PRODUCT_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__ShopService: http://shop-service
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  shop-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./ShopService/ShopService.Api/Dockerfile
+    ports:
+      - "${SHOP_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__AccountService: http://account-service
+      ServiceUrls__ProductService: http://product-service
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  order-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./OrderService/OrderService.Api/Dockerfile
+    ports:
+      - "${ORDER_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__ProductService: http://product-service
+      ServiceUrls__ShopService: http://shop-service
+      ServiceUrls__AccountService: http://account-service
+      ServiceUrls__PaymentService: http://payment-service
+      API_TOKEN_GHN: ${API_TOKEN_GHN}
+      GHN_SHOPID: ${GHN_SHOPID}
     depends_on:
-      # postgres:
-      #   condition: service_healthy
+      postgres:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+      product-service:
+        condition: service_healthy
+      shop-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *microservice-healthcheck
 
+  payment-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./PaymentService/PaymentService.Api/Dockerfile
+    ports:
+      - "${PAYMENT_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__OrderService: http://order-service
+      ServiceUrls__AccountService: http://account-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  cart-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./CartService/CartService.Api/Dockerfile
+    ports:
+      - "${CART_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__ProductService: http://product-service
+      ServiceUrls__ShopService: http://shop-service
+      ServiceUrls__AccountService: http://account-service
+      ServiceUrls__PaymentService: http://payment-service
+      API_TOKEN_GHN: ${API_TOKEN_GHN}
+      GHN_SHOPID: ${GHN_SHOPID}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      shop-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  delivery-service:
+    <<: *microservice-common
+    build:
+      context: ./src
+      dockerfile: ./DeliveryService/DeliveryService.Api/Dockerfile
+    ports:
+      - "${DELIVERY_SERVICE_PORT}:80"
+    environment:
+      <<: *common-variables
+      ServiceUrls__ProductService: http://product-service
+      ServiceUrls__ShopService: http://shop-service
+      ServiceUrls__AccountService: http://account-service
+      ServiceUrls__PaymentService: http://payment-service
+      API_TOKEN_GHN: ${API_TOKEN_GHN}
+      GHN_SHOPID: ${GHN_SHOPID}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      shop-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *microservice-healthcheck
+
+  # API Gateway (should start after all services)
   api-gateway:
     build:
       context: ./src
       dockerfile: ./ApiGateway/ApiGateway/Dockerfile
     ports:
-      - "8000:80"
-     # - "443:80"
+      - "${API_GATEWAY_PORT}:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:80
-      - Logging__LogLevel__Default=Debug
-      - Logging__LogLevel__Microsoft=Warning
-      - Logging__LogLevel__Ocelot=Debug
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+      <<: *common-variables
+      Logging__LogLevel__Default: Debug
+      Logging__LogLevel__Microsoft: Warning
+      Logging__LogLevel__Ocelot: Debug
     depends_on:
-      - account-service
-      - product-service
-      - shop-service
-      - order-service
-      - payment-service
-    restart: unless-stopped
-   # Product Service (Mới thêm)
-  product-service:
-    build:
-      context: ./src
-      dockerfile: ./ProductService/ProductService.Api/Dockerfile
-    ports:
-      - "7005:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USERNAME}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
- 
-      - ServiceUrls__ShopService=http://shop-service
-      # - ServiceUrls__AccountService=http://account-service
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-  shop-service:
-    build:
-      context: ./src
-      dockerfile: ./ShopService/ShopService.Api/Dockerfile
-    ports:
-      - "7077:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USERNAME}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
- 
-      - ServiceUrls__AccountService=http://account-service
-      - ServiceUrls__ProductService=http://product-service
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-  order-service:
-    build:
-      context: ./src
-      dockerfile: ./OrderService/OrderService.Api/Dockerfile
-    ports:
-      - "7135:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USERNAME}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
-      # Service URLs
-      - ServiceUrls__ProductService=http://product-service
-      - ServiceUrls__ShopService=http://shop-service
-      - ServiceUrls__AccountService=http://account-service
-      - ServiceUrls__PaymentService=http://payment-service
-      #Delivery Service
-      - API_TOKEN_GHN=&{API_TOKEN_GHN}
-      - GHN_SHOPID=${GHN_SHOPID}
-    depends_on:
-      rabbitmq:
+      account-service:
         condition: service_healthy
       product-service:
-        condition: service_started
+        condition: service_healthy
       shop-service:
-        condition: service_started
-    restart: unless-stopped
-
-  payment-service:
-    build:
-      context: ./src
-      dockerfile: ./PaymentService/PaymentService.Api/Dockerfile
-    ports:
-      - "7021:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USERNAME}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
-      # Service URLs - Liên kết với các service khác
-      - ServiceUrls__OrderService=http://order-service
-      - ServiceUrls__AccountService=http://account-service
-    depends_on:
-      rabbitmq:
         condition: service_healthy
       order-service:
-        condition: service_started
-    restart: unless-stopped
-
-  cart-service:
-    build:
-      context: ./src
-      dockerfile: ./CartService/CartService.Api/Dockerfile
-    ports:
-      - "7228:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USERNAME}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=${JWT_ISSUER}
-      - JwtSettings__Audience=${JWT_AUDIENCE}
-      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-      - EMAIL_API_KEY=${EMAIL_API_KEY}
-      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-      # Appwrite Settings
-      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
-      # Service URLs
-      - ServiceUrls__ProductService=http://product-service
-      - ServiceUrls__ShopService=http://shop-service
-      - ServiceUrls__AccountService=http://account-service
-      - ServiceUrls__PaymentService=http://payment-service
-      #Delivery Service
-      - API_TOKEN_GHN=&{API_TOKEN_GHN}
-      - GHN_SHOPID=${GHN_SHOPID}
-    depends_on:
-      rabbitmq:
         condition: service_healthy
-      product-service:
-        condition: service_started
-      shop-service:
-        condition: service_started
+      payment-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      delivery-service:
+        condition: service_healthy
     restart: unless-stopped
-
-  delivery-service:
-      build:
-        context: ./src
-        dockerfile: ./DeliveryService/DeliveryService.Api/Dockerfile
-      ports:
-        - "7202:80"
-      environment:
-        - ASPNETCORE_URLS=http://+:80
-        - ASPNETCORE_ENVIRONMENT=Production
-        - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-        - RabbitMQ__Host=rabbitmq
-        - RabbitMQ__Username=${RABBITMQ_USERNAME}
-        - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-        - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-        - JwtSettings__Issuer=${JWT_ISSUER}
-        - JwtSettings__Audience=${JWT_AUDIENCE}
-        - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
-        - EMAIL_API_KEY=${EMAIL_API_KEY}
-        - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
-        - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
-        - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
-        - EMAIL_PROVIDER=${EMAIL_PROVIDER}
-        # Appwrite Settings
-        - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
-        - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
-        - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
-        - APPWRITE_API_KEY=${APPWRITE_API_KEY}
-        # Service URLs
-        - ServiceUrls__ProductService=http://product-service
-        - ServiceUrls__ShopService=http://shop-service
-        - ServiceUrls__AccountService=http://account-service
-        - ServiceUrls__PaymentService=http://payment-service
-        #Delivery Service
-        - API_TOKEN_GHN=&{API_TOKEN_GHN}
-        - GHN_SHOPID=${GHN_SHOPID}
-      depends_on:
-        rabbitmq:
-          condition: service_healthy
-        product-service:
-          condition: service_started
-        shop-service:
-          condition: service_started
-        order-service:
-           condition: service_started
-        payment-service:
-           condition: service_started
-      restart: unless-stopped
+    healthcheck:
+      <<: *microservice-healthcheck
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
