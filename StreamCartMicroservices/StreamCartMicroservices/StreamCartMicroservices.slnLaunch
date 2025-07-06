@@ -1,0 +1,39 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\ApiGateway\\ApiGateway\\ApiGateway.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\AccountService\\AccountService.Api\\AccountService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\ProductService\\ProductService.Api\\ProductService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\ShopService\\ShopService.Api\\ShopService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\CartService\\CartService.Api\\CartService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\OrderService\\OrderService.Api\\OrderService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\DeliveryService\\DeliveryService.Api\\DeliveryService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\NotificationService\\Notification.Api\\Notification.Api.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

@@ -31,7 +31,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 var command = new CreateCategoryCommand()
                 {
                     CategoryName = request.CategoryName,
@@ -85,7 +85,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 var command = new UpdateCategoryCommand
                 {
                     Id = id,
@@ -120,7 +120,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 var command = new DeleteCategoryCommand()
                 {
                     CategoryId = id,

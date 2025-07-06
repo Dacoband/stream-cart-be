@@ -48,7 +48,7 @@ namespace ProductService.Application.Services
                     if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                        if (product != null && product.DiscountPrice != fs.FlashSalePrice)
+                        if (product != null)
                         {
                             product.UpdatePricing(product.BasePrice,fs.FlashSalePrice);
                             await _productRepo.ReplaceAsync(product.Id.ToString(),product);
@@ -74,12 +74,13 @@ namespace ProductService.Application.Services
                     else
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
-                        if (variant != null && variant.FlashSalePrice != fs.FlashSalePrice)
+                        if (variant != null )
                         {
                             variant.UpdatePrice(variant.Price,fs.FlashSalePrice);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
                             var productEvent = new ProductUpdatedEvent()
                             {
+
                                 VariantId = variant.Id,
                                 Price = fs.FlashSalePrice,   
 
@@ -98,6 +99,7 @@ namespace ProductService.Application.Services
                 }
                 else if (isEnded)
                 {
+                    
                     if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
@@ -135,6 +137,7 @@ namespace ProductService.Application.Services
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
                             var productEvent = new ProductUpdatedEvent()
                             {
+                                ProductId = fs.ProductId,
                                 VariantId = variant.Id,
                                 Price = variant.Price,
 

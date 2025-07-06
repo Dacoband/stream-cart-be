@@ -66,7 +66,7 @@ namespace CartService.Application.Services
                     PriceCurrent = product.BasePrice,
                     Stock = product.Variants.Sum(x=>x.Stock),
                 };
-                if(product.Variants.Count >= 0 && !variantId.HasValue)
+                if(product.Variants.Count > 0 && !variantId.HasValue)
                 {
                     return null;
                 }
