@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.Interfaces.IServices;
+using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Services.User;
 using System;
 using System.Threading.Tasks;
 
@@ -18,11 +20,13 @@ namespace OrderService.Api.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly ILogger<OrderController> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
-        public OrderController(IOrderService orderService, ILogger<OrderController> logger)
+        public OrderController(IOrderService orderService, ILogger<OrderController> logger, ICurrentUserService currentUserService)
         {
             _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _currentUserService = currentUserService;
         }
 
         /// <summary>
@@ -203,8 +207,11 @@ namespace OrderService.Api.Controllers
                 // Get current user ID from authentication as modifier
                 var modifiedBy = User.Identity?.IsAuthenticated == true ?
                     User.Identity.Name : "system";
+                var order = await _orderService.GetOrderByIdAsync(id);
+                if (order == null)
+                    return NotFound();
 
-                var order = await _orderService.UpdateOrderStatusAsync(id, statusDto.Status, modifiedBy);
+                await _orderService.UpdateOrderStatusAsync(id, statusDto.Status, modifiedBy);
                 if (order == null)
                 {
                     return NotFound();
@@ -387,6 +394,46 @@ namespace OrderService.Api.Controllers
             {
                 _logger.LogError(ex, "Error retrieving statistics for shop {ShopId}", shopId);
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving the statistics");
+            }
+        }
+        /// <summary>
+        /// Khách hàng xác nhận đã nhận được hàng
+        /// </summary>
+        /// <param name="orderId">ID của đơn hàng</param>
+        /// <returns>Thông tin đơn hàng đã cập nhật</returns>
+        [HttpPost("{orderId}/confirm-delivery")]
+        [Authorize(Roles = "Customer")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<OrderDto>> ConfirmOrderDelivery(Guid orderId)
+        {
+            try
+            {
+                // Lấy ID của người dùng hiện tại
+                var customerId = _currentUserService.GetUserId();
+                if (customerId == Guid.Empty)
+                {
+                    _logger.LogWarning("Không thể xác nhận đơn hàng: Người dùng chưa đăng nhập");
+                    return Unauthorized(new { error = "Bạn cần đăng nhập để xác nhận đơn hàng" });
+                }
+
+                // Gọi service để xác nhận đơn hàng
+                var updatedOrder = await _orderService.ConfirmOrderDeliveredAsync(orderId, customerId);
+                if (updatedOrder == null)
+                {
+                    _logger.LogWarning("Không thể xác nhận đơn hàng {OrderId}: Đơn hàng không tồn tại hoặc không thuộc về khách hàng", orderId);
+                    return NotFound(new { error = "Không tìm thấy đơn hàng hoặc bạn không có quyền xác nhận đơn hàng này" });
+                }
+
+                // Trả về kết quả thành công
+                return Ok(updatedOrder);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi khách hàng xác nhận đơn hàng {OrderId}", orderId);
+                return BadRequest(new { error = "Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại sau." });
             }
         }
     }

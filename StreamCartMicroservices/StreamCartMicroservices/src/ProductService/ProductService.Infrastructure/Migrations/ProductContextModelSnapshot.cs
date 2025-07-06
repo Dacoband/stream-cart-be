@@ -206,6 +206,9 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("discount_price");
 
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("HasVariant")
                         .HasColumnType("boolean")
                         .HasColumnName("has_variant");
@@ -246,6 +249,9 @@ namespace ProductService.Infrastructure.Migrations
                     b.Property<Guid?>("ShopId")
                         .HasColumnType("uuid")
                         .HasColumnName("shop_id");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("StockQuantity")
                         .HasColumnType("integer")

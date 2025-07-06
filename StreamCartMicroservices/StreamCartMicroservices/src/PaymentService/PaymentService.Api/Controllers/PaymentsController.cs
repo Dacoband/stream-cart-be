@@ -227,14 +227,20 @@ namespace PaymentService.Api.Controllers
             var orderDetails = await _orderServiceClient.GetOrderByIdAsync(requestDto.OrderId);
             if (orderDetails == null)
                 return NotFound($"Order with ID {requestDto.OrderId} not found");
-
+            var qrCode = await _qrCodeService.GenerateQrCodeAsync(
+                orderDetails.Id,
+                orderDetails.TotalAmount,
+                orderDetails.UserId,
+                PaymentMethod.BankTransfer
+            );
             var createPaymentDto = new CreatePaymentDto
             {
                 OrderId = orderDetails.Id,
                 //UserId = orderDetails.UserId,
                 Amount = orderDetails.TotalAmount,
                 PaymentMethod = PaymentMethod.BankTransfer,
-                CreatedBy = User.Identity?.Name ?? "System"
+                CreatedBy = User.Identity?.Name ?? "System",
+                QrCode = qrCode
             };
 
             var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
@@ -244,21 +250,16 @@ namespace PaymentService.Api.Controllers
                 orderDetails.Id, PaymentStatus.Pending);
 
 
-            var qrCode = await _qrCodeService.GenerateQrCodeAsync(
-                orderDetails.Id,
-                orderDetails.TotalAmount,
-                orderDetails.UserId,
-                PaymentMethod.BankTransfer 
-            );
+
 
             // 4. Cập nhật QR code cho Payment nếu cần
-                var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
-                {
-                    NewStatus = PaymentStatus.Pending,
-                    QrCode = qrCode,
-                    UpdatedBy = User.Identity?.Name ?? "System"
-                };
-                await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
+            var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
+            {
+                NewStatus = PaymentStatus.Pending,
+                QrCode = qrCode,
+                UpdatedBy = User.Identity?.Name ?? "System"
+            };
+            await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
 
             return Ok(new
             {
@@ -266,6 +267,62 @@ namespace PaymentService.Api.Controllers
                 paymentId = payment.Id,
                 amount = orderDetails.TotalAmount
             });
+        }
+        /// <summary>
+        /// Xử lý callback từ SePay
+        /// </summary>
+        [HttpPost("callback/sepay")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> ProcessSePayCallback([FromBody] SePayCallbackRequest request)
+        {
+            try
+            {
+                // Trích xuất thông tin từ request của SePay
+                var transactionId = request.TransactionId;
+                var orderCode = request.OrderCode;
+                var amount = request.Amount;
+                var status = request.Status;
+
+                // Tìm payment dựa trên mã đơn hàng
+                if (string.IsNullOrEmpty(orderCode))
+                {
+                    return BadRequest("Order code is null or empty");
+                }
+
+                var orderId = Guid.Parse(orderCode.Replace("ORDER_", ""));
+                var payments = await _paymentService.GetPaymentsByOrderIdAsync(orderId);
+
+                if (payments == null || !payments.Any())
+                {
+                    return BadRequest("Payment not found");
+                }
+
+                var payment = payments.FirstOrDefault();
+
+                // Ensure payment.QrCode is not null before accessing it
+                if (payment?.QrCode == null)
+                {
+                    return BadRequest("QR Code not found for the payment");
+                }
+
+                // Tạo callback dto từ dữ liệu của SePay
+                var callbackDto = new PaymentCallbackDto
+                {
+                    IsSuccessful = status == "success",
+                    QrCode = payment.QrCode,
+                    RawResponse = System.Text.Json.JsonSerializer.Serialize(request)
+                };
+
+                // Xử lý callback
+                var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
+
+                return Ok(new { success = true, message = "Callback processed successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
         }
     }
 }

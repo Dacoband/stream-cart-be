@@ -17,8 +17,9 @@ namespace PaymentService.Infrastructure.Services
         private readonly string _bankAccount;
         private readonly string _bankName;
         private readonly string _secretKey;
+        private readonly IOrderServiceClient _orderServiceClient;
 
-        public QrCodeService(IConfiguration configuration, ILogger<QrCodeService> logger)
+        public QrCodeService(IConfiguration configuration, ILogger<QrCodeService> logger, IOrderServiceClient orderServiceClient)
         {
             _configuration = configuration;
             _logger = logger;
@@ -27,12 +28,23 @@ namespace PaymentService.Infrastructure.Services
             _bankAccount = _configuration["Payment:SePay:BankAccount"] ?? "0343219324";
             _bankName = _configuration["Payment:SePay:BankName"] ?? "MB";
             _secretKey = _configuration["Payment:QrCode:SecretKey"] ?? "DefaultSecretKey";
+            _orderServiceClient = orderServiceClient;
         }
 
         public async Task<string> GenerateQrCodeAsync(Guid orderId, decimal amount, Guid userId, PaymentMethod paymentMethod)
         {
             try
             {
+                var order = await _orderServiceClient.GetOrderByIdAsync(orderId);
+                if (order == null)
+                {
+                    throw new ApplicationException($"Order with ID {orderId} not found.");
+                }
+                if (order.Status != OrderStatus.Waiting && order.PaymentStatus != PaymentStatus.Pending)
+                {
+                    throw new ApplicationException($"Cannot generate QR code for order with payment status {order.PaymentStatus}");
+                }
+
                 if (paymentMethod != PaymentMethod.BankTransfer)
                 {
                     _logger.LogWarning("QR code can only be generated for bank transfers");

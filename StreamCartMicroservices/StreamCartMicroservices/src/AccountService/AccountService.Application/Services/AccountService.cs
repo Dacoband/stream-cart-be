@@ -1,6 +1,7 @@
 ﻿using AccountService.Application.Commands;
 using AccountService.Application.DTOs;
 using AccountService.Application.Interfaces;
+using AccountService.Application.Queries;
 using AccountService.Domain.Entities;
 using AccountService.Domain.Enums;
 using AccountService.Infrastructure.Interfaces;
@@ -190,6 +191,12 @@ namespace AccountService.Application.Services
                 return true;
 
             return false;
+        }
+        public async Task<IEnumerable<AccountDto>> GetAccountsByShopIdAsync(Guid shopId)
+        {
+            var query = new GetAccountsByShopIdQuery { ShopId = shopId };
+            var result = await _mediator.Send(query);
+            return result;
         }
         #endregion
 

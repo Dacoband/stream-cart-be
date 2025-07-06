@@ -674,6 +674,39 @@ namespace ShopService.Application.Services
                 return null;
             }
         }
+        public async Task<ShopDto> UpdateShopCompletionRateAsync(Guid shopId, decimal rateChange, Guid updatedByAccountId)
+        {
+            try
+            {
+                // Kiểm tra shop tồn tại
+                var shop = await _shopRepository.GetByIdAsync(shopId.ToString());
+                if (shop == null)
+                {
+                    _logger.LogWarning("Không thể cập nhật tỷ lệ hoàn thành: Shop {ShopId} không tồn tại", shopId);
+                    return null;
+                }
+
+                // Tính toán giá trị tỷ lệ mới
+                decimal newRate = Math.Clamp(shop.CompleteRate + rateChange, 0, 100);
+
+                // Cập nhật tỷ lệ hoàn thành
+                shop.UpdateCompleteRate(newRate, updatedByAccountId.ToString());
+
+                // Lưu thay đổi
+                await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
+
+                // Chuyển đổi sang DTO
+                var shopDto = MapShopToDto(shop);
+
+                _logger.LogInformation("Đã cập nhật tỷ lệ hoàn thành của shop {ShopId} thành {CompleteRate}", shopId, newRate);
+                return shopDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật tỷ lệ hoàn thành của shop {ShopId}", shopId);
+                throw;
+            }
+        }
 
         #endregion
 

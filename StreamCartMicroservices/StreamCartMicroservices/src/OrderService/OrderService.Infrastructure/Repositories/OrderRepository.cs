@@ -311,5 +311,23 @@ namespace OrderService.Infrastructure.Repositories
                 throw;
             }
         }
+        public async Task<IEnumerable<Orders>> GetShippedOrdersBeforeDateAsync(DateTime thresholdDate)
+        {
+            try
+            {
+                // Sử dụng LastModifiedAt thay vì ShippingDate vì thuộc tính này sẽ được cập nhật 
+                // khi order chuyển sang trạng thái Shipped qua phương thức Ship()
+                return await _orderContext.Orders
+                    .Where(o => o.OrderStatus == OrderStatus.Shipped &&
+                                o.LastModifiedAt <= thresholdDate &&
+                                !o.IsDeleted)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy danh sách đơn hàng đã giao trước ngày {ThresholdDate}", thresholdDate);
+                throw;
+            }
+        }
     }
 }

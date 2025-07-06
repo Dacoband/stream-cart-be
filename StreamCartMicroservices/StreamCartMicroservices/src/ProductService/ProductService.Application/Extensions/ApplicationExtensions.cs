@@ -53,15 +53,15 @@ namespace ProductService.Application.Extensions
                 }
             });
             // Inside AddApplicationServices method
-            services.AddScoped<IRequestHandler<CreateProductVariantCommand, ProductVariantDto>, CreateProductVariantCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateProductVariantCommand, ProductVariantDto>, UpdateProductVariantCommandHandler>();
+            services.AddScoped<IRequestHandler<CreateProductVariantCommand, DTOs.Variants.ProductVariantDto>, CreateProductVariantCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateProductVariantCommand, DTOs.Variants.ProductVariantDto>, UpdateProductVariantCommandHandler>();
             services.AddScoped<IRequestHandler<DeleteProductVariantCommand, bool>, DeleteProductVariantCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateVariantStockCommand, ProductVariantDto>, UpdateVariantStockCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateVariantPriceCommand, ProductVariantDto>, UpdateVariantPriceCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateVariantStockCommand, DTOs.Variants.ProductVariantDto>, UpdateVariantStockCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateVariantPriceCommand, DTOs.Variants.ProductVariantDto>, UpdateVariantPriceCommandHandler>();
             services.AddScoped<IRequestHandler<BulkUpdateVariantStockCommand, bool>, BulkUpdateVariantStockCommandHandler>();
 
-            services.AddScoped<IRequestHandler<CreateProductAttributeCommand, ProductAttributeDto>, CreateProductAttributeCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateProductAttributeCommand, ProductAttributeDto>, UpdateProductAttributeCommandHandler>();
+            services.AddScoped<IRequestHandler<CreateProductAttributeCommand, DTOs.Attributes.ProductAttributeDto>, CreateProductAttributeCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateProductAttributeCommand, DTOs.Attributes.ProductAttributeDto>, UpdateProductAttributeCommandHandler>();
             services.AddScoped<IRequestHandler<DeleteProductAttributeCommand, bool>, DeleteProductAttributeCommandHandler>();
 
             services.AddScoped<IRequestHandler<CreateAttributeValueCommand, AttributeValueDto>, CreateAttributeValueCommandHandler>();
@@ -73,16 +73,16 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<DeleteProductCombinationCommand, bool>, DeleteProductCombinationCommandHandler>();
             services.AddScoped<IRequestHandler<GenerateProductCombinationsCommand, bool>, GenerateProductCombinationsCommandHandler>();
             // Image handlers
-            services.AddScoped<IRequestHandler<UploadProductImageCommand, ProductImageDto>, UploadProductImageCommandHandler>();
-            services.AddScoped<IRequestHandler<UpdateProductImageCommand, ProductImageDto>, UpdateProductImageCommandHandler>();
+            services.AddScoped<IRequestHandler<UploadProductImageCommand, DTOs.Images.ProductImageDto>, UploadProductImageCommandHandler>();
+            services.AddScoped<IRequestHandler<UpdateProductImageCommand, DTOs.Images.ProductImageDto>, UpdateProductImageCommandHandler>();
             services.AddScoped<IRequestHandler<DeleteProductImageCommand, bool>, DeleteProductImageCommandHandler>();
             services.AddScoped<IRequestHandler<SetPrimaryImageCommand, bool>, SetPrimaryImageCommandHandler>();
             services.AddScoped<IRequestHandler<ReorderProductImagesCommand, bool>, ReorderProductImagesCommandHandler>();
 
-            services.AddScoped<IRequestHandler<GetAllProductImagesQuery, IEnumerable<ProductImageDto>>, GetAllProductImagesQueryHandler>();
-            services.AddScoped<IRequestHandler<GetProductImageByIdQuery, ProductImageDto>, GetProductImageByIdQueryHandler>();
-            services.AddScoped<IRequestHandler<GetProductImagesByProductIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByProductIdQueryHandler>();
-            services.AddScoped<IRequestHandler<GetProductImagesByVariantIdQuery, IEnumerable<ProductImageDto>>, GetProductImagesByVariantIdQueryHandler>();
+            services.AddScoped<IRequestHandler<GetAllProductImagesQuery, IEnumerable<DTOs.Images.ProductImageDto>>, GetAllProductImagesQueryHandler>();
+            services.AddScoped<IRequestHandler<GetProductImageByIdQuery, DTOs.Images.ProductImageDto>, GetProductImageByIdQueryHandler>();
+            services.AddScoped<IRequestHandler<GetProductImagesByProductIdQuery, IEnumerable<DTOs.Images.ProductImageDto>>, GetProductImagesByProductIdQueryHandler>();
+            services.AddScoped<IRequestHandler<GetProductImagesByVariantIdQuery, IEnumerable<DTOs.Images.ProductImageDto>>, GetProductImagesByVariantIdQueryHandler>();
             services.AddScoped<IRequestHandler<GetProductDetailQuery, ProductDetailDto>, GetProductDetailQueryHandler>();
             services.AddScoped<IProductService, ProductManagementService>();
             services.AddScoped<IAttributeValueService, AttributeValueService>();

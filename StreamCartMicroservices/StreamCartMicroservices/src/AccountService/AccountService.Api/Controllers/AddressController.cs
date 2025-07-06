@@ -5,6 +5,7 @@ using AccountService.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -18,10 +19,12 @@ namespace AccountService.Api.Controllers
     public class AddressController : ControllerBase
     {
         private readonly IAddressManagementService _addressService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public AddressController(IAddressManagementService addressService)
+        public AddressController(IAddressManagementService addressService, ICurrentUserService currentUserService)
         {
             _addressService = addressService ?? throw new ArgumentNullException(nameof(addressService));
+            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
         }
 
         private Guid GetCurrentAccountId()
@@ -44,7 +47,7 @@ namespace AccountService.Api.Controllers
 
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
 
                 var command = new CreateAddressCommand
                 {
@@ -90,7 +93,7 @@ namespace AccountService.Api.Controllers
 
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
 
                 var command = new UpdateAddressCommand
                 {
@@ -162,7 +165,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var address = await _addressService.GetAddressByIdAsync(id, accountId);
 
                 if (address == null)
@@ -186,7 +189,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var addresses = await _addressService.GetAddressesByAccountIdAsync(accountId);
 
                 return Ok(ApiResponse<IEnumerable<AddressDto>>.SuccessResult(addresses));
@@ -219,7 +222,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var address = await _addressService.GetDefaultShippingAddressAsync(accountId);
 
                 if (address == null)
@@ -239,7 +242,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var addresses = await _addressService.GetAddressesByTypeAsync(accountId, type);
 
                 return Ok(ApiResponse<IEnumerable<AddressDto>>.SuccessResult(addresses));
@@ -257,7 +260,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var result = await _addressService.SetDefaultShippingAddressAsync(id, accountId);
 
                 if (!result)
@@ -278,7 +281,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var address = await _addressService.AssignAddressToShopAsync(id, accountId, shopId);
 
                 return Ok(ApiResponse<AddressDto>.SuccessResult(address, "Address assigned to shop successfully"));
@@ -304,7 +307,7 @@ namespace AccountService.Api.Controllers
         {
             try
             {
-                var accountId = GetCurrentAccountId();
+                var accountId = _currentUserService.GetUserId();
                 var address = await _addressService.UnassignAddressFromShopAsync(id, accountId);
 
                 return Ok(ApiResponse<AddressDto>.SuccessResult(address, "Address unassigned from shop successfully"));

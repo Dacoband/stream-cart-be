@@ -69,7 +69,7 @@ namespace PaymentService.Infrastructure.Data
 
                 // String property configurations (changed from TransactionId to QrCode)
                 entity.Property(e => e.QrCode)
-                    .HasMaxLength(255);
+                    .HasColumnType("text");
 
                 entity.Property(e => e.CreatedBy)
                     .IsRequired()
