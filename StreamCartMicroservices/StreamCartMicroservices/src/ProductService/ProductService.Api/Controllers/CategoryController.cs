@@ -21,7 +21,7 @@ namespace ProductService.Api.Controllers
             _mediator = mediator;
         }
         [HttpPost]
-        [Authorize(Roles ="Admin")]
+        [Authorize(Roles ="OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<Category>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateCategory([FromBody] CreateCatgoryDTO request)
@@ -75,7 +75,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<Category>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateCategory([FromBody] UpdateCategoryDTO request, [FromRoute] Guid id)
@@ -113,7 +113,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<bool>), 400)]
         public async Task<IActionResult> UpdateCategoryStatus([FromRoute] Guid id)
