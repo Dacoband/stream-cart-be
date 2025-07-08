@@ -10,6 +10,7 @@ namespace ProductService.Application.DTOs.Products
         public string? Description { get; set; }
         public string? CategoryName { get; set; }
         public decimal BasePrice { get; set; }
+        public decimal FinalPrice { get; set; }
         public string? Weight { get; set; }
         public string? Dimension { get; set; }
         public List<string> PrimaryImage { get; set; } = new();
@@ -33,6 +34,8 @@ namespace ProductService.Application.DTOs.Products
     {
         public string? AttributeName { get; set; }
         public List<string> Values { get; set; } = new();
+        public List<string> ImageUrls { get; set; } = new(); 
+
     }
 
     public class ProductDetailVariantDto

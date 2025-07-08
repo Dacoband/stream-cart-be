@@ -7,6 +7,7 @@ using ProductService.Application.DTOs.Category;
 using ProductService.Application.Queries.CategoryQueries;
 using ProductService.Domain.Entities;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System.Security.Claims;
 
 namespace ProductService.Api.Controllers
@@ -16,9 +17,11 @@ namespace ProductService.Api.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly IMediator _mediator;
-        public CategoryController(IMediator mediator)
+        private readonly ICurrentUserService _currentUserService;
+        public CategoryController(IMediator mediator, ICurrentUserService currentUserService)
         {
             _mediator = mediator;
+            _currentUserService = currentUserService;
         }
         [HttpPost]
         [Authorize(Roles ="Admin")]
@@ -31,7 +34,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 var command = new CreateCategoryCommand()
                 {
                     CategoryName = request.CategoryName,
@@ -85,7 +88,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 var command = new UpdateCategoryCommand
                 {
                     Id = id,
@@ -120,7 +123,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 var command = new DeleteCategoryCommand()
                 {
                     CategoryId = id,

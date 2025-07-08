@@ -94,15 +94,41 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 .GroupBy(av => av.Value.AttributeId)
                 .ToDictionary(g => g.Key, g => g.Select(x => x.Value.ValueName).Distinct().ToList());
 
+            var attributeValueImages = new Dictionary<string, string>();
+            foreach (var image in images)
+            {
+                if (image.VariantId.HasValue)
+                {
+                    var variantCombinations = await _combinationRepository.GetByVariantIdAsync(image.VariantId.Value);
+                    foreach (var combo in variantCombinations)
+                    {
+                        var value = await _attributeValueRepository.GetByIdAsync(combo.AttributeValueId.ToString());
+                        if (value != null)
+                        {
+                            attributeValueImages[value.ValueName] = image.ImageUrl;
+                        }
+                    }
+                }
+            }
             foreach (var attr in attributes)
             {
+                var valueNames = attrValuesByAttr.ContainsKey(attr.Key) ? attrValuesByAttr[attr.Key] : new List<string>();
+                var valueImages = valueNames.Select(valueName =>
+                    attributeValueImages.ContainsKey(valueName) ? attributeValueImages[valueName] : string.Empty).ToList();
+
                 attributeDtos.Add(new ProductDetailAttributeDto
                 {
                     AttributeName = attr.Value,
-                    Values = attrValuesByAttr.ContainsKey(attr.Key) ? attrValuesByAttr[attr.Key] : new List<string>()
+                    Values = valueNames,
+                    ImageUrls = valueImages // Add image URLs for each value
                 });
             }
-
+            decimal finalPrice = product.BasePrice;
+            if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+            {
+                // Apply discount as a percentage of original price
+                finalPrice = product.BasePrice * (1 - (product.DiscountPrice.Value / 100));
+            }
             // Build variant DTOs
             var variantDtos = new List<ProductDetailVariantDto>();
             foreach (var variant in variants)
@@ -163,6 +189,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 Description = product.Description,
                 CategoryName = GetCategoryNamePlaceholder(product.CategoryId),
                 BasePrice = product.BasePrice,
+                FinalPrice = finalPrice,
                 Weight = product.Weight.HasValue ? $"{product.Weight}g" : null,
                 Dimension = product.Dimensions,
                 PrimaryImage = primaryImages,

@@ -2,8 +2,10 @@
 using AccountService.Application.Commands;
 using AccountService.Application.Extensions;
 using AccountService.Application.Handlers.ImageHandler;
+using AccountService.Application.Interfaces;
 using AccountService.Infrastructure.Data;
 using AccountService.Infrastructure.Extensions;
+using AccountService.Infrastructure.Interfaces;
 using AccountService.Infrastructure.Messaging.Consumers;
 using dotenv.net;
 using MassTransit;
