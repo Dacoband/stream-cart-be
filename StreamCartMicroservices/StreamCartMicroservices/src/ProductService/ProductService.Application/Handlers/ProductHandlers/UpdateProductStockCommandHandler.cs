@@ -3,6 +3,7 @@ using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
 using ProductService.Infrastructure.Interfaces;
+using ProductService.Infrastructure.Repositories;
 using Shared.Messaging.Event.ProductEvent;
 using System;
 using System.Threading;
@@ -14,10 +15,12 @@ namespace ProductService.Application.Handlers.ProductHandlers
     {
         private readonly IProductRepository _productRepository;
         private readonly IPublishEndpoint _publishEndpoint;
-        public UpdateProductStockCommandHandler(IProductRepository productRepository, IPublishEndpoint publishEndpoint)
+        private readonly IProductImageRepository _productImageRepository;
+        public UpdateProductStockCommandHandler(IProductRepository productRepository, IPublishEndpoint publishEndpoint, IProductImageRepository productImageRepository)
         {
             _productRepository = productRepository;
             _publishEndpoint = publishEndpoint;
+            _productImageRepository = productImageRepository;
         }
 
         public async Task<ProductDto> Handle(UpdateProductStockCommand request, CancellationToken cancellationToken)
@@ -57,6 +60,16 @@ namespace ProductService.Application.Handlers.ProductHandlers
 
                 throw ex;
             }
+            decimal finalPrice = product.BasePrice;
+            if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+            {
+                // Apply discount as a percentage of original price
+                finalPrice = product.BasePrice * (1 - (product.DiscountPrice.Value / 100));
+            }
+
+            // Get primary image if exists
+            var primaryImage = await _productImageRepository.GetPrimaryImageAsync(product.Id);
+            string? primaryImageUrl = primaryImage?.ImageUrl;
 
             return new ProductDto
             {
@@ -67,6 +80,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 CategoryId = product.CategoryId,
                 BasePrice = product.BasePrice,
                 DiscountPrice = product.DiscountPrice,
+                FinalPrice = finalPrice, // New field for final price after discount
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
                 Weight = product.Weight,
@@ -74,7 +88,9 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 HasVariant = product.HasVariant,
                 QuantitySold = product.QuantitySold,
                 ShopId = product.ShopId,
-               // LivestreamId = product.LivestreamId,
+                // LivestreamId = product.LivestreamId,
+                PrimaryImageUrl = primaryImageUrl, // New primary image URL field
+                HasPrimaryImage = primaryImage != null,
                 CreatedAt = product.CreatedAt,
                 CreatedBy = product.CreatedBy,
                 LastModifiedAt = product.LastModifiedAt,

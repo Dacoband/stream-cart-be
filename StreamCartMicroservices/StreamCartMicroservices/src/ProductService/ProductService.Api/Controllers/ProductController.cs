@@ -5,6 +5,7 @@ using ProductService.Application.Interfaces;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -18,11 +19,13 @@ namespace ProductService.Api.Controllers
     {
         private readonly IProductService _productService;
         private readonly IShopServiceClient _shopServiceClient;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ProductController(IProductService productService, IShopServiceClient shopServiceClient)
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService )
         {
             _productService = productService;
             _shopServiceClient = shopServiceClient;
+            _currentUserService = currentUserService;
         }
 
         [HttpPost]
@@ -38,7 +41,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123"; 
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -67,7 +70,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -91,7 +94,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -180,7 +183,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -206,7 +209,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

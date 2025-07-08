@@ -11,6 +11,7 @@ namespace ProductService.Application.DTOs
         public Guid? CategoryId { get; set; }
         public decimal BasePrice { get; set; }
         public decimal? DiscountPrice { get; set; }
+        public decimal FinalPrice { get; set; } 
         public int StockQuantity { get; set; }
         public bool IsActive { get; set; }
         public decimal? Weight { get; set; }
@@ -22,6 +23,8 @@ namespace ProductService.Application.DTOs
         public string? CreatedBy { get; set; }
         public DateTime? LastModifiedAt { get; set; }
         public string? LastModifiedBy { get; set; }
+        public bool HasPrimaryImage { get; set; }
+        public string? PrimaryImageUrl { get; set; }
     }
 
 }

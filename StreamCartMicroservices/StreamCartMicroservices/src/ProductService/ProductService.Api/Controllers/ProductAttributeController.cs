@@ -2,6 +2,7 @@
 using ProductService.Application.DTOs.Attributes;
 using ProductService.Application.Interfaces;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -14,10 +15,12 @@ namespace ProductService.Api.Controllers
     public class ProductAttributeController : ControllerBase
     {
         private readonly IProductAttributeService _service;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ProductAttributeController(IProductAttributeService service)
+        public ProductAttributeController(IProductAttributeService service, ICurrentUserService currentUserService)
         {
             _service = service;
+            _currentUserService = currentUserService;
         }
 
         [HttpGet]
@@ -47,7 +50,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product attribute data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -76,7 +79,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product attribute data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -101,7 +104,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> DeleteAttribute(Guid id)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
