@@ -1,4 +1,4 @@
-using dotenv.net;
+﻿using dotenv.net;
 using MassTransit;
 using Microsoft.OpenApi.Models;
 using Notification.Api.Hubs;
@@ -16,109 +16,70 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Load .env
 DotEnv.Load();
+
+// Load config
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
+
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
-// Add core services
+// Core
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Notification Service API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        {
+            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // App services
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// JWT, Email, Appwrite, etc.
 builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddEmailServices(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddCurrentUserService();
-
-// SignalR + RealTimeNotifier
-builder.Services.AddSignalR();
 builder.Services.AddScoped<IRealTimeNotifier, RealtimeNotifier>();
 
 // MediatR
-builder.Services.AddMediatR(config =>
+builder.Services.AddMediatR(cfg =>
 {
-    config.RegisterServicesFromAssembly(typeof(GetMyNotificationQuery).Assembly);
-    config.RegisterServicesFromAssembly(typeof(MarkAsRead).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetMyNotificationQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(MarkAsRead).Assembly);
 });
 
-// MassTransit (RabbitMQ)
-builder.Services.AddMassTransit(x =>
+// MassTransit
+builder.Services.AddMessaging(builder.Configuration, x =>
 {
     x.AddConsumer<FlashSaleConsumer>();
     x.AddConsumer<OrderChangeComsumer>();
-
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        cfg.Host(builder.Configuration["RabbitMQSettings:Host"], "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMQSettings:Username"]);
-            h.Password(builder.Configuration["RabbitMQSettings:Password"]);
-        });
-
-        cfg.ReceiveEndpoint("flash-sale-notification-queue", e =>
-        {
-            e.ConfigureConsumer<FlashSaleConsumer>(context);
-        });
-
-        cfg.ReceiveEndpoint("order-changed-notification-queue", e =>
-        {
-            e.ConfigureConsumer<OrderChangeComsumer>(context);
-        });
-    });
-});
-
-// Swagger
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Notification Service API",
-        Version = "v1",
-        Description = "API endpoints for Notification"
-    });
-
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
 });
 
 var app = builder.Build();
 
-// Middleware pipeline
+// Middleware
 if (!builder.Environment.IsEnvironment("Docker"))
-{
     app.UseHttpsRedirection();
-}
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -140,8 +101,7 @@ app.MapHub<NotificationHub>("/hubs/notification");
 
 app.Run();
 
-
-// Helper method for replacing ${ENV_VAR} placeholders
+// Replace ${ENV_VAR}
 void ReplaceConfigurationPlaceholders(IConfigurationRoot config)
 {
     var regex = new Regex(@"\${([^}]+)}");

@@ -22,6 +22,7 @@ namespace CartService.Application.Consumers
         {
             _cartItemRepository = cartItemRepository;
             _logger = logger;
+            _publishEndpoint = publishEndpoint;
         }
         public async Task Consume(ConsumeContext<ProductUpdatedEvent> context)
         {
@@ -44,10 +45,21 @@ namespace CartService.Application.Consumers
                     ProductId = item.ProductId,
                     VariantId = msg.VariantId,
                     ProductName = item.ProductName,
-                    UserId = item.Cart.CreatedBy,
+                    UserId = item.CreatedBy,
                     Discount =msg.Price ?? 0,
                 };
-               await _publishEndpoint.Publish(flashSaleEvent);
+                try
+                {
+                    await _publishEndpoint.Publish(flashSaleEvent);
+                    _logger.LogInformation("Publish flashsale event in flashsale; ");
+
+                }
+                catch (Exception ex) {
+                
+                _logger.LogInformation(ex.Message);
+                }
+
+
                 _logger.LogInformation("Updated CartItem: Id={CartItemId}, ProductName={ProductName}, Price={PriceSnapShot}, Stock={Stock}",
                    item.Id, item.ProductName, item.PriceSnapShot, item.Stock);
             }

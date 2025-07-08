@@ -67,40 +67,46 @@ namespace ProductService.Application.Services
             var result = new ApiResponse<ListCategoryDTO>()
             {
                 Success = true,
-                Message = "Lấy danh mục ản phẩm thành công"
+                Message = "Lấy danh mục sản phẩm thành công"
             };
-            var categories =(ICollection<Category>) await _categoryRepo.GetAllAsync();
+
+            var categories = (ICollection<Category>)await _categoryRepo.GetAllAsync();
+
             if (filter.IsDeleted.HasValue)
             {
                 categories = categories.Where(x => x.IsDeleted == filter.IsDeleted).ToList();
             }
+
+            var fullTree = BuildCategoryTree(categories, null, filter.IsDeleted);
+
             if (!string.IsNullOrWhiteSpace(filter.CategoryName))
             {
-                categories = categories
-                    .Where(x => x.CategoryName.ToLower().Contains(filter.CategoryName.ToLower()))
-                    .ToList();
+                fullTree = FilterTreeByName((List<CategoryDetailDTO>)fullTree, filter.CategoryName);
             }
-            var categoryTree = BuildCategoryTree(categories,null, filter.IsDeleted);
-            if (categoryTree == null)
+
+            if (fullTree == null || fullTree.Count == 0)
             {
                 result.Success = false;
                 result.Message = "Không tìm thấy danh mục";
                 return result;
             }
+
             int pageIndex = filter.PageIndex ?? 1;
-            int pageSize = filter.PageSize ?? categoryTree.Count;
-           
-            categoryTree = categoryTree.OrderBy(c => c.CategoryName)
+            int pageSize = filter.PageSize ?? fullTree.Count;
+
+            var pagedTree = fullTree
+                .OrderBy(c => c.CategoryName)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-            result.Data = new ListCategoryDTO() { 
-                Categories = categoryTree.ToList(),
-                TotalItem = categoryTree.Count,
+
+            result.Data = new ListCategoryDTO()
+            {
+                Categories = pagedTree,
+                TotalItem = fullTree.Count,
             };
 
             return result;
-
         }
 
         public async Task<ApiResponse<CategoryDetailDTO>> GetCategoryById(Guid id)
@@ -163,7 +169,7 @@ namespace ProductService.Application.Services
                 await _categoryRepo.ReplaceAsync(categoryId.ToString(),category);
                 foreach (var sub in subCategories)
                 {
-                await _categoryRepo.ReplaceAsync(sub.Id.ToString(),sub);
+                await _categoryRepo.ReplaceAsync(sub.Id.    ToString(),sub);
                 }
 
                 response.Data = true;
@@ -254,5 +260,35 @@ namespace ProductService.Application.Services
         }).ToList();
 
         }
+        private List<CategoryDetailDTO> FilterTreeByName(List<CategoryDetailDTO> categories, string keyword)
+        {
+            keyword = keyword.ToLower();
+
+            var result = new List<CategoryDetailDTO>();
+
+            foreach (var cat in categories)
+            {
+                // Lọc các sub trước
+                var filteredSubs = FilterTreeByName(cat.SubCategories.ToList(), keyword);
+
+                // Nếu chính nó match hoặc có sub match
+                if (cat.CategoryName.ToLower().Contains(keyword) || filteredSubs.Count > 0)
+                {
+                    result.Add(new CategoryDetailDTO
+                    {
+                        CategoryId = cat.CategoryId,
+                        CategoryName = cat.CategoryName,
+                        Description = cat.Description,
+                        IconURL = cat.IconURL,
+                        Slug = cat.Slug,
+                        IsDeleted = cat.IsDeleted,
+                        SubCategories = filteredSubs
+                    });
+                }
+            }
+
+            return result;
+        }
+
     }
 }

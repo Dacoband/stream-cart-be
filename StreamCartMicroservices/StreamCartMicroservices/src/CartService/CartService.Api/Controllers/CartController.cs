@@ -30,7 +30,7 @@ namespace CartService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 var command = new AddToCartCommand()
                 {
                     ProductId = request.ProductId,
@@ -63,7 +63,7 @@ namespace CartService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "123";
+                string userId = User.FindFirst("id")?.Value;
                 var command = new GetMyCartQuery()
                 {
                     userId = userId ?? "123",
@@ -127,8 +127,9 @@ namespace CartService.Api.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
-            string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "123";
-            try { 
+            string userId = User.FindFirst("id")?.Value;
+            try
+            { 
             var command = new UpdateCartItemCommand()
             {
                 UserId = userId,

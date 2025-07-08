@@ -32,12 +32,12 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new CreateFlashSaleCommand()
                 {
-                    UserId = userId ?? "123",
-                    ShopId = shopId ?? "123",
+                    UserId = userId ,
+                    ShopId = shopId,
                     ProductId = request.ProductId,
                     VariantId = request.VariantId,
                     QuantityAvailable = request.QuantityAvailable,
@@ -73,7 +73,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new UpdateFlashSaleCommand()
                 {
@@ -168,7 +168,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string userId = User.FindFirst("id")?.Value;
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new DeleteFlashSaleCommand()
                 {

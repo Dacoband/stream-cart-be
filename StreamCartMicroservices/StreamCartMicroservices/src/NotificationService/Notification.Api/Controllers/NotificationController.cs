@@ -31,7 +31,7 @@ namespace Notification.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "123";
+                string userId = User.FindFirst("id")?.Value;
                 var command = new GetMyNotificationQuery
                 {
                     FilterNotificationDTO = filter,
@@ -56,7 +56,7 @@ namespace Notification.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
             try
             {
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "123";
+                string userId = User.FindFirst("id")?.Value;
                 var command = new MarkAsRead
                 {
                    Id = id,

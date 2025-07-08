@@ -36,5 +36,15 @@ namespace ProductService.Application.DTOs.FlashSale
                     new[] { nameof(EndTime) });
             }
         }
+        public void ConvertToUtc()
+        {
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            var localStartTime = DateTime.SpecifyKind(StartTime, DateTimeKind.Unspecified);
+            var localEndTime = DateTime.SpecifyKind(EndTime, DateTimeKind.Unspecified);
+
+            StartTime = TimeZoneInfo.ConvertTimeToUtc(localStartTime, vnTimeZone);
+            EndTime = TimeZoneInfo.ConvertTimeToUtc(localEndTime, vnTimeZone);
+        }
     }
 }
