@@ -38,7 +38,6 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 {
                     finalPrice = p.BasePrice * (1 - (p.DiscountPrice.Value / 100));
                 }
-
                 // Get primary image if exists
                 var primaryImage = await _productImageRepository.GetPrimaryImageAsync(p.Id);
                 string? primaryImageUrl = primaryImage?.ImageUrl;

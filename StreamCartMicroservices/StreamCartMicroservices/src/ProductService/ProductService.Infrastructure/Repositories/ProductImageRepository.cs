@@ -45,7 +45,7 @@ namespace ProductService.Infrastructure.Repositories
             else
             {
                 return await _dbSet
-                    .FirstOrDefaultAsync(i => i.ProductId == productId && i.VariantId == null && i.IsPrimary && !i.IsDeleted);
+                    .FirstOrDefaultAsync(i => i.ProductId == productId && i.IsPrimary && !i.IsDeleted);
             }
         }
 
