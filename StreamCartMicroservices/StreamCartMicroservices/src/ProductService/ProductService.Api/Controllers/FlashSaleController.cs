@@ -19,7 +19,7 @@ namespace ProductService.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ICurrentUserService _currentUserService;
-        public FlashSaleController(IMediator mediator, ICurrentUserService currentUserService)
+        public FlashSaleController(IMediator mediator,ICurrentUserService currentUserService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
@@ -35,12 +35,12 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
-                string? shopId = User.FindFirst("ShopId")?.Value ;
+                string? userId = _currentUserService.GetUserId().ToString();
+                string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new CreateFlashSaleCommand()
                 {
-                    UserId = userId ?? "123",
-                    ShopId = shopId ?? "123",
+                    UserId = userId ,
+                    ShopId = shopId,
                     ProductId = request.ProductId,
                     VariantId = request.VariantId,
                     QuantityAvailable = request.QuantityAvailable,
@@ -76,8 +76,8 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
-                string? shopId = User.FindFirst("ShopId")?.Value;
+                string? userId = _currentUserService.GetUserId().ToString();
+                string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new UpdateFlashSaleCommand()
                 {
                     UserId = userId,
@@ -171,12 +171,12 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
-                string? shopId = User.FindFirst("ShopId")?.Value;
+                string? userId = _currentUserService.GetUserId().ToString();
+                string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new DeleteFlashSaleCommand()
                 {
                     FlashSaleId = id,
-                    ShopId = shopId ?? string.Empty,
+                    ShopId = shopId,
                     UserId = userId
                 };
                 var deletedFlashSale = await _mediator.Send(command);

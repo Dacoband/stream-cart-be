@@ -113,14 +113,24 @@ namespace ProductService.Application.Handlers.DetailHandlers
             foreach (var attr in attributes)
             {
                 var valueNames = attrValuesByAttr.ContainsKey(attr.Key) ? attrValuesByAttr[attr.Key] : new List<string>();
-                var valueImages = valueNames.Select(valueName =>
-                    attributeValueImages.ContainsKey(valueName) ? attributeValueImages[valueName] : string.Empty).ToList();
+                var valuePairs = new List<AttributeValueImagePair>();
+
+                // Create explicit value-image pairs
+                foreach (var valueName in valueNames)
+                {
+                    valuePairs.Add(new AttributeValueImagePair
+                    {
+                        Value = valueName,
+                        ImageUrl = attributeValueImages.ContainsKey(valueName)
+                            ? attributeValueImages[valueName]
+                            : string.Empty
+                    });
+                }
 
                 attributeDtos.Add(new ProductDetailAttributeDto
                 {
                     AttributeName = attr.Value,
-                    Values = valueNames,
-                    ImageUrls = valueImages // Add image URLs for each value
+                    ValueImagePairs = valuePairs
                 });
             }
             decimal finalPrice = product.BasePrice;
@@ -162,6 +172,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     AttributeValues = attributeValueDict,
                     Stock = variant.Stock,
                     Price = variant.Price,
+                    FlashSalePrice = variant.FlashSalePrice,
                     VariantImage = variantImageDto
                 });
             }
@@ -187,9 +198,13 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 ProductId = product.Id,
                 ProductName = product.ProductName,
                 Description = product.Description,
+                CategoryId = product.CategoryId,
                 CategoryName = GetCategoryNamePlaceholder(product.CategoryId),
                 BasePrice = product.BasePrice,
+                DiscountPrice = product.DiscountPrice,
                 FinalPrice = finalPrice,
+                StockQuantity = product.StockQuantity,
+                QuantitySold = product.QuantitySold,
                 Weight = product.Weight.HasValue ? $"{product.Weight}g" : null,
                 Dimension = product.Dimensions,
                 PrimaryImage = primaryImages,

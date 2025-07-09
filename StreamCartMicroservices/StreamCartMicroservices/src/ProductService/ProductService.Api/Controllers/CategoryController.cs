@@ -24,7 +24,7 @@ namespace ProductService.Api.Controllers
             _currentUserService = currentUserService;
         }
         [HttpPost]
-        [Authorize(Roles ="Admin")]
+        [Authorize(Roles ="OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<Category>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateCategory([FromBody] CreateCatgoryDTO request)
@@ -34,13 +34,13 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 var command = new CreateCategoryCommand()
                 {
                     CategoryName = request.CategoryName,
                     Description = request.Description,
                     IconURL = request.IconURL,
-                    CreatedBy = userId ?? "123",
+                    CreatedBy = userId,
                     LastModifiedBy = userId,
                     ParentCategoryID = request.ParentCategoryID,
                     IsDeleted = true,
@@ -78,7 +78,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<Category>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateCategory([FromBody] UpdateCategoryDTO request, [FromRoute] Guid id)
@@ -88,7 +88,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 var command = new UpdateCategoryCommand
                 {
                     Id = id,
@@ -116,18 +116,18 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<bool>), 400)]
         public async Task<IActionResult> UpdateCategoryStatus([FromRoute] Guid id)
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 var command = new DeleteCategoryCommand()
                 {
                     CategoryId = id,
-                    Modifier = userId ?? "123",
+                    Modifier = userId,
                 };
                 var deleteCategory = await _mediator.Send(command);
                 return Ok(deleteCategory);
