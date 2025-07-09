@@ -24,27 +24,37 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 ? await _productRepository.GetActiveByCategoryIdAsync(request.CategoryId)
                 : await _productRepository.GetByCategoryIdAsync(request.CategoryId);
 
-            return products.Select(p => new ProductDto
+            return products.Select(p =>
             {
-                Id = p.Id,
-                ProductName = p.ProductName,
-                Description = p.Description,
-                SKU = p.SKU,
-                CategoryId = p.CategoryId,
-                BasePrice = p.BasePrice,
-                DiscountPrice = p.DiscountPrice,
-                StockQuantity = p.StockQuantity,
-                IsActive = p.IsActive,
-                Weight = p.Weight,
-                Dimensions = p.Dimensions,
-                HasVariant = p.HasVariant,
-                QuantitySold = p.QuantitySold,
-                ShopId = p.ShopId,
-                //LivestreamId = p.LivestreamId,
-                CreatedAt = p.CreatedAt,
-                CreatedBy = p.CreatedBy,
-                LastModifiedAt = p.LastModifiedAt,
-                LastModifiedBy = p.LastModifiedBy
+                decimal finalPrice = p.BasePrice;
+                if (p.DiscountPrice.HasValue && p.DiscountPrice.Value > 0)
+                {
+                    finalPrice = p.BasePrice * (1 - (p.DiscountPrice.Value / 100));
+                }
+
+                return new ProductDto
+                {
+                    Id = p.Id,
+                    ProductName = p.ProductName,
+                    Description = p.Description,
+                    SKU = p.SKU,
+                    CategoryId = p.CategoryId,
+                    BasePrice = p.BasePrice,
+                    DiscountPrice = p.DiscountPrice,
+                    FinalPrice = finalPrice,
+                    StockQuantity = p.StockQuantity,
+                    IsActive = p.IsActive,
+                    Weight = p.Weight,
+                    Dimensions = p.Dimensions,
+                    HasVariant = p.HasVariant,
+                    QuantitySold = p.QuantitySold,
+                    ShopId = p.ShopId,
+                    //LivestreamId = p.LivestreamId,
+                    CreatedAt = p.CreatedAt,
+                    CreatedBy = p.CreatedBy,
+                    LastModifiedAt = p.LastModifiedAt,
+                    LastModifiedBy = p.LastModifiedBy
+                };
             }).ToList();
         }
     }

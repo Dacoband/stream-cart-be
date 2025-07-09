@@ -70,7 +70,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -94,7 +94,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -183,7 +183,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -209,7 +209,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+                string? userId = _currentUserService.GetUserId().ToString();
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

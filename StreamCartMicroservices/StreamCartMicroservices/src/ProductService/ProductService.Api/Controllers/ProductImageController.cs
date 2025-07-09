@@ -50,7 +50,7 @@ namespace ProductService.Api.Controllers
             if (imageFile == null || imageFile.Length == 0)
                 return BadRequest(ApiResponse<object>.ErrorResult("No image file provided"));
 
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -79,7 +79,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateImage(Guid id, [FromBody] UpdateProductImageDto updateImageDto)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -103,7 +103,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteImage(Guid id)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -142,7 +142,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> SetPrimaryImage(Guid id, [FromBody] SetPrimaryImageDto setPrimaryDto)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -166,7 +166,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> ReorderImages([FromBody] ReorderImagesDto reorderDto)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

@@ -51,7 +51,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -80,7 +80,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -104,7 +104,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteCombination(Guid variantId, Guid attributeValueId)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -134,7 +134,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GenerateCombinations(Guid productId, [FromBody] GenerateCombinationsDto generateDto)
         {
-            string? userId = _currentUserService.GetUserId().ToString() ?? "123";
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
