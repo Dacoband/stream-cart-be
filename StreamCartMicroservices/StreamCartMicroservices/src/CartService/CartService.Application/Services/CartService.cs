@@ -76,7 +76,7 @@ namespace CartService.Application.Services
                 return result;
             }
             //Update cart Item 
-            var existingCartItem =await _cartItemRepository.FindOneAsync(x=> x.ProductId == cart.ProductId && x.VariantId==cart.VariantId && x.CartId == existingCart.Id);
+            var existingCartItem =await _cartItemRepository.FindOneAsync(x=> x.ProductId.ToString() == cart.ProductId && x.VariantId.ToString() ==cart.VariantId && x.CartId == existingCart.Id);
             if (existingCartItem != null) {
                 existingCartItem.Quantity = existingCartItem.Quantity + cart.Quantity;
                 if(existingCartItem.Quantity < 0)
@@ -106,7 +106,9 @@ namespace CartService.Application.Services
             var addToCartItem = new CartItem
             {
                 ProductId = productInfo.ProductId,
-                VariantId = productInfo.VariantId,
+                VariantId = !string.IsNullOrEmpty(productInfo.VariantId)
+    ? Guid.Parse(productInfo.VariantId)
+    : (Guid?)null ,
                 ProductName = productInfo.ProductName,
                 ShopId = productInfo.ShopId,
                 ShopName = productInfo.ShopName,
@@ -214,7 +216,7 @@ namespace CartService.Application.Services
                 CartId = cartResponse.Id,
                 CustomerId = userId,
                 CartItemByShop = grouped,
-                TotalProduct = grouped.Count,
+                TotalProduct = cartResponse.Items.Sum(x => x.Quantity)
             };
             return result;
         }
@@ -277,7 +279,7 @@ namespace CartService.Application.Services
                 result.Message = "SẢn phẩm không tồn tại trong giỏ hàng";
                 return result;
             }
-            var productInfo = await _productService.GetProductInfoAsync(existingCartItem.ProductId, request.VariantId);
+            var productInfo = await _productService.GetProductInfoAsync(existingCartItem.ProductId.ToString() , request.VariantId.ToString());
             if (productInfo == null)
             {
                 result.Success = false;

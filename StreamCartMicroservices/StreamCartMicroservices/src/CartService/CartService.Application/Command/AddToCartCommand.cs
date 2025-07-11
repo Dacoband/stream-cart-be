@@ -12,8 +12,8 @@ namespace CartService.Application.Command
     public class AddToCartCommand : IRequest<ApiResponse<CreateCartDTO>>
     {
         public string UserId { get; set; }
-        public Guid ProductId { get; set; }
-        public Guid? VariantId { get; set; }
+        public string ProductId { get; set; }
+        public string? VariantId { get; set; }
         public int Quantity { get; set; }
     }
 }

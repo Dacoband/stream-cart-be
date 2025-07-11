@@ -1,6 +1,7 @@
 ﻿using CartService.Application.DTOs;
 using CartService.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using Shared.Common.Extensions;
 using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
@@ -32,7 +33,7 @@ namespace CartService.Application.Services
     new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        public async Task<ProductSnapshotDTO>? GetProductInfoAsync(Guid productId, Guid? variantId)
+        public async Task<ProductSnapshotDTO>? GetProductInfoAsync(string productId, string? variantId)
         {
             try { 
             var url = $"https://brightpa.me/api/products/{productId}/detail";
@@ -64,21 +65,22 @@ namespace CartService.Application.Services
                     ShopId = product.ShopId,
                     PriceOriginal = product.BasePrice,
                     PriceCurrent = product.BasePrice,
-                    Stock = product.Variants.Sum(x=>x.Stock),
+                    Stock = product.StockQuantity,
                 };
-                if(product.Variants.Count > 0 && !variantId.HasValue)
+                if(product.Variants.Count > 0 && variantId.IsNullOrEmpty() && variantId.IsNullOrWhiteSpace())
                 {
                     return null;
                 }
                 
-                if (variantId.HasValue)
+                if (!variantId.IsNullOrEmpty() && !variantId.IsNullOrWhiteSpace())
                 {
-                    var variant = product.Variants.Where(x => x.VariantId == variantId).FirstOrDefault();
+                    var variant = product.Variants.Where(x => x.VariantId.ToString() == variantId).FirstOrDefault();
                     productSnapshot.PriceCurrent = variant.Price;
                     productSnapshot.PriceOriginal = variant.Price;
                     productSnapshot.Stock = variant.Stock;
                     productSnapshot.Attributes = variant.AttributeValues;
                     productSnapshot.VariantId = variantId;
+                   
                 }
                 return productSnapshot;
             }
