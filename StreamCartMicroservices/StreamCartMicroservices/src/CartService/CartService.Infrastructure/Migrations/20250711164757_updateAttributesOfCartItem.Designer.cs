@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using CartService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CartService.Infrastructure.Migrations
 {
     [DbContext(typeof(CartContext))]
-    partial class CartContextModelSnapshot : ModelSnapshot
+    [Migration("20250711164757_updateAttributesOfCartItem")]
+    partial class updateAttributesOfCartItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

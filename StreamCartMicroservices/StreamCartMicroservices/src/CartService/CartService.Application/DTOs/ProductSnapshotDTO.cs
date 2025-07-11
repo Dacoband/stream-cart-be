@@ -9,7 +9,7 @@ namespace CartService.Application.DTOs
     public class ProductSnapshotDTO
     {
         public Guid ProductId { get; set; }
-        public Guid? VariantId { get; set; }
+        public string? VariantId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string ShopName { get; set; } = string.Empty;
         public Guid ShopId { get; set; }

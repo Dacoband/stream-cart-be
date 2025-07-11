@@ -10,8 +10,8 @@ namespace CartService.Application.DTOs
 {
     public class CreateCartDTO
     {
-        public Guid ProductId { get; set; }
-        public Guid? VariantId { get; set; }
+        public string ProductId { get; set; }
+        public string? VariantId { get; set; }
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm phải lớn hơn 0")]
 
         public int Quantity { get; set; }
