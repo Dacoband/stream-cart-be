@@ -94,15 +94,51 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 .GroupBy(av => av.Value.AttributeId)
                 .ToDictionary(g => g.Key, g => g.Select(x => x.Value.ValueName).Distinct().ToList());
 
+            var attributeValueImages = new Dictionary<string, string>();
+            foreach (var image in images)
+            {
+                if (image.VariantId.HasValue)
+                {
+                    var variantCombinations = await _combinationRepository.GetByVariantIdAsync(image.VariantId.Value);
+                    foreach (var combo in variantCombinations)
+                    {
+                        var value = await _attributeValueRepository.GetByIdAsync(combo.AttributeValueId.ToString());
+                        if (value != null)
+                        {
+                            attributeValueImages[value.ValueName] = image.ImageUrl;
+                        }
+                    }
+                }
+            }
             foreach (var attr in attributes)
             {
+                var valueNames = attrValuesByAttr.ContainsKey(attr.Key) ? attrValuesByAttr[attr.Key] : new List<string>();
+                var valuePairs = new List<AttributeValueImagePair>();
+
+                // Create explicit value-image pairs
+                foreach (var valueName in valueNames)
+                {
+                    valuePairs.Add(new AttributeValueImagePair
+                    {
+                        Value = valueName,
+                        ImageUrl = attributeValueImages.ContainsKey(valueName)
+                            ? attributeValueImages[valueName]
+                            : string.Empty
+                    });
+                }
+
                 attributeDtos.Add(new ProductDetailAttributeDto
                 {
                     AttributeName = attr.Value,
-                    Values = attrValuesByAttr.ContainsKey(attr.Key) ? attrValuesByAttr[attr.Key] : new List<string>()
+                    ValueImagePairs = valuePairs
                 });
             }
-
+            decimal finalPrice = product.BasePrice;
+            if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+            {
+                // Apply discount as a percentage of original price
+                finalPrice = product.BasePrice * (1 - (product.DiscountPrice.Value / 100));
+            }
             // Build variant DTOs
             var variantDtos = new List<ProductDetailVariantDto>();
             foreach (var variant in variants)
@@ -136,6 +172,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     AttributeValues = attributeValueDict,
                     Stock = variant.Stock,
                     Price = variant.Price,
+                    FlashSalePrice = variant.FlashSalePrice,
                     VariantImage = variantImageDto
                 });
             }
@@ -161,8 +198,13 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 ProductId = product.Id,
                 ProductName = product.ProductName,
                 Description = product.Description,
+                CategoryId = product.CategoryId,
                 CategoryName = GetCategoryNamePlaceholder(product.CategoryId),
                 BasePrice = product.BasePrice,
+                DiscountPrice = product.DiscountPrice,
+                FinalPrice = finalPrice,
+                StockQuantity = product.StockQuantity,
+                QuantitySold = product.QuantitySold,
                 Weight = product.Weight.HasValue ? $"{product.Weight}g" : null,
                 Dimension = product.Dimensions,
                 PrimaryImage = primaryImages,

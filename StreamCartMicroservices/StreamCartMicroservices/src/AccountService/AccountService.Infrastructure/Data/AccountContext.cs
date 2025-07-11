@@ -15,7 +15,7 @@ namespace AccountService.Infrastructure.Data
     {
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Address> Addresses { get; set; }
-
+        
         public AccountContext(DbContextOptions<AccountContext> options) : base(options)
         {
         }
@@ -25,7 +25,6 @@ namespace AccountService.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
             
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-            
             // Account entity configuration
             modelBuilder.Entity<Account>(entity =>
             {

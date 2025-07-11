@@ -11,10 +11,14 @@ namespace ProductService.Application.Handlers.ProductHandlers
     public class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, ProductDto?>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IProductImageRepository _productImageRepository;
 
-        public GetProductByIdQueryHandler(IProductRepository productRepository)
+        public GetProductByIdQueryHandler(
+            IProductRepository productRepository,
+            IProductImageRepository productImageRepository)
         {
             _productRepository = productRepository;
+            _productImageRepository = productImageRepository;
         }
 
         public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
@@ -26,6 +30,16 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 return null;
             }
 
+            decimal finalPrice = product.BasePrice;
+            if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+            {
+                finalPrice = product.BasePrice * (1 - (product.DiscountPrice.Value / 100));
+            }
+
+            // Get primary image if exists
+            var primaryImage = await _productImageRepository.GetPrimaryImageAsync(product.Id);
+            string? primaryImageUrl = primaryImage?.ImageUrl;
+
             return new ProductDto
             {
                 Id = product.Id,
@@ -35,6 +49,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 CategoryId = product.CategoryId,
                 BasePrice = product.BasePrice,
                 DiscountPrice = product.DiscountPrice,
+                FinalPrice = finalPrice,
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
                 Weight = product.Weight,
@@ -43,6 +58,8 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 QuantitySold = product.QuantitySold,
                 ShopId = product.ShopId,
                 //LivestreamId = product.LivestreamId,
+                PrimaryImageUrl = primaryImageUrl,
+                HasPrimaryImage = primaryImage != null,
                 CreatedAt = product.CreatedAt,
                 CreatedBy = product.CreatedBy,
                 LastModifiedAt = product.LastModifiedAt,

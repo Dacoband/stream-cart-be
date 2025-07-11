@@ -3,6 +3,7 @@ using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Variants;
 using ProductService.Application.Interfaces;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -15,10 +16,12 @@ namespace ProductService.Api.Controllers
     public class ProductVariantController : ControllerBase
     {
         private readonly IProductVariantService _service;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ProductVariantController(IProductVariantService service)
+        public ProductVariantController(IProductVariantService service, ICurrentUserService currentUserService)
         {
             _service = service;
+            _currentUserService = currentUserService;
         }
 
         [HttpGet]
@@ -48,7 +51,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product variant data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -76,7 +79,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product variant data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -100,7 +103,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteVariant(Guid id)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -130,7 +133,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateVariantStock(Guid id, [FromBody] Application.DTOs.Variants.UpdateStockDto updateStockDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -154,7 +157,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateVariantPrice(Guid id, [FromBody] UpdatePriceDto updatePriceDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -178,7 +181,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> BulkUpdateStock([FromBody] BulkUpdateStockDto bulkUpdateDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

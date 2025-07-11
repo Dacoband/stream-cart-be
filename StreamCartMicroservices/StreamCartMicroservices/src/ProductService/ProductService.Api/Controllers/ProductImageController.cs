@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs.Images;
 using ProductService.Application.Interfaces;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -15,10 +16,11 @@ namespace ProductService.Api.Controllers
     public class ProductImageController : ControllerBase
     {
         private readonly IProductImageService _service;
-
-        public ProductImageController(IProductImageService service)
+        private readonly ICurrentUserService _currentUserService;
+        public ProductImageController(IProductImageService service, ICurrentUserService currentUserService)
         {
             _service = service;
+            _currentUserService = currentUserService;
         }
 
         [HttpGet]
@@ -48,7 +50,7 @@ namespace ProductService.Api.Controllers
             if (imageFile == null || imageFile.Length == 0)
                 return BadRequest(ApiResponse<object>.ErrorResult("No image file provided"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -77,7 +79,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> UpdateImage(Guid id, [FromBody] UpdateProductImageDto updateImageDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -101,7 +103,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteImage(Guid id)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -140,7 +142,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> SetPrimaryImage(Guid id, [FromBody] SetPrimaryImageDto setPrimaryDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -164,7 +166,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> ReorderImages([FromBody] ReorderImagesDto reorderDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

@@ -8,8 +8,13 @@ namespace ProductService.Application.DTOs.Products
         public Guid ProductId { get; set; }
         public string? ProductName { get; set; }
         public string? Description { get; set; }
+        public Guid? CategoryId { get; set; }
         public string? CategoryName { get; set; }
         public decimal BasePrice { get; set; }
+        public decimal? DiscountPrice { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int StockQuantity { get; set; }
+        public int QuantitySold { get; set; }
         public string? Weight { get; set; }
         public string? Dimension { get; set; }
         public List<string> PrimaryImage { get; set; } = new();
@@ -29,18 +34,33 @@ namespace ProductService.Application.DTOs.Products
         public List<ProductDetailVariantDto> Variants { get; set; } = new();
     }
 
+    //public class ProductDetailAttributeDto
+    //{
+    //    public string? AttributeName { get; set; }
+    //    public List<string> Values { get; set; } = new();
+    //    public List<string> ImageUrls { get; set; } = new(); 
+
+    //}
     public class ProductDetailAttributeDto
     {
         public string? AttributeName { get; set; }
-        public List<string> Values { get; set; } = new();
+
+        // Replace separate lists with a list of pairs
+        public List<AttributeValueImagePair> ValueImagePairs { get; set; } = new();
     }
 
+    public class AttributeValueImagePair
+    {
+        public string Value { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+    }
     public class ProductDetailVariantDto
     {
         public Guid VariantId { get; set; }
         public Dictionary<string, string> AttributeValues { get; set; } = new();
         public int Stock { get; set; }
         public decimal Price { get; set; }
+        public decimal? FlashSalePrice { get; set; }
         public ProductDetailVariantImageDto? VariantImage { get; set; }
     }
 

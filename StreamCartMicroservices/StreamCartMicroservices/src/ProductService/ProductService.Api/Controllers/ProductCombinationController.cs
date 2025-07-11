@@ -2,6 +2,7 @@
 using ProductService.Application.DTOs.Combinations;
 using ProductService.Application.Interfaces;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +16,12 @@ namespace ProductService.Api.Controllers
     public class ProductCombinationController : ControllerBase
     {
         private readonly IProductCombinationService _service;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ProductCombinationController(IProductCombinationService service)
+        public ProductCombinationController(IProductCombinationService service, ICurrentUserService currentUserService)
         {
             _service = service;
+            _currentUserService = currentUserService;
         }
 
         [HttpGet]
@@ -48,7 +51,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -77,7 +80,7 @@ namespace ProductService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid product combination data"));
 
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -101,7 +104,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DeleteCombination(Guid variantId, Guid attributeValueId)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
@@ -131,7 +134,7 @@ namespace ProductService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GenerateCombinations(Guid productId, [FromBody] GenerateCombinationsDto generateDto)
         {
-            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            string? userId = _currentUserService.GetUserId().ToString();
             if (string.IsNullOrEmpty(userId))
                 return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 

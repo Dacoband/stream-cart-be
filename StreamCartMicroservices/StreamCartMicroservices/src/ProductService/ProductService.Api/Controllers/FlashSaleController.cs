@@ -8,6 +8,7 @@ using ProductService.Application.DTOs.FlashSale;
 using ProductService.Application.Queries.FlashSaleQueries;
 using ProductService.Domain.Entities;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System.Security.Claims;
 
 namespace ProductService.Api.Controllers
@@ -17,9 +18,11 @@ namespace ProductService.Api.Controllers
     public class FlashSaleController : Controller
     {
         private readonly IMediator _mediator;
-        public FlashSaleController(IMediator mediator)
+        private readonly ICurrentUserService _currentUserService;
+        public FlashSaleController(IMediator mediator,ICurrentUserService currentUserService)
         {
             _mediator = mediator;
+            _currentUserService = currentUserService;
         }
         [HttpPost]
         [Authorize(Roles = "Seller")]
@@ -32,7 +35,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string? userId = _currentUserService.GetUserId().ToString();
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new CreateFlashSaleCommand()
                 {
@@ -73,7 +76,7 @@ namespace ProductService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string? userId = _currentUserService.GetUserId().ToString();
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new UpdateFlashSaleCommand()
                 {
@@ -168,7 +171,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string? userId = _currentUserService.GetUserId().ToString();
                 string shopId = User.FindFirst("ShopId")?.Value;
                 var command = new DeleteFlashSaleCommand()
                 {
