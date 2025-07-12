@@ -27,6 +27,7 @@ namespace CartService.Application.DTOs
         public string? ShopLogo { get; set; }
         public int ShopTotalProduct { get; set; }
 
+        public int StockQuantity { get; set; }
         // Attributes and variants
         public List<ProductDetailAttributeDto> Attributes { get; set; } = new();
         public List<ProductDetailVariantDto> Variants { get; set; } = new();

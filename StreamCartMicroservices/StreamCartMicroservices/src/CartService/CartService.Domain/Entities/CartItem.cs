@@ -54,7 +54,7 @@ namespace CartService.Domain.Entities
 
 
         [Column(TypeName = "jsonb")]
-        public Dictionary<string, string> Attributes { get; set; } = new();
+        public Dictionary<string, string>? Attributes { get; set; } = new();
 
         public Cart? Cart { get; set; }
     }

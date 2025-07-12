@@ -9,7 +9,7 @@ namespace CartService.Application.Interfaces
 {
     public interface IProductService
     {
-        Task<ProductSnapshotDTO> GetProductInfoAsync(Guid productId, Guid? variantId);
+        Task<ProductSnapshotDTO> GetProductInfoAsync(string productId, string? variantId);
 
     }
 }
