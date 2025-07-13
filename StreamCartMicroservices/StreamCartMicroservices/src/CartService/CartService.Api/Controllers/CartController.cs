@@ -76,7 +76,7 @@ namespace CartService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tìm giỏ hàng: {ex.Message}"));
             }
         }
-        [HttpGet("/PreviewOrder")]
+        [HttpGet("PreviewOrder")]
         [Authorize(Roles = "Customer")]
         [ProducesResponseType(typeof(ApiResponse<PreviewOrderResponseDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]

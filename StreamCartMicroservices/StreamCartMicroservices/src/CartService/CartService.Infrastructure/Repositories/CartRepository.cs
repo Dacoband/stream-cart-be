@@ -20,7 +20,7 @@ namespace CartService.Infrastructure.Repositories
 
         public async Task<Cart?> GetMyCart(string customerId)
         {
-            return await _dbSet.Where(x=> x.CreatedBy == customerId).Include(x=>x.Items).FirstOrDefaultAsync();
+            return await _dbSet.Where(x=> x.CreatedBy == customerId && x.IsDeleted == false).Include(x=>x.Items).FirstOrDefaultAsync();
         }
     }
 }

@@ -35,7 +35,7 @@ namespace CartService.Application.Consumers
 
                 item.ProductName = msg.ProductName ?? item.ProductName;
                 item.PrimaryImage = msg.PrimaryImage ?? item.PrimaryImage;
-                item.PriceSnapShot = msg.Price ?? item.PriceCurrent;
+                item.PriceCurrent = msg.Price ?? item.PriceCurrent;
                 item.Stock = msg.Stock ?? item.Stock;
                 item.Attributes = msg.Attributes ?? item.Attributes;
                 item.ProductStatus = msg.ProductStatus ?? item.ProductStatus;

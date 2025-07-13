@@ -157,7 +157,7 @@ namespace CartService.Application.Services
              };
             try
             {
-                await _cartItemRepository.DeleteAsync(cartItemId.ToString());
+                await _cartItemRepository.DeleteCartItem(cartItemId);
                 return result;
             }
             catch (Exception ex) {

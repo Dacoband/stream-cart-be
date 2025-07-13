@@ -20,7 +20,7 @@ namespace CartService.Infrastructure.Repositories
 
         public async Task<List<CartItem>> GetCartByProduct(Guid productId, Guid? variantId)
         {
-            var product =await _dbSet.Where(x => x.ProductId == productId).ToListAsync();
+            var product =await _dbSet.Where(x => x.ProductId == productId && x.IsDeleted == false).ToListAsync();
             if (variantId.HasValue)
             {
                 product = product.Where(x => x.VariantId == variantId).ToList();
@@ -30,12 +30,20 @@ namespace CartService.Infrastructure.Repositories
 
         public async Task<List<CartItem>> GetCartItemByShop(Guid shopId)
         {
-            return await _dbSet.Where(x=> x.ShopId == shopId).ToListAsync();
+            return await _dbSet.Where(x=> x.ShopId == shopId && x.IsDeleted == false).ToListAsync();
         }
 
         public async Task<CartItem?> GetItemByCartId(Guid cartId)
         {
             return await _dbSet.FirstOrDefaultAsync(x => x.CartId == cartId);
+        }
+
+        public async Task  DeleteCartItem(Guid cartItemId)
+        {
+            var cartItem = await _dbSet.FirstOrDefaultAsync(x => x.Id == cartItemId);
+             _dbSet.Remove(cartItem);
+            await _dbContext.SaveChangesAsync();
+            return;
         }
 
     }

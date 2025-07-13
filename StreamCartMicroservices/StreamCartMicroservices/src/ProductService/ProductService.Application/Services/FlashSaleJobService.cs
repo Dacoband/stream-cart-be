@@ -38,6 +38,7 @@ namespace ProductService.Application.Services
         {
             var now = DateTime.UtcNow;
             var flashSales = await _flashSaleRepo.GetAllActiveFlashSalesAsync();
+
             foreach (var fs in flashSales)
             {
                 var isRunning = fs.StartTime <= now && now < fs.EndTime;
@@ -50,112 +51,93 @@ namespace ProductService.Application.Services
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
                         if (product != null)
                         {
-                            product.UpdatePricing(product.BasePrice,fs.FlashSalePrice);
-                            await _productRepo.ReplaceAsync(product.Id.ToString(),product);
-                            var productEvent = new ProductUpdatedEvent()
-                            {
-                                ProductId = product.Id,
-                                ProductName = product.ProductName,
-                                Price = fs.FlashSalePrice,
-                                Stock = product.StockQuantity,
+                            product.UpdatePricing(product.BasePrice, fs.FlashSalePrice);
+                            await _productRepo.ReplaceAsync(product.Id.ToString(), product);
 
-                            };
-                            try
+                            // 👇 Chỉ gửi ProductUpdatedEvent nếu chưa gửi thông báo
+                            if (!fs.NotificationSent)
                             {
+                                var productEvent = new ProductUpdatedEvent()
+                                {
+                                    ProductId = product.Id,
+                                    ProductName = product.ProductName,
+                                    Price = fs.FlashSalePrice,
+                                    Stock = product.StockQuantity
+                                };
+
                                 await _publishEndpoint.Publish(productEvent);
-                            }
-                            catch (Exception ex)
-                            {
-
-                                throw ex;
+                                fs.NotificationSent = true;
+                                await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
                             }
                         }
                     }
                     else
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
-                        if (variant != null )
+                        if (variant != null)
                         {
-                            variant.UpdatePrice(variant.Price,fs.FlashSalePrice);
+                            variant.UpdatePrice(variant.Price, fs.FlashSalePrice);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
-                            var productEvent = new ProductUpdatedEvent()
-                            {
 
-                                VariantId = variant.Id,
-                                Price = fs.FlashSalePrice,   
-
-                            };
-                            try
+                            if (!fs.NotificationSent)
                             {
+                                var productEvent = new ProductUpdatedEvent()
+                                {
+                                    ProductId = fs.ProductId,
+                                    VariantId = variant.Id,
+                                    Price = fs.FlashSalePrice
+                                };
+
                                 await _publishEndpoint.Publish(productEvent);
-                            }
-                            catch (Exception ex)
-                            {
-
-                                throw ex;
+                                fs.NotificationSent = true;
+                                await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
                             }
                         }
                     }
                 }
                 else if (isEnded)
                 {
-                    
                     if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                            if(product != null) {
-
+                        if (product != null)
+                        {
                             product.UpdatePricing(product.BasePrice, 0);
                             await _productRepo.ReplaceAsync(product.Id.ToString(), product);
+
                             var productEvent = new ProductUpdatedEvent()
                             {
                                 ProductId = product.Id,
                                 ProductName = product.ProductName,
                                 Price = product.BasePrice,
-                                Stock = product.StockQuantity,
-
+                                Stock = product.StockQuantity
                             };
 
-                            try
-                            {
-                                await _publishEndpoint.Publish(productEvent);
-                            }
-                            catch (Exception ex)
-                            {
-
-                                throw ex;
-                            }
-
+                            await _publishEndpoint.Publish(productEvent);
                         }
-
                     }
                     else
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
-                        if (variant != null) {
+                        if (variant != null)
+                        {
                             variant.UpdatePrice(variant.Price, 0);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
+
                             var productEvent = new ProductUpdatedEvent()
                             {
                                 ProductId = fs.ProductId,
                                 VariantId = variant.Id,
-                                Price = variant.Price,
-
+                                Price = variant.Price
                             };
-                            try
-                            {
-                                await _publishEndpoint.Publish(productEvent);
-                            }
-                            catch (Exception ex)
-                            {
 
-                                throw ex;
-                            }
-
+                            await _publishEndpoint.Publish(productEvent);
                         }
-                            
-
                     }
+
+                    // 👇 Reset trạng thái đã gửi thông báo nếu cần chạy lại lần sau
+                    fs.NotificationSent = false;
+                    await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
                 }
             }
 

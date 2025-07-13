@@ -26,5 +26,12 @@
     <ProjectReference Include="..\Livestreamservice.Application\Livestreamservice.Application.csproj" />
     <ProjectReference Include="..\LivestreamService.Infrastrcture\LivestreamService.Infrastrcture.csproj" />
   </ItemGroup>
+	
+	
+  <ItemGroup>
+    <None Update=".env">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
