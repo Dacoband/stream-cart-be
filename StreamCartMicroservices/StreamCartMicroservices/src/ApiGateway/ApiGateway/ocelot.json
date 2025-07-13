@@ -801,7 +801,7 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "notification-service",
+          "Host": "notification-service", 
           "Port": 80
         }
       ],
