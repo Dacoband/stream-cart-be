@@ -34,17 +34,26 @@ namespace Notification.Application.Consumer
             if (context.Message.Discount == 0) return;
             var notification = new Notifications()
             {
+                Id = new Guid(),
                 RecipientUserID = context.Message.UserId,
                 ProductId = context.Message.ProductId,
                 VariantId = context.Message.VariantId,
                 Type = "FlashSale",
-                Message = $"Sản phẩm {context.Message.ProductName} trong giỏ hàng của bạn đang có FlashSale",       
+                Message = $"Sản phẩm {context.Message.ProductName} trong giỏ hàng của bạn đang có FlashSale",
             };
 
+
             notification.SetCreator("system");
-            await _notificationRepository.CreateAsync(notification);
-            _logger.LogInformation("Flash sale creatre noti in comsumer");
-            await _notifier.SendNotificationToUser(context.Message.UserId, notification);
+            try
+            {
+                await _notificationRepository.CreateAsync(notification);
+                await _notifier.SendNotificationToUser(context.Message.UserId, notification);
+            }
+            catch (Exception ex) {
+            
+                _logger.LogInformation(ex.Message);
+            }
+        
 
         }
     }

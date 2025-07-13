@@ -13,6 +13,7 @@ namespace CartService.Infrastructure.Interfaces
         Task<CartItem?> GetItemByCartId(Guid cartId);
         Task<List<CartItem>> GetCartByProduct(Guid productId, Guid? variantId);
         Task<List<CartItem>> GetCartItemByShop(Guid shopId);
+        Task DeleteCartItem(Guid cartId);
 
     }
 }

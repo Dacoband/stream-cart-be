@@ -37,6 +37,7 @@ namespace ProductService.Domain.Entities
 
         [Column("EndTime")]
         public DateTime EndTime { get; set; }
+        public bool NotificationSent { get; set; } = false;
 
         // Navigation properties
         [ForeignKey("ProductId")]
