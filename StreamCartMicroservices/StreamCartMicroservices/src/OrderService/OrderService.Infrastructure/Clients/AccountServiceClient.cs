@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using Shared.Common.Models;
 
 namespace OrderService.Infrastructure.Clients
 {
@@ -67,6 +68,32 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogError(ex, "Error getting email for account ID: {AccountId}", accountId);
                 return string.Empty;
+            }
+        }
+
+        public async Task<List<AccountDto?>> GetAccountByShopIdAsync(Guid shopId)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching account for shop ID: {ShopId}", shopId);
+
+                var response = await _httpClient.GetAsync($"/api/accounts/by-shop/{shopId}");
+                response.EnsureSuccessStatusCode();
+
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<AccountDto>>>();
+
+                if (result?.Success == true && result.Data is { Count: > 0 })
+                {
+                    return result.Data;
+                }
+
+                _logger.LogWarning("No account found for shop ID: {ShopId}", shopId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting account by shop ID: {ShopId}", shopId);
+                return null;
             }
         }
     }

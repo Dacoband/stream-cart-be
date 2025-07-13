@@ -188,6 +188,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     UserId = request.AccountId.ToString(),
                 };
                 await _publishEndpoint.Publish(orderChangEvent);
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
+                    {
+                        OrderCode = order.OrderCode,
+                        Message = "vừa được cập nhật mã vận đơn",
+                        UserId = acc.Id.ToString(),
+                    };
+                    await _publishEndpoint.Publish(ordChangeEvent);
+                }
                 return orderDto;
             }
             catch (Exception ex)

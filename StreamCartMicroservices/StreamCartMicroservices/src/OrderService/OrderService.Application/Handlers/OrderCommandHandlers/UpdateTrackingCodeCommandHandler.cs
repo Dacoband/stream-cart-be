@@ -12,6 +12,7 @@ using OrderService.Domain.Enums;
 using System.Collections.Generic;
 using Shared.Messaging.Event.OrderEvents;
 using MassTransit;
+using OrderService.Application.Interfaces;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
 {
@@ -20,15 +21,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IOrderRepository _orderRepository;
         private readonly ILogger<UpdateTrackingCodeCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IAccountServiceClient _accountServiceClient;
 
         public UpdateTrackingCodeCommandHandler(
             IOrderRepository orderRepository,
             ILogger<UpdateTrackingCodeCommandHandler> logger,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _publishEndpoint = publishEndpoint;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<OrderDto> Handle(UpdateTrackingCodeCommand request, CancellationToken cancellationToken)
@@ -109,7 +112,19 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     Message = "đã được cập nhật mã vận đơn thành công",
                     UserId = request.ModifiedBy,
                 };
+                
                 await _publishEndpoint.Publish(orderChangEvent);
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
+                    {
+                        OrderCode = order.OrderCode,
+                        Message = "vừa được cập nhật mã vận đơn",
+                        UserId = acc.Id.ToString(),
+                    };
+                    await _publishEndpoint.Publish(ordChangeEvent);
+                }
                 _logger.LogInformation("Tracking code updated successfully for order {OrderId}", request.OrderId);
                 return orderDto;
             }

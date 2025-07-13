@@ -795,6 +795,20 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
       "SwaggerKey": "payment"
     },
+    //notification
+    {
+      "DownstreamPathTemplate": "/api/notification/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notification-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notification/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
+      "SwaggerKey": "notification"
+    },
     //{
     //  "DownstreamPathTemplate": "/api/payments/generate-qr-code",
     //  "DownstreamScheme": "http",
@@ -994,6 +1008,16 @@
           "Name": "Delivery API",
           "Version": "v1",
           "Url": "http://delivery-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "notification",
+      "Config": [
+        {
+          "Name": "Notification API",
+          "Version": "v1",
+          "Url": "http://notification-service/swagger/v1/swagger.json"
         }
       ]
     }
