@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Shared.Common.Models;
+using ShopService.Application.DTOs.Account;
 using ShopService.Application.Interfaces;
 using System;
 using System.Net.Http;
@@ -38,6 +40,17 @@ namespace ShopService.Application.Services
         {
             var account = await _httpClient.GetFromJsonAsync<AccountDto>($"api/accounts/{accountId}");
             return account?.Email ?? string.Empty;
+        }
+        public async Task<AccountDetailDTO> GetAccountByAccountIdAsync(Guid accountId)
+        {
+            var response = await _httpClient.GetFromJsonAsync<ApiResponse<AccountDetailDTO>>($"api/accounts/{accountId}");
+
+            if (response == null || !response.Success || response.Data == null)
+            {
+                throw new Exception($"Không thể lấy thông tin tài khoản {accountId}");
+            }
+
+            return response.Data;
         }
     }
 

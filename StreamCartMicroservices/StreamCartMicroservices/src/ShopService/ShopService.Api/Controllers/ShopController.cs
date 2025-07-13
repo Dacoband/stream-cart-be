@@ -573,7 +573,8 @@ namespace ShopService.Api.Controllers
 
         private Guid GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var userIdClaim = User.FindFirst("id")?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
                 return Guid.Empty;
 

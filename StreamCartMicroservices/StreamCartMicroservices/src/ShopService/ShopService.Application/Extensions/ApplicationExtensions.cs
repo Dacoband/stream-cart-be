@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Common.Services.Email;
 using ShopService.Application.Interfaces;
 using ShopService.Application.Services;
 using System.Reflection;
@@ -27,7 +28,9 @@ namespace ShopService.Application.Extensions
             services.AddScoped<IShopManagementService, ShopManagementService>();
 
             services.AddScoped<IAdminNotificationService, AdminNotificationService>();
-            
+            services.AddScoped<IEmailService, MailJetEmailService>();
+
+
             return services;
         }
     }
