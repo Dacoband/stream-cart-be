@@ -192,5 +192,29 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi xóa FlashSale"));
             }
         }
+        [HttpGet("current")]
+        [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetCurrentFlashSales()
+        {
+            try
+            {
+                var query = new GetCurrentFlashSalesQuery();
+                var currentFlashSales = await _mediator.Send(query);
+
+                if (currentFlashSales.Success)
+                {
+                    return Ok(currentFlashSales);
+                }
+                else
+                {
+                    return BadRequest(currentFlashSales);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách FlashSale hiện tại: {ex.Message}"));
+            }
+        }
     }
 }

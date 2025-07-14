@@ -76,6 +76,8 @@ services:
     #   interval: 10s
     #   timeout: 5s
     #   retries: 5
+    networks:
+    - app-network
 
   api-gateway:
     build:
@@ -111,6 +113,8 @@ services:
       - order-service
       - payment-service
     restart: unless-stopped
+    networks:
+    - app-network
    # Product Service (Mới thêm)
   product-service:
     build:
@@ -147,6 +151,8 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+    - app-network
   shop-service:
     build:
       context: ./src
@@ -182,6 +188,9 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+    - app-network
+    
   order-service:
     build:
       context: ./src
@@ -225,6 +234,8 @@ services:
       shop-service:
         condition: service_started
     restart: unless-stopped
+    networks:
+    - app-network
 
   payment-service:
     build:
@@ -262,6 +273,8 @@ services:
       order-service:
         condition: service_started
     restart: unless-stopped
+    networks:
+    - app-network
 
   cart-service:
     build:
@@ -306,7 +319,74 @@ services:
       shop-service:
         condition: service_started
     restart: unless-stopped
+    networks:
+    - app-network
+   
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "5349:5349/udp"
+      - "3478:3478/udp"
+      - "9751:9751"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    command: --dev --config /etc/livekit.yaml 
+    networks:
+      - app-network
+    
 
+
+  livestream-service:
+    build:
+      context: ./src
+      dockerfile: ./LivestreamService/LivestreamService.Api/Dockerfile
+    ports:
+      - "7041:80"
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+      # LiveKit Settings - These are the critical settings to fix the 404 error
+      - LiveKit__Url=http://livekit:7880
+      - LiveKit__ApiKey=devkey
+      - LiveKit__ApiSecret=aVeryLongAndSecureSecretKey123456!
+      # Service URLs
+      - ServiceUrls__ShopService=http://shop-service
+      - ServiceUrls__AccountService=http://account-service
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      shop-service:
+        condition: service_started
+      account-service:
+        condition: service_started
+      livekit:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - app-network
+    
+  
+  
   delivery-service:
       build:
         context: ./src
@@ -354,6 +434,8 @@ services:
         payment-service:
            condition: service_started
       restart: unless-stopped
+      networks:
+        - app-network
   notification-service:
     build:
       context: ./src
@@ -405,6 +487,12 @@ services:
        payment-service:
            condition: service_started
     restart: unless-stopped
+    networks:
+        - app-network
 
 volumes:
   postgres_data:
+networks:
+  app-network:
+    driver: bridge
+ 

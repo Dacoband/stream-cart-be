@@ -15,21 +15,31 @@ namespace LivestreamService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ShopServiceClient> _logger;
-        private readonly string _baseUrl;
+        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly IConfiguration _configuration;
 
         public ShopServiceClient(HttpClient httpClient, IConfiguration configuration, ILogger<ShopServiceClient> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-            _baseUrl = configuration["ServiceUrls:ShopService"];
-            if (string.IsNullOrEmpty(_baseUrl))
+            _jsonOptions = new JsonSerializerOptions
             {
-                _baseUrl = "http://shop-service/api";
-                _logger.LogWarning("Shop service URL not found in configuration. Using default: {BaseUrl}", _baseUrl);
-            }
+                PropertyNameCaseInsensitive = true
+            };
 
-            _httpClient.BaseAddress = new Uri(_baseUrl);
+            // Set the base address for the HTTP client
+            var shopServiceUrl = _configuration["ServiceUrls:ShopService"];
+            if (!string.IsNullOrEmpty(shopServiceUrl))
+            {
+                _httpClient.BaseAddress = new Uri(shopServiceUrl);
+                _logger.LogInformation("ShopServiceClient configured with base URL: {BaseUrl}", shopServiceUrl);
+            }
+            else
+            {
+                _logger.LogWarning("ServiceUrls:ShopService is not configured. HTTP requests may fail.");
+            }
         }
 
         public async Task<ShopDTO> GetShopByIdAsync(Guid shopId)
@@ -40,9 +50,21 @@ namespace LivestreamService.Infrastructure.Services
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<ShopDTO>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                return apiResponse?.Data;
+                // Deserialize and map to our local ShopDto
+                var json = JsonDocument.Parse(content);
+
+                return new ShopDTO
+                {
+                    Id = shopId,
+                    ShopName = GetJsonPropertyValue(json.RootElement, "shopName", string.Empty),
+                    Description = GetJsonPropertyValue(json.RootElement, "description", string.Empty),
+                    LogoURL = GetJsonPropertyValue(json.RootElement, "logoURL", string.Empty),
+                    CoverImageURL = GetJsonPropertyValue(json.RootElement, "coverImageURL", string.Empty),
+                    //AccountId = GetJsonPropertyValue(json.RootElement, "accountId", Guid.Empty),
+                    Status = GetJsonPropertyValue(json.RootElement, "status", false),
+                    ApprovalStatus = GetJsonPropertyValue(json.RootElement, "approvalStatus", string.Empty)
+                };
             }
             catch (HttpRequestException ex)
             {
@@ -143,6 +165,45 @@ namespace LivestreamService.Infrastructure.Services
             public bool Success { get; set; }
             public string Message { get; set; }
             public T Data { get; set; }
+        }
+        private T GetJsonPropertyValue<T>(JsonElement element, string propertyName, T defaultValue)
+        {
+            if (element.TryGetProperty(propertyName, out JsonElement property))
+            {
+                try
+                {
+                    if (typeof(T) == typeof(string))
+                    {
+                        return (T)(object)property.GetString()!;
+                    }
+                    else if (typeof(T) == typeof(bool))
+                    {
+                        return (T)(object)property.GetBoolean();
+                    }
+                    else if (typeof(T) == typeof(int))
+                    {
+                        return (T)(object)property.GetInt32();
+                    }
+                    else if (typeof(T) == typeof(decimal))
+                    {
+                        return (T)(object)property.GetDecimal();
+                    }
+                    else if (typeof(T) == typeof(Guid))
+                    {
+                        return (T)(object)Guid.Parse(property.GetString()!);
+                    }
+                    else if (typeof(T) == typeof(DateTime))
+                    {
+                        return (T)(object)property.GetDateTime();
+                    }
+                }
+                catch
+                {
+                    return defaultValue;
+                }
+            }
+
+            return defaultValue;
         }
     }
 }
