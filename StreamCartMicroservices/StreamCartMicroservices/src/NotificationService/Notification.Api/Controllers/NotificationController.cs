@@ -46,7 +46,7 @@ namespace Notification.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tìm thông báo: {ex.Message}"));
             }
         }
-        [HttpPatch("/mark-as-read/{id}")]
+        [HttpPatch("mark-as-read/{id}")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<bool>), 400)]
