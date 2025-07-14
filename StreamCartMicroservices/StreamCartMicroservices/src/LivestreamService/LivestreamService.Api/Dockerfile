@@ -7,7 +7,7 @@ WORKDIR /src
 
 COPY ["LivestreamService/LivestreamService.Api/LivestreamService.Api.csproj", "LivestreamService/LivestreamService.Api/"]
 COPY ["LivestreamService/LivestreamService.Application/LivestreamService.Application.csproj", "LivestreamService/LivestreamService.Application/"]
-COPY ["LivestreamService/LivestreamService.Domain/LivestreamService.Domain.csproj", "LivestreamService/LivestreamService.Domain/"]
+COPY ["LivestreamService/Livestreamservice.Domain/Livestreamservice.Domain.csproj", "Livestreamservice/Livestreamservice.Domain/"]
 COPY ["LivestreamService/LivestreamService.Infrastructure/LivestreamService.Infrastructure.csproj", "LivestreamService/LivestreamService.Infrastructure/"]
 COPY ["Shared/Shared.Common/Shared.Common.csproj", "Shared/Shared.Common/"]
 COPY ["Shared/Shared.Messaging/Shared.Messaging.csproj", "Shared/Shared.Messaging/"]
