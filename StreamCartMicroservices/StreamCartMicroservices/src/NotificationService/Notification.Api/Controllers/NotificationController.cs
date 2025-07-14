@@ -11,7 +11,7 @@ using System.Security.Claims;
 
 namespace Notification.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/notification")]
     [ApiController]
     public class NotificationController : ControllerBase
     {
