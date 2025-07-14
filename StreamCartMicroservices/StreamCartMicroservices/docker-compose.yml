@@ -441,7 +441,7 @@ services:
       context: ./src
       dockerfile: ./NotificationService/Notification.Api/Dockerfile
     ports:
-      - "7077:80"  # Cổng public:container, bạn có thể thay 7077 nếu cần
+      - "7078:80"  # Cổng public:container, bạn có thể thay 7077 nếu cần
     environment:
         - ASPNETCORE_URLS=http://+:80
         - ASPNETCORE_ENVIRONMENT=Production
