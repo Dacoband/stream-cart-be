@@ -9,8 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.Messaging\Shared.Messaging.csproj" />
-    <ProjectReference Include="..\Livestreamservice.Application\Livestreamservice.Application.csproj" />
-    <ProjectReference Include="..\Livestreamservice.Domain\Livestreamservice.Domain.csproj" />
+    <ProjectReference Include="..\LivestreamService.Application\LivestreamService.Application.csproj" />
+    <ProjectReference Include="..\LivestreamService.Domain\LivestreamService.Domain.csproj" />
   </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="MassTransit" Version="8.4.1" />
