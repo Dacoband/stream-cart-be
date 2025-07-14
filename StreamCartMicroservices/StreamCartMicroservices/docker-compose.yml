@@ -354,5 +354,57 @@ services:
         payment-service:
            condition: service_started
       restart: unless-stopped
+  notification-service:
+    build:
+      context: ./src
+      dockerfile: ./NotificationService/NotificationService.Api/Dockerfile
+    ports:
+      - "7077:80"  # Cổng public:container, bạn có thể thay 7077 nếu cần
+    environment:
+        - ASPNETCORE_URLS=http://+:80
+        - ASPNETCORE_ENVIRONMENT=Production
+        - ConnectionStrings__PostgreSQL=Host=160.187.241.81;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+        - RabbitMQ__Host=rabbitmq
+        - RabbitMQ__Username=${RABBITMQ_USERNAME}
+        - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+        - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+        - JwtSettings__Issuer=${JWT_ISSUER}
+        - JwtSettings__Audience=${JWT_AUDIENCE}
+        - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+        - EMAIL_API_KEY=${EMAIL_API_KEY}
+        - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+        - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+        - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+        - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+        # Appwrite Settings
+        - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+        - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+        - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+        - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+        # Service URLs
+        - ServiceUrls__ProductService=http://product-service
+        - ServiceUrls__ShopService=http://shop-service
+        - ServiceUrls__AccountService=http://account-service
+        - ServiceUrls__PaymentService=http://payment-service
+        #Delivery Service
+        - API_TOKEN_GHN=&{API_TOKEN_GHN}
+        - GHN_SHOPID=${GHN_SHOPID}      
+        - ConnectionStrings__MongoDB=${MONGO_CONNECTION_STRING}
+      # hoặc PostgreSQL
+      # - ConnectionStrings__PostgreSQL=${POSTGRES_CONNECTION_STRING}
+
+    depends_on:
+       rabbitmq:
+          condition: service_healthy
+       product-service:
+          condition: service_started
+       shop-service:
+          condition: service_started
+       order-service:
+           condition: service_started
+       payment-service:
+           condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
