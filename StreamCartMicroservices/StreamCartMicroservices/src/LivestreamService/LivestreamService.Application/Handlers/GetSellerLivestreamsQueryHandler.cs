@@ -2,20 +2,21 @@
 using LivestreamService.Application.DTOs;
 using LivestreamService.Application.Interfaces;
 using MediatR;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 
-namespace LivestreamService.Application.Queries
+namespace LivestreamService.Application.Handlers
 {
-    public class GetUpcomingLivestreamsQueryHandler : IRequestHandler<GetUpcomingLivestreamsQuery, List<LivestreamDTO>>
+    public class GetSellerLivestreamsQueryHandler : IRequestHandler<GetSellerLivestreamsQuery, List<LivestreamDTO>>
     {
         private readonly ILivestreamRepository _livestreamRepository;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly IAccountServiceClient _accountServiceClient;
 
-        public GetUpcomingLivestreamsQueryHandler(
+        public GetSellerLivestreamsQueryHandler(
             ILivestreamRepository livestreamRepository,
             IShopServiceClient shopServiceClient,
             IAccountServiceClient accountServiceClient)
@@ -25,18 +26,12 @@ namespace LivestreamService.Application.Queries
             _accountServiceClient = accountServiceClient;
         }
 
-        public async Task<List<LivestreamDTO>> Handle(GetUpcomingLivestreamsQuery request, CancellationToken cancellationToken)
+        public async Task<List<LivestreamDTO>> Handle(GetSellerLivestreamsQuery request, CancellationToken cancellationToken)
         {
-            var upcomingLivestreams = await _livestreamRepository.GetUpcomingLivestreamsAsync();
-
-            if (request.IncludePromotedOnly)
-            {
-                upcomingLivestreams = upcomingLivestreams.Where(l => l.IsPromoted).ToList();
-            }
-
+            var sellerLivestreams = await _livestreamRepository.GetLivestreamsBySellerIdAsync(request.SellerId);
             var result = new List<LivestreamDTO>();
 
-            foreach (var livestream in upcomingLivestreams)
+            foreach (var livestream in sellerLivestreams)
             {
                 var shop = await _shopServiceClient.GetShopByIdAsync(livestream.ShopId);
                 var seller = await _accountServiceClient.GetSellerByIdAsync(livestream.SellerId);
