@@ -66,7 +66,8 @@ namespace CartService.Application.Services
                     PriceOriginal = product.BasePrice,
                     PriceCurrent = product.BasePrice,
                     Stock = product.StockQuantity,
-                    PrimaryImage = product.PrimaryImage[0],
+                    PrimaryImage = product.PrimaryImage?.FirstOrDefault() ?? ""
+,
                 };
                 if(product.Variants.Count > 0 && variantId.IsNullOrEmpty() && variantId.IsNullOrWhiteSpace())
                 {
@@ -81,9 +82,9 @@ namespace CartService.Application.Services
                     productSnapshot.Stock = variant.Stock;
                     productSnapshot.Attributes = variant.AttributeValues;
                     productSnapshot.VariantId = variantId;
-                    productSnapshot.PrimaryImage = !string.IsNullOrEmpty(variant.VariantImage.Url)
+                    productSnapshot.PrimaryImage = !string.IsNullOrEmpty(variant.VariantImage?.Url)
                         ? variant.VariantImage.Url
-                        : product.PrimaryImage[0];
+                        : productSnapshot.PrimaryImage;
                 }
                 return productSnapshot;
             }

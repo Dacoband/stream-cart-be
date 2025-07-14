@@ -10,6 +10,6 @@ namespace CartService.Application.Command
 {
     public class DeleteCartItemCommand : IRequest<ApiResponse<bool>>
     {
-        public Guid CartItemId { get; set; }
+        public List<Guid> CartItemId { get; set; }
     }
 }

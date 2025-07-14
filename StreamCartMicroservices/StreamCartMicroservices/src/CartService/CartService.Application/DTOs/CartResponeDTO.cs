@@ -37,5 +37,7 @@ namespace CartService.Application.DTOs
         public Guid ShopId { get; set; }
         public string ShopName { get; set; }
         public List<ProductCart> Products { get; set; }
+        public int NumberOfProduct {  get; set; }
+        public decimal TotalPriceInShop { get; set; }
     }
 }
