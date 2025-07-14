@@ -1,13 +1,26 @@
+# bind_addresses:
+#   - 0.0.0.0
+# port: 7880
+# rtc:
+#   udp_port: 7881
+#   tcp_port: 7882
+#   use_external_ip: true
+# keys:
+#   devkey: "aVeryLongAndSecureSecretKey123456!"
+# room:
+#   enable_remote_unmute: true
+#   max_participants: 20
+#   empty_timeout: 300
 bind_addresses:
-  - 0.0.0.0
-port: 7880
+  - ${LIVEKIT_BIND_ADDRESSES}
+port: ${LIVEKIT_PORT}
 rtc:
-  udp_port: 7881
-  tcp_port: 7882
-  use_external_ip: true
+  udp_port: ${LIVEKIT_RTC_UDP_PORT}
+  tcp_port: ${LIVEKIT_RTC_TCP_PORT}
+  use_external_ip: ${LIVEKIT_RTC_USE_EXTERNAL_IP}
 keys:
-  devkey: "aVeryLongAndSecureSecretKey123456!"
+  ${LIVEKIT_API_KEY}: "${LIVEKIT_API_SECRET}"
 room:
-  enable_remote_unmute: true
-  max_participants: 20
-  empty_timeout: 300
+  enable_remote_unmute: ${LIVEKIT_ROOM_ENABLE_REMOTE_UNMUTE}
+  max_participants: ${LIVEKIT_ROOM_MAX_PARTICIPANTS}
+  empty_timeout: ${LIVEKIT_ROOM_EMPTY_TIMEOUT}

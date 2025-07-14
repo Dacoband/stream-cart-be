@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LivestreamService.Application.Handlers
+namespace LivestreamService.Application.Queries
 {
     public class GetUpcomingLivestreamsQueryHandler : IRequestHandler<GetUpcomingLivestreamsQuery, List<LivestreamDTO>>
     {
