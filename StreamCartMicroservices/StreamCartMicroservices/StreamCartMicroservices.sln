@@ -21,6 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
 		docker-compose.yml = docker-compose.yml
+		Livekit.yaml = Livekit.yaml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Api", "src\ProductService\ProductService.Api\ProductService.Api.csproj", "{A32F825E-1D0D-9E64-9FA3-3F81C88CEFFF}"
@@ -81,11 +82,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification.Infrastrcture"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Api", "src\LivestreamService\LivestreamService.Api\LivestreamService.Api.csproj", "{D5CF9303-BB33-E10D-4FFF-10AA1EB8B12C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Livestreamservice.Application", "src\LivestreamService\Livestreamservice.Application\Livestreamservice.Application.csproj", "{6C822AB5-6384-23E1-B0E3-28A1EE58F18C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Application", "src\LivestreamService\Livestreamservice.Application\LivestreamService.Application.csproj", "{6C822AB5-6384-23E1-B0E3-28A1EE58F18C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Livestreamservice.Domain", "src\LivestreamService\Livestreamservice.Domain\Livestreamservice.Domain.csproj", "{8324F904-95AA-E040-09D8-D74A400A55B4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Domain", "src\LivestreamService\Livestreamservice.Domain\LivestreamService.Domain.csproj", "{8324F904-95AA-E040-09D8-D74A400A55B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Infrastrcture", "src\LivestreamService\LivestreamService.Infrastrcture\LivestreamService.Infrastrcture.csproj", "{0CC195AD-2559-0DB5-B311-D0FB28ACEF5A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Infrastructure", "src\LivestreamService\LivestreamService.Infrastructure\LivestreamService.Infrastructure.csproj", "{D38467B2-F66A-A6C6-080F-C44D6A5BC398}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -245,10 +246,10 @@ Global
 		{8324F904-95AA-E040-09D8-D74A400A55B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8324F904-95AA-E040-09D8-D74A400A55B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8324F904-95AA-E040-09D8-D74A400A55B4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0CC195AD-2559-0DB5-B311-D0FB28ACEF5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0CC195AD-2559-0DB5-B311-D0FB28ACEF5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0CC195AD-2559-0DB5-B311-D0FB28ACEF5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0CC195AD-2559-0DB5-B311-D0FB28ACEF5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D38467B2-F66A-A6C6-080F-C44D6A5BC398}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D38467B2-F66A-A6C6-080F-C44D6A5BC398}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D38467B2-F66A-A6C6-080F-C44D6A5BC398}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D38467B2-F66A-A6C6-080F-C44D6A5BC398}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

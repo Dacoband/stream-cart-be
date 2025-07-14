@@ -78,12 +78,11 @@ namespace LivestreamService.Domain.Entities
             Status = false;
             SetModifier(modifiedBy);
         }
-
-        public void SetPlaybackUrl(string url, string modifiedBy)
+        public void SetPlaybackUrl(string playbackUrl)
         {
-            PlaybackUrl = url;
-            SetModifier(modifiedBy);
+            PlaybackUrl = playbackUrl;
         }
+        
 
         public void SetMaxViewer(int maxViewer, string modifiedBy)
         {

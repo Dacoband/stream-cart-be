@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Livestreamservice.Domain\Livestreamservice.Domain.csproj" />
+    <ProjectReference Include="..\LivestreamService.Domain\LivestreamService.Domain.csproj" />
   </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="FluentValidation" Version="12.0.0" />

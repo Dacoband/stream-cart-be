@@ -33,23 +33,29 @@ namespace LivestreamService.Infrastructure.Extensions
             // Add HttpClient for service communication
             services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
             {
-                var serviceUrl = configuration["ServiceUrls:ShopService"] ?? "http://shop-service";
-                client.BaseAddress = new Uri(serviceUrl);
+                var serviceUrl = configuration["ServiceUrls:ShopService"];
+                if(!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
             });
 
             services.AddHttpClient<IAccountServiceClient, AccountServiceClient>(client =>
             {
-                var serviceUrl = configuration["ServiceUrls:AccountService"] ?? "http://account-service";
-                client.BaseAddress = new Uri(serviceUrl);
+                var serviceUrl = configuration["ServiceUrls:AccountService"];
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
             });
 
             return services;
         }
 
-        public static IServiceCollection AddHttpClientFactory(this IServiceCollection services)
-        {
-            services.AddHttpClient();
-            return services;
-        }
+        //public static IServiceCollection AddHttpClientFactory(this IServiceCollection services)
+        //{
+        //    services.AddHttpClient();
+        //    return services;
+        //}
     }
 }
