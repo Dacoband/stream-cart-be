@@ -674,6 +674,20 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
       "SwaggerKey": "shops"
     },
+    //notification
+    {
+      "DownstreamPathTemplate": "/api/notification/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7077
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notification/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
+      "SwaggerKey": "notification"
+    },
     //{
     //  "DownstreamPathTemplate": "/api/shops-service",
     //  "DownstreamScheme": "https",
@@ -747,6 +761,16 @@
       "Config": [
         {
           "Name": "Delivery API",
+          "Version": "v1",
+          "Url": "https://localhost:7077/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "notification",
+      "Config": [
+        {
+          "Name": "Notification API",
           "Version": "v1",
           "Url": "https://localhost:7077/swagger/v1/swagger.json"
         }

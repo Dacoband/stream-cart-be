@@ -60,6 +60,7 @@ builder.Services.AddEmailServices(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddCurrentUserService();
 builder.Services.AddScoped<IRealTimeNotifier, RealtimeNotifier>();
+builder.Services.AddSwaggerGen();
 
 // MediatR
 builder.Services.AddMediatR(cfg =>

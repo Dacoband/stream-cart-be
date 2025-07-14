@@ -5,6 +5,7 @@ using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
 using OrderService.Application.Events;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Enums;
@@ -22,16 +23,18 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly IProductServiceClient _productServiceClient; 
         private readonly ILogger<CancelOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IAccountServiceClient _accountServiceClient;
 
         public CancelOrderCommandHandler(
             IOrderRepository orderRepository,
             IProductServiceClient productServiceClient, 
-            ILogger<CancelOrderCommandHandler> logger, IPublishEndpoint publishEndpoint)
+            ILogger<CancelOrderCommandHandler> logger, IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _publishEndpoint = publishEndpoint;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<OrderDto> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
@@ -136,6 +139,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     UserId = request.CancelledBy,
                 };
                 await _publishEndpoint.Publish(orderChangEvent);
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
+                    {
+                        OrderCode = order.OrderCode,
+                        Message = "đã bị hủy",
+                        UserId = acc.Id.ToString(),
+                    };
+                    await _publishEndpoint.Publish(ordChangeEvent);
+                }
                 _logger.LogInformation("Order {OrderId} cancelled successfully", request.OrderId);
                 return orderDto;
             }

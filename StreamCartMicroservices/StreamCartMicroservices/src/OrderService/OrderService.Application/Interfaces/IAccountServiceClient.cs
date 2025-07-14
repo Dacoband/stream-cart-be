@@ -22,5 +22,6 @@ namespace OrderService.Application.Interfaces
         /// <param name="accountId">Account ID</param>
         /// <returns>Email address</returns>
         Task<string> GetEmailByAccountIdAsync(Guid accountId);
+        Task<List<AccountDto?>> GetAccountByShopIdAsync(Guid shopId);
     }
 }
