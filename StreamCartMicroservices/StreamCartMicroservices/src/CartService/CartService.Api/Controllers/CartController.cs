@@ -100,7 +100,7 @@ namespace CartService.Api.Controllers
             }
         }
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCartItem([FromRoute] Guid id)
+        public async Task<IActionResult> DeleteCartItem([FromQuery] List<Guid> id)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));

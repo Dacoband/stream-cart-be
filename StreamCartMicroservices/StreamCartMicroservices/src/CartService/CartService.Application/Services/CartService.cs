@@ -141,7 +141,7 @@ namespace CartService.Application.Services
 
         }
 
-        public async Task<ApiResponse<bool>> DeleteCart(Guid cartItemId)
+        public async Task<ApiResponse<bool>> DeleteCart(List<Guid> cartItemId)
         {
             //Initiate response
             var result = new ApiResponse<bool>()
@@ -149,22 +149,29 @@ namespace CartService.Application.Services
                 Message = "Xóa sản phẩm trong giỏ hàng thành công",
                 Success = true,
             };
-            var existingCartItem = await _cartItemRepository.GetByIdAsync(cartItemId.ToString());
-            if (existingCartItem == null) {
-                result.Success = false;
-                result.Message = "Không tìm thấy sản phẩm cần xóa trong giỏ hàng";
-                return result;
-             };
-            try
-            {
-                await _cartItemRepository.DeleteCartItem(cartItemId);
-                return result;
+            foreach (var item in cartItemId) {
+
+                var existingCartItem = await _cartItemRepository.GetByIdAsync(cartItemId.ToString());
+                if (existingCartItem == null)
+                {
+                    result.Success = false;
+                    result.Message = "Không tìm thấy sản phẩm cần xóa trong giỏ hàng";
+                    return result;
+                };
+                try
+                {
+                    await _cartItemRepository.DeleteCartItem(item);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    result.Message = ex.Message;
+                    result.Success = false;
+                    return result;
+                }
             }
-            catch (Exception ex) {
-                result.Message = ex.Message;
-                result.Success = false;
-                return result;
-            }
+            return result;
+           
         }
 
         public async Task<ApiResponse<CartResponeDTO>> GetMyCart(string userId) 
@@ -209,7 +216,9 @@ namespace CartService.Application.Services
                Attributes = ci.Attributes,
                PrimaryImage = ci.PrimaryImage,
                ProductStatus = ci.ProductStatus,
-           }).ToList()
+           }).ToList(),
+           NumberOfProduct = g.Count(),
+           TotalPriceInShop = g.Sum(x => x.PriceCurrent),
        }).ToList();
             result.Data = new CartResponeDTO()
             {
@@ -240,9 +249,39 @@ namespace CartService.Application.Services
             if (!cartItems.Any())
             {
                 result.Success = false;
-                result.Message = "Không tìm thấy sản phẩm nào trong giỏ hàng";
+                result.Message = "Không tìm thấy giỏ hàng";
                 return result;
             }
+            var sortedItems = cartItems.OrderByDescending(x => x.CreatedAt);
+            //GroupByShop
+            var grouped = sortedItems
+             .GroupBy(ci => new { ci.ShopId, ci.ShopName })
+              .Select(g => new ProductInShopCart
+              {
+                  ShopId = g.Key.ShopId,
+                  ShopName = g.Key.ShopName,
+                  Products = g.Select(ci => new ProductCart
+                  {
+                      CartItemId = ci.Id,
+                      ProductId = ci.ProductId,
+                      VariantID = ci.VariantId,
+                      ProductName = ci.ProductName,
+                      PriceData = new PriceData
+                      {
+                          CurrentPrice = ci.PriceCurrent,
+                          OriginalPrice = ci.PriceSnapShot,
+                          Discount = ci.PriceSnapShot - ci.PriceCurrent
+                      },
+                      Quantity = ci.Quantity,
+                      StockQuantity = ci.Stock,
+                      Attributes = ci.Attributes,
+                      PrimaryImage = ci.PrimaryImage,
+                      ProductStatus = ci.ProductStatus,
+                  }).ToList(),
+                  NumberOfProduct = g.Sum(x=>x.Quantity),
+                  TotalPriceInShop = g.Sum(x => x.PriceCurrent *x.Quantity),
+              }).ToList();
+            
             //InitiateResponse
             int totalItem = cartItems.Sum(ci => ci.Quantity);
             decimal totalAmount = cartItems.Sum(ci => ci.PriceCurrent * ci.Quantity);
@@ -253,7 +292,8 @@ namespace CartService.Application.Services
                 TotalAmount = totalAmount,
                 Discount = discount,
                 TotalItem = totalItem,
-                SubTotal = subTotal
+                SubTotal = subTotal,
+                ListCartItem = grouped,
             };
             result.Data = response;
             return result;
