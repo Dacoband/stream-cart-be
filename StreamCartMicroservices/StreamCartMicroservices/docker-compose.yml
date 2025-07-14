@@ -357,7 +357,7 @@ services:
   notification-service:
     build:
       context: ./src
-      dockerfile: ./NotificationService/NotificationService.Api/Dockerfile
+      dockerfile: ./Notification/Notification.Api/Dockerfile
     ports:
       - "7077:80"  # Cổng public:container, bạn có thể thay 7077 nếu cần
     environment:
