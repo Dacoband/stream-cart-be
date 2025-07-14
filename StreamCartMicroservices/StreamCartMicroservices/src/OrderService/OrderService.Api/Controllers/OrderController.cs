@@ -1,12 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Models;
 using Shared.Common.Services.User;
 using System;
 using System.Threading.Tasks;
@@ -21,12 +24,15 @@ namespace OrderService.Api.Controllers
         private readonly IOrderService _orderService;
         private readonly ILogger<OrderController> _logger;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IMediator _mediator;
 
-        public OrderController(IOrderService orderService, ILogger<OrderController> logger, ICurrentUserService currentUserService)
+
+        public OrderController(IOrderService orderService, ILogger<OrderController> logger, ICurrentUserService currentUserService,IMediator mediator)
         {
             _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUserService = currentUserService;
+            _mediator = mediator;
         }
 
         /// <summary>
@@ -434,6 +440,40 @@ namespace OrderService.Api.Controllers
             {
                 _logger.LogError(ex, "Lỗi khi khách hàng xác nhận đơn hàng {OrderId}", orderId);
                 return BadRequest(new { error = "Có lỗi xảy ra khi xác nhận đơn hàng. Vui lòng thử lại sau." });
+            }
+        }
+        [HttpPost("multi")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<List<OrderDto>>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> CreateMultiOrder([FromBody] CreateMultiOrderDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Invalid input data"));
+            }
+
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                var command = new CreateMultiOrderCommand
+                {
+                    AccountId = userId,
+                    PaymentMethod = request.PaymentMethod,
+                    ShippingAddress = request.ShippingAddress,
+                    LivestreamId = request.LivestreamId,
+                    CreatedFromCommentId = request.CreatedFromCommentId,
+                    OrdersByShop = request.OrdersByShop
+                };
+
+                var result = await _mediator.Send(command);
+                return Created($"/api/orders", ApiResponse<List<OrderDto>>.SuccessResult(result, "Multiple orders created successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating multiple orders");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error creating orders: {ex.Message}"));
             }
         }
     }

@@ -15,21 +15,18 @@ namespace LivestreamService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<AccountServiceClient> _logger;
-        private readonly string _baseUrl;
-
+        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly IConfiguration _configuration;
         public AccountServiceClient(HttpClient httpClient, IConfiguration configuration, ILogger<AccountServiceClient> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            _baseUrl = configuration["ServiceUrls:AccountService"];
-            if (string.IsNullOrEmpty(_baseUrl))
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _jsonOptions = new JsonSerializerOptions
             {
-                _baseUrl = "http://account-service/api";
-                _logger.LogWarning("Account service URL not found in configuration. Using default: {BaseUrl}", _baseUrl);
-            }
-
-            _httpClient.BaseAddress = new Uri(_baseUrl);
+                PropertyNameCaseInsensitive = true
+            };
         }
 
         public async Task<AccountDTO> GetAccountByIdAsync(Guid accountId)
@@ -60,7 +57,8 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"/api/accounts/{sellerId}");
+                var serviceUrl = _configuration["ServiceUrls:AccountService"];
+                var response = await _httpClient.GetAsync($"{serviceUrl}/api/accounts/{sellerId}");
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Failed to get seller with ID {SellerId}. Status code: {StatusCode}",
@@ -69,12 +67,10 @@ namespace LivestreamService.Infrastructure.Services
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<AccountDTO>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<AccountDTO>>(content, _jsonOptions);
 
                 if (apiResponse?.Data == null)
-                {
                     return null;
-                }
 
                 // Convert account data to seller data
                 return new SellerDTO

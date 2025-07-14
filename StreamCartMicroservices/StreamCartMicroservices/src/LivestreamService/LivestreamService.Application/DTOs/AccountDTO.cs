@@ -10,7 +10,7 @@ namespace LivestreamService.Application.DTOs
         public string? AvatarUrl { get; set; }
 
         public string? Fullname { get; set; }
-        public string? Role { get; set; }
+        public int? Role { get; set; }
         public bool IsVerified { get; set; }
 
     }

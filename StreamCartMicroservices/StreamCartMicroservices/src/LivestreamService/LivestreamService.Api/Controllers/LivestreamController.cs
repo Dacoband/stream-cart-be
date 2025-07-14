@@ -63,11 +63,11 @@ namespace LivestreamService.Api.Controllers
                 var shopId = request.ShopId;
 
                 // Verify the user has rights to this shop
-                var hasPermission = await _shopServiceClient.IsShopMemberAsync(shopId, userId);
-                if (!hasPermission)
-                {
-                    return BadRequest(ApiResponse<object>.ErrorResult("You can only create livestreams for your own shop"));
-                }
+                //var hasPermission = await _shopServiceClient.IsShopMemberAsync(shopId, userId);
+                //if (!hasPermission)
+                //{
+                //    return BadRequest(ApiResponse<object>.ErrorResult("You can only create livestreams for your own shop"));
+                //}
 
                 var command = new CreateLivestreamCommand
                 {

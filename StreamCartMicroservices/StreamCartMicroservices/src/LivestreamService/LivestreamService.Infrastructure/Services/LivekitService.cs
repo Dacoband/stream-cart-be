@@ -44,27 +44,38 @@ namespace LivestreamService.Infrastructure.Services
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                var url = $"{_livekitUrl}/v1/rooms/{roomName}";
+
+                // Use the Twirp protocol endpoint format - this is what LiveKit expects
+                var url = $"{_livekitUrl}/twirp/livekit.RoomService/CreateRoom";
+                _logger.LogInformation("Creating room using endpoint: {Url}", url);
 
                 var payload = new
                 {
                     name = roomName,
-                    empty_timeout = 300, // 5 minutes
+                    empty_timeout = 300,
                     max_participants = 100
                 };
 
-                var token = GenerateAccessToken(url, payload);
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+                // Generate JWT token for authentication
+                var token = GenerateAccessTokenForRoomCreate(roomName);
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
+                // Make the API call
                 var response = await client.PostAsync(url, new StringContent(
                     JsonSerializer.Serialize(payload),
                     Encoding.UTF8,
                     "application/json"));
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Room creation failed with status: {StatusCode}, Response: {Response}",
+                        response.StatusCode, await response.Content.ReadAsStringAsync());
+                    throw new HttpRequestException($"LiveKit room creation failed with status: {response.StatusCode}");
+                }
 
-                var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>();
-                _logger.LogInformation("Room {RoomName} created in LiveKit", roomName);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("Room {RoomName} created in LiveKit. Response: {Response}",
+                    roomName, responseContent);
 
                 return roomName;
             }
@@ -151,11 +162,30 @@ namespace LivestreamService.Infrastructure.Services
                 return 0;
             }
         }
+        private string GenerateAccessTokenForRoomCreate(string roomName)
+        {
+            var claims = new
+            {
+                iss = _apiKey,
+                sub = "server",
+                iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                exp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds(),
+                nbf = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                video = new
+                {
+                    roomCreate = true,
+                    room = roomName
+                }
+            };
+
+            return GenerateJwt(claims);
+        }
 
         private string GenerateAccessToken(string url, object payload = null, string method = "POST")
         {
             var claims = new
             {
+                iss = _apiKey,
                 access = new
                 {
                     method = method,
@@ -176,9 +206,12 @@ namespace LivestreamService.Infrastructure.Services
                 alg = "HS256",
                 typ = "JWT"
             };
-
-            var headerJson = JsonSerializer.Serialize(header);
-            var claimsJson = JsonSerializer.Serialize(claims);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var headerJson = JsonSerializer.Serialize(header,options);
+            var claimsJson = JsonSerializer.Serialize(claims,options);
 
             var headerBase64 = Base64UrlEncode(Encoding.UTF8.GetBytes(headerJson));
             var claimsBase64 = Base64UrlEncode(Encoding.UTF8.GetBytes(claimsJson));

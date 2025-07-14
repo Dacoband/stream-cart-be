@@ -71,6 +71,8 @@ namespace LivestreamService.Application.Handlers
                     request.SellerId.ToString()
                 );
 
+                // Set a default value for PlaybackUrl which is required by the database
+                livestream.SetPlaybackUrl($"https://stream.placeholder.com/{livekitRoomId}");
                 // Save livestream
                 await _livestreamRepository.InsertAsync(livestream);
 
