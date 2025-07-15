@@ -99,7 +99,7 @@ namespace CartService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tìm giỏ hàng"));
             }
         }
-        [HttpDelete("{id}")]
+        [HttpDelete]
         public async Task<IActionResult> DeleteCartItem([FromQuery] List<Guid> id)
         {
             if (!ModelState.IsValid)
