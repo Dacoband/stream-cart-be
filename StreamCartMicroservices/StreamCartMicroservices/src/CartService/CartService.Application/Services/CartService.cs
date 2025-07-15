@@ -151,7 +151,7 @@ namespace CartService.Application.Services
             };
             foreach (var item in cartItemId) {
 
-                var existingCartItem = await _cartItemRepository.GetByIdAsync(cartItemId.ToString());
+                var existingCartItem = await _cartItemRepository.GetByIdAsync(item.ToString());
                 if (existingCartItem == null)
                 {
                     result.Success = false;
@@ -161,7 +161,6 @@ namespace CartService.Application.Services
                 try
                 {
                     await _cartItemRepository.DeleteCartItem(item);
-                    return result;
                 }
                 catch (Exception ex)
                 {
