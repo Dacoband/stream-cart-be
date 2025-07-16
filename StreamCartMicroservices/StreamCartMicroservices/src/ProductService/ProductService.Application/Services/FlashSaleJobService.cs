@@ -61,7 +61,7 @@ namespace ProductService.Application.Services
                                 {
                                     ProductId = product.Id,
                                     ProductName = product.ProductName,
-                                    Price = fs.FlashSalePrice,
+                                    Price = (fs.FlashSalePrice /100) * product.BasePrice,
                                     Stock = product.StockQuantity
                                 };
 
@@ -85,7 +85,7 @@ namespace ProductService.Application.Services
                                 {
                                     ProductId = fs.ProductId,
                                     VariantId = variant.Id,
-                                    Price = fs.FlashSalePrice
+                                    Price = (fs.FlashSalePrice / 100)* variant.Price,
                                 };
 
                                 await _publishEndpoint.Publish(productEvent);
