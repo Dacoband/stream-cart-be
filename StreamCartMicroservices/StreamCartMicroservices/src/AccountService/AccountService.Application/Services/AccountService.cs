@@ -198,6 +198,44 @@ namespace AccountService.Application.Services
             var result = await _mediator.Send(query);
             return result;
         }
+        public async Task<(bool CanDelete, string Reason)> CanDeleteAccountAsync(Guid accountId)
+        {
+            var account = await GetAccountByIdAsync(accountId);
+            if (account == null)
+            {
+                return (false, "Account not found");
+            }
+
+            // Không được xóa ITAdmin
+            if (account.Role == RoleType.ITAdmin)
+            {
+                return (false, "Cannot delete ITAdmin account");
+            }
+
+            // Kiểm tra OperationManager
+            if (account.Role == RoleType.OperationManager)
+            {
+                var activeOpManagerCount = await CountActiveOperationManagersAsync();
+                // Trừ đi chính tài khoản này nếu nó đang active
+                if (account.IsActive)
+                {
+                    activeOpManagerCount--;
+                }
+
+                if (activeOpManagerCount < 1)
+                {
+                    return (false, "Cannot delete the last active Operation Manager. At least one Operation Manager must exist in the system.");
+                }
+            }
+
+            return (true, string.Empty);
+        }
+
+        public async Task<int> CountActiveOperationManagersAsync()
+        {
+            var operationManagers = await GetAccountsByRoleAsync(RoleType.OperationManager);
+            return operationManagers.Count(om => om.IsActive);
+        }
         #endregion
 
         private AccountDto? MapToDto(Account? account)
