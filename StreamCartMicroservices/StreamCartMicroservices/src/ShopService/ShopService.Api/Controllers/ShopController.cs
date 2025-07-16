@@ -131,7 +131,7 @@ namespace ShopService.Api.Controllers
         /// <param name="createShopDto">Thông tin shop mới</param>
         /// <returns>Shop đã tạo</returns>
         [HttpPost]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -165,7 +165,7 @@ namespace ShopService.Api.Controllers
         /// <param name="updateShopDto">Thông tin cập nhật</param>
         /// <returns>Shop đã cập nhật</returns>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -213,7 +213,7 @@ namespace ShopService.Api.Controllers
         /// <param name="bankingInfo">Thông tin ngân hàng mới</param>
         /// <returns>Shop đã cập nhật</returns>
         [HttpPut("{id}/banking-info")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -250,7 +250,7 @@ namespace ShopService.Api.Controllers
         /// <param name="id">ID của shop</param>
         /// <returns>Kết quả thực hiện</returns>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller,OperationManager")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -279,7 +279,7 @@ namespace ShopService.Api.Controllers
         /// <param name="active">true để kích hoạt, false để vô hiệu hóa</param>
         /// <returns>Shop đã cập nhật</returns>
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller,OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -311,7 +311,7 @@ namespace ShopService.Api.Controllers
         /// <param name="id">ID của shop</param>
         /// <returns>Shop đã phê duyệt</returns>
         [HttpPost("{id}/approve")]
-        [Authorize(Roles = "Admin,ITAdmin")]
+        [Authorize(Roles = "Admin,OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -336,7 +336,7 @@ namespace ShopService.Api.Controllers
         /// <param name="reason">Lý do từ chối</param>
         /// <returns>Shop đã từ chối</returns>
         [HttpPost("{id}/reject")]
-        [Authorize(Roles = "Admin,ITAdmin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -360,7 +360,7 @@ namespace ShopService.Api.Controllers
         /// <param name="status">Trạng thái phê duyệt</param>
         /// <returns>Danh sách shop</returns>
         [HttpGet("by-approval-status/{status}")]
-        [Authorize(Roles = "Admin,ITAdmin")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -384,7 +384,7 @@ namespace ShopService.Api.Controllers
         /// <param name="shopId">ID của shop</param>
         /// <returns>Danh sách thành viên</returns>
         [HttpGet("{shopId}/members")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller,OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -410,7 +410,7 @@ namespace ShopService.Api.Controllers
         /// <param name="memberDto">Thông tin thành viên mới</param>
         /// <returns>Kết quả thực hiện</returns>
         [HttpPost("{shopId}/members")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -439,7 +439,7 @@ namespace ShopService.Api.Controllers
         /// <param name="memberId">ID của thành viên</param>
         /// <returns>Kết quả thực hiện</returns>
         [HttpDelete("{shopId}/members/{memberId}")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -468,7 +468,7 @@ namespace ShopService.Api.Controllers
         /// <param name="roleDto">Vai trò mới</param>
         /// <returns>Kết quả thực hiện</returns>
         [HttpPut("{shopId}/members/{memberId}/role")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -500,7 +500,7 @@ namespace ShopService.Api.Controllers
         /// <param name="invitationDto">Thông tin lời mời</param>
         /// <returns>ID của lời mời</returns>
         [HttpPost("{shopId}/invite")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -596,7 +596,7 @@ namespace ShopService.Api.Controllers
 
         #endregion
         [HttpPut("{id}/product-count")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize(Roles = "Seller")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ShopDto>> UpdateProductCount(
@@ -617,7 +617,7 @@ namespace ShopService.Api.Controllers
         /// <param name="request">Thông tin cập nhật</param>
         /// <returns>Shop đã cập nhật</returns>
         [HttpPut("{id}/completion-rate")]
-        [Authorize(Roles = "Admin,System")]
+        [Authorize(Roles = "OperationManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

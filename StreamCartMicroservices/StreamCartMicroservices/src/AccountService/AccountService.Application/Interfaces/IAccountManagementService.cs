@@ -25,5 +25,17 @@ namespace AccountService.Application.Interfaces
         Task<AccountDto> UpdateAccountStatusAsync(Guid accountId, bool isActive, Guid updatedByAccountId);
         Task<bool> CanManageAccountStatusAsync(Guid accountId, Guid targetAccountId);
         Task<IEnumerable<AccountDto>> GetAccountsByShopIdAsync(Guid shopId);
+        /// <summary>
+        /// Kiểm tra xem có thể xóa tài khoản hay không
+        /// </summary>
+        /// <param name="accountId">ID của tài khoản cần kiểm tra</param>
+        /// <returns>Tuple với kết quả kiểm tra và lý do (nếu không thể xóa)</returns>
+        Task<(bool CanDelete, string Reason)> CanDeleteAccountAsync(Guid accountId);
+
+        /// <summary>
+        /// Đếm số lượng OperationManager đang hoạt động
+        /// </summary>
+        /// <returns>Số lượng OperationManager active</returns>
+        Task<int> CountActiveOperationManagersAsync();
     }
 }

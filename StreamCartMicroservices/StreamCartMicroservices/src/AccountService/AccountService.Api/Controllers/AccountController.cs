@@ -50,14 +50,46 @@ namespace AccountService.Api.Controllers
         [Authorize(Roles = "ITAdmin")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 403)]
         public async Task<IActionResult> DeleteAccount(Guid id)
         {
-            var result = await _accountService.DeleteAccountAsync(id);
+            try
+            {
+                var accountToDelete = await _accountService.GetAccountByIdAsync(id);
+                if (accountToDelete == null)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Account not found"));
+                }
 
-            if (!result)
-                return BadRequest(ApiResponse<object>.ErrorResult("Failed to delete account"));
+                // Kiểm tra không được xóa ITAdmin
+                if (accountToDelete.Role == RoleType.ITAdmin)
+                {
+                    return Forbid(ApiResponse<object>.ErrorResult("Cannot delete ITAdmin account").ToString());
+                }
 
-            return Ok(ApiResponse<bool>.SuccessResult(true, "Account deleted successfully"));
+                // Kiểm tra nếu là OperationManager, phải đảm bảo còn ít nhất 1 OperationManager khác
+                if (accountToDelete.Role == RoleType.OperationManager)
+                {
+                    var operationManagers = await _accountService.GetAccountsByRoleAsync(RoleType.OperationManager);
+                    var activeOperationManagers = operationManagers.Where(om => om.IsActive && om.Id != id).Count();
+
+                    if (activeOperationManagers < 1)
+                    {
+                        return BadRequest(ApiResponse<object>.ErrorResult("Cannot delete the last active Operation Manager. At least one Operation Manager must exist in the system."));
+                    }
+                }
+
+                var result = await _accountService.DeleteAccountAsync(id);
+
+                if (!result)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Failed to delete account"));
+
+                return Ok(ApiResponse<bool>.SuccessResult(true, "Account deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Error deleting account: {ex.Message}"));
+            }
         }
 
         [HttpGet("{id}")]
