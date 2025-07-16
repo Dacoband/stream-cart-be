@@ -11,7 +11,7 @@ namespace ProductService.Application.DTOs.FlashSale
     {
         public Guid ProductId { get; set; }
         public List<Guid>? VariantId { get; set; }
-        [Range(100, double.MaxValue, ErrorMessage = "Giá FalshSale phải lớn hơn 100đ")]
+        [Range(0,100, ErrorMessage = "Phần trăm FlashSale cho sản phẩm phải nằm trong khoảng 0%-100%")]
         public decimal FLashSalePrice { get; set; }
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm áp dụng FlashSale phải lớn hơn 0")]
         public int? QuantityAvailable { get; set; }

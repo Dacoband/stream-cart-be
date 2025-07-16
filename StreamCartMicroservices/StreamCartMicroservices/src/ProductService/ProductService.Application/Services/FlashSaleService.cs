@@ -78,7 +78,7 @@ namespace ProductService.Application.Services
                 var flashSaleCreated = new FlashSale()
                 {
                     ProductId = request.ProductId,
-                    VariantId = Guid.NewGuid(),
+                    VariantId = null,
                     FlashSalePrice = request.FLashSalePrice,
                     QuantityAvailable = request.QuantityAvailable ?? existingProduct.StockQuantity,
                     QuantitySold = 0,
