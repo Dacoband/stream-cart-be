@@ -366,12 +366,13 @@ services:
       - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
       - APPWRITE_API_KEY=${APPWRITE_API_KEY}
       # LiveKit Settings - These are the critical settings to fix the 404 error
-      - LiveKit__Url=http://livekit:7880
-      - LiveKit__ApiKey=devkey
-      - LiveKit__ApiSecret=aVeryLongAndSecureSecretKey123456!
+      - LiveKit__Url=${LIVEKIT_URL}
+      - LiveKit__ApiKey=${LIVEKIT_API_KEY}
+      - LiveKit__ApiSecret=${LIVEKIT_API_SECRET}
       # Service URLs
       - ServiceUrls__ShopService=http://shop-service
       - ServiceUrls__AccountService=http://account-service
+      - ServiceUrls__ProductService=http://product-service  
     depends_on:
       rabbitmq:
         condition: service_healthy

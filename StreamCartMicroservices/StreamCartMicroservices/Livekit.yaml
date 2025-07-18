@@ -6,7 +6,7 @@ rtc:
   tcp_port: 7882
   use_external_ip: true
 keys:
-  devkey: "aVeryLongAndSecureSecretKey123456!"
+  ${LIVEKIT_API_KEY}: "${LIVEKIT_API_SECRET}"
 room:
   enable_remote_unmute: true
   max_participants: 20

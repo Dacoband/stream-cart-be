@@ -38,6 +38,7 @@ builder.Services.AddHostedService<DatabaseInitializer>();
 
 builder.Services.AddScoped<ILivestreamRepository, LivestreamRepository>();
 
+
 builder.Services.AddScoped<ILivekitService, LivekitService>();
 
 builder.Services.AddAppSettings(builder.Configuration);

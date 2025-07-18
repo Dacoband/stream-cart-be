@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
+using ProductService.Application.Queries.ProductQueries;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
@@ -20,12 +22,14 @@ namespace ProductService.Api.Controllers
         private readonly IProductService _productService;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IMediator _mediator;
 
-        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService )
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService, IMediator mediator)
         {
             _productService = productService;
             _shopServiceClient = shopServiceClient;
             _currentUserService = currentUserService;
+            _mediator = mediator;
         }
 
         [HttpPost]
@@ -294,6 +298,30 @@ namespace ProductService.Api.Controllers
             catch (ApplicationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("flash-sales")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetProductsWithFlashSale()
+        {
+            try
+            {
+                var query = new GetProductsWithFlashSaleQuery();
+                var response = await _mediator.Send(query);
+
+                if (response.Success)
+                {
+                    return Ok(response);
+                }
+                else
+                {
+                    return BadRequest(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách sản phẩm có Flash Sale: {ex.Message}"));
             }
         }
     }
