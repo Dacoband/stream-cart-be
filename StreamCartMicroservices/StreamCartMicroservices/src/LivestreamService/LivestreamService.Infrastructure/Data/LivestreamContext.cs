@@ -10,6 +10,9 @@ namespace LivestreamService.Infrastructure.Data
         }
 
         public DbSet<Livestream> Livestreams { get; set; }
+        public DbSet<LivestreamProduct> LivestreamProducts { get; set; }
+        public DbSet<StreamEvent> StreamEvents { get; set; }
+        public DbSet<StreamView> StreamViews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,6 +43,45 @@ namespace LivestreamService.Infrastructure.Data
 
                 // Add index on scheduled start time
                 entity.HasIndex(e => e.ScheduledStartTime);
+            });
+            modelBuilder.Entity<LivestreamProduct>(entity =>
+            {
+                entity.ToTable("LivestreamProducts");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LivestreamId).IsRequired();
+                entity.Property(e => e.ProductId).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.VariantId).HasMaxLength(100);
+                entity.Property(e => e.Price).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.Stock).IsRequired();
+
+                // Add indexes
+                entity.HasIndex(e => e.LivestreamId);
+                entity.HasIndex(e => e.ProductId);
+                entity.HasIndex(e => e.IsPin);
+            });
+            modelBuilder.Entity<StreamEvent>(entity =>
+            {
+                entity.ToTable("StreamEvents");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LivestreamId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.EventType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Payload).HasMaxLength(4000);
+
+                entity.HasIndex(e => e.LivestreamId);
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.EventType);
+            });
+            modelBuilder.Entity<StreamView>(entity =>
+            {
+                entity.ToTable("StreamViews");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LivestreamId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.StartTime).IsRequired();
+
+                entity.HasIndex(e => e.LivestreamId);
+                entity.HasIndex(e => e.UserId);
             });
         }
     }

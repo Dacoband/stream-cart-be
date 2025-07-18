@@ -142,5 +142,10 @@ namespace ProductService.Infrastructure.Repositories
 
             return await query.CountAsync() == 0;
         }
+        public async Task<IEnumerable<Product>> GetProductsHaveFlashSale()
+        {
+            var query = _dbSet.Where(p => p.DiscountPrice != 0);
+            return await query.ToListAsync();
+        }
     }
 }
