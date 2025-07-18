@@ -112,6 +112,7 @@ services:
       - shop-service
       - order-service
       - payment-service
+      - livestream-service
     restart: unless-stopped
     networks:
     - app-network
