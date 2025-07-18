@@ -24,6 +24,10 @@ namespace LivestreamService.Infrastructure.Extensions
 
             // Add repositories
             services.AddScoped<ILivestreamRepository, LivestreamRepository>();
+            services.AddScoped<ILivestreamProductRepository, LivestreamProductRepository>();
+            services.AddScoped<IStreamEventRepository, StreamEventRepository>();
+            services.AddScoped<IStreamViewRepository, StreamViewRepository>();
+
 
             // Add service clients
             services.AddScoped<IShopServiceClient, ShopServiceClient>();
@@ -48,7 +52,16 @@ namespace LivestreamService.Infrastructure.Extensions
                     client.BaseAddress = new Uri(serviceUrl);
                 }
             });
-
+            services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
+            {
+                var serviceUrl = configuration["ServiceUrls:ProductService"];
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
+            });
+            // Thêm vào các dang ký service
+            services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
             return services;
         }
 

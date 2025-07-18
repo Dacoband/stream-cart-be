@@ -26,5 +26,6 @@ namespace LivestreamService.Application.DTOs
         public DateTime? ApprovalDateContent { get; set; }
         public bool IsPromoted { get; set; }
         public string? Tags { get; set; }
+        public List<LivestreamProductDTO>? Products { get; set; } = new();
     }
 }

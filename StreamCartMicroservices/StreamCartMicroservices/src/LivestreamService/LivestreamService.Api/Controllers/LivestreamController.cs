@@ -77,7 +77,8 @@ namespace LivestreamService.Api.Controllers
                     ScheduledStartTime = request.ScheduledStartTime,
                     ThumbnailUrl = request.ThumbnailUrl,
                     Tags = request.Tags,
-                    SellerId = userId
+                    SellerId = userId,
+                    Products = request.Products
                 };
 
                 var result = await _mediator.Send(command);

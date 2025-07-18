@@ -245,10 +245,10 @@ namespace LivestreamService.Infrastructure.Services
 
     internal class ParticipantInfo
     {
-        public string Sid { get; set; }
-        public string Identity { get; set; }
-        public string State { get; set; }
-        public string Name { get; set; }
+        public string? Sid { get; set; }
+        public string? Identity { get; set; }
+        public string? State { get; set; }
+        public string? Name { get; set; }
         public long JoinedAt { get; set; }
     }
 }
