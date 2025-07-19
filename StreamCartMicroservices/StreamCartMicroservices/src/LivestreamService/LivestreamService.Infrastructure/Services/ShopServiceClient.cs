@@ -163,8 +163,8 @@ namespace LivestreamService.Infrastructure.Services
         private class ApiResponse<T>
         {
             public bool Success { get; set; }
-            public string Message { get; set; }
-            public T Data { get; set; }
+            public string? Message { get; set; }
+            public T? Data { get; set; }
         }
         private T GetJsonPropertyValue<T>(JsonElement element, string propertyName, T defaultValue)
         {

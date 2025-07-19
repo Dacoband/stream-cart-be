@@ -1005,6 +1005,32 @@
       "SwaggerKey": "livestream"
     },
     {
+      "DownstreamPathTemplate": "/api/chat/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/chat/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/livestream-chat/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/livestream-chat/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH" ],
+      "SwaggerKey": "livestream"
+    },
+    {
       "DownstreamPathTemplate": "/swagger/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
