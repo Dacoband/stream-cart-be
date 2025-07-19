@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Bson" Version="3.4.1" />
+  </ItemGroup>
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\Shared\Shared.Common\Shared.Common.csproj" />

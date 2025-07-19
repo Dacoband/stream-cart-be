@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
@@ -23,13 +24,15 @@ namespace ProductService.Api.Controllers
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ICurrentUserService _currentUserService;
         private readonly IMediator _mediator;
+        private readonly ILogger<ProductController> _logger;
 
-        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService, IMediator mediator)
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService, IMediator mediator, ILogger<ProductController> logger)
         {
             _productService = productService;
             _shopServiceClient = shopServiceClient;
             _currentUserService = currentUserService;
             _mediator = mediator;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -322,6 +325,117 @@ namespace ProductService.Api.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách sản phẩm có Flash Sale: {ex.Message}"));
+            }
+        }
+        /// </summary>
+        /// <param name="request">Thông tin tìm kiếm và bộ lọc</param>
+        /// <returns>Danh sách sản phẩm phù hợp</returns>
+        [HttpGet("search")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<SearchProductResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> SearchProducts([FromQuery] SearchProductRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu tìm kiếm không hợp lệ"));
+            }
+
+            try
+            {
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = request.SearchTerm,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    CategoryId = request.CategoryId,
+                    MinPrice = request.MinPrice,
+                    MaxPrice = request.MaxPrice,
+                    ShopId = request.ShopId,
+                    SortBy = request.SortBy,
+                    InStockOnly = request.InStockOnly,
+                    MinRating = request.MinRating,
+                    OnSaleOnly = request.OnSaleOnly
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<SearchProductResponseDto>.SuccessResult(
+                    result,
+                    $"Tìm thấy {result.TotalResults} sản phẩm cho '{request.SearchTerm}' trong {result.SearchTimeMs:F2}ms"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tìm kiếm sản phẩm với từ khóa: {SearchTerm}", request.SearchTerm);
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi tìm kiếm sản phẩm"));
+            }
+        }
+        /// <summary>
+        /// Lấy gợi ý tìm kiếm nhanh
+        /// </summary>
+        /// <param name="q">Từ khóa cần gợi ý</param>
+        /// <returns>Danh sách gợi ý</returns>
+        [HttpGet("search/suggestions")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<List<string>>), 200)]
+        public async Task<IActionResult> GetSearchSuggestions([FromQuery] string q)
+        {
+            try
+            {
+                // Simple suggestion logic - could be enhanced with Redis cache or Elasticsearch
+                var suggestions = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(q) && q.Length >= 2)
+                {
+                    // Mock suggestions - in reality, this would query popular search terms
+                    suggestions.AddRange(new[]
+                    {
+                        $"{q} áo",
+                        $"{q} quần",
+                        $"{q} giày",
+                        $"{q} túi xách",
+                        $"{q} phụ kiện"
+                    }.Take(5));
+                }
+
+                return Ok(ApiResponse<List<string>>.SuccessResult(suggestions));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy gợi ý tìm kiếm cho: {Query}", q);
+                return Ok(ApiResponse<List<string>>.SuccessResult(new List<string>()));
+            }
+        }
+        /// <summary>
+        /// Lấy sản phẩm phổ biến/trending
+        /// </summary>
+        [HttpGet("trending")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductSearchItemDto>>), 200)]
+        public async Task<IActionResult> GetTrendingProducts([FromQuery] int limit = 10)
+        {
+            try
+            {
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = "",
+                    PageNumber = 1,
+                    PageSize = limit,
+                    SortBy = "best_selling"
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<List<ProductSearchItemDto>>.SuccessResult(
+                    result.Products.Items.ToList(),
+                    "Lấy danh sách sản phẩm trending thành công"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm trending");
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra"));
             }
         }
     }

@@ -5,6 +5,7 @@ using LivestreamService.Application.Extensions;
 using LivestreamService.Application.Interfaces;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Extensions;
+using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("*")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 builder.Services.AddApplicationServices(builder.Configuration);
@@ -100,7 +102,7 @@ if (!builder.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-
+app.MapHub<ChatHub>("/chatHub");
 app.UseRouting();
 app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
