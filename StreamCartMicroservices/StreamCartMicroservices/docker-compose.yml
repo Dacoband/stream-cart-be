@@ -332,8 +332,8 @@ services:
       - "3478:3478/udp"
       - "9751:9751"
     volumes:
-      - ./livekit.yaml:/etc/livekit.yaml
-    command: --dev --config /etc/livekit.yaml 
+      - ./Livekit.yaml:/etc/Livekit.yaml
+    command: --dev --config /etc/Livekit.yaml 
     networks:
       - app-network
     
