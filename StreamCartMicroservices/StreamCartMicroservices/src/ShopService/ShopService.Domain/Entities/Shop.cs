@@ -25,6 +25,8 @@ namespace ShopService.Domain.Entities
 
         public int TotalProduct { get; private set; }
         public decimal CompleteRate { get; private set; }
+        public ICollection<ShopMembership> ShopMemberships { get; set; }
+
 
         public ShopStatus Status { get; private set; }
        

@@ -33,7 +33,8 @@ namespace ShopService.Infrastructure.Extensions
             services.AddScoped<IMessagePublisher, MessagePublisher>();
             services.AddScoped<IWalletRepository, WalletRepository>();
             services.AddScoped<IWalletService, WalletService>();
-
+            services.AddScoped<IMembershipRepository, MembershipRepository>();
+            services.AddScoped<IShopMembershipRepository, ShopMembershipRepository>();
 
             return services;
         }

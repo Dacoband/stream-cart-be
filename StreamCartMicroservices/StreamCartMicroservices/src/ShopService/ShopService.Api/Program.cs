@@ -5,9 +5,11 @@ using Microsoft.Extensions.Hosting;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
 using ShopService.Api.Services;
-using ShopService.Application.Extensions;
 using ShopService.Infrastructure.Extensions;
+using ShopService.Application.Extensions;
 using System.Text.RegularExpressions;
+using System.Reflection;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnv.Load();
@@ -76,6 +78,8 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+  
+
 });
 
 var app = builder.Build();
