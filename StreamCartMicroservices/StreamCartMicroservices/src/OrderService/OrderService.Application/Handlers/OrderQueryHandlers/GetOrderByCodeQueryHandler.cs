@@ -46,7 +46,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     FullName = order.ToName,
                     Phone = order.ToPhone,
                     AddressLine1 = order.ToAddress,
-                    AddressLine2 = order.ToWard,
+                    Ward = order.ToWard,
                     City = order.ToProvince,
                     State = order.ToDistrict,
                     PostalCode = order.ToPostalCode,
