@@ -10,6 +10,8 @@ namespace ShopService.Infrastructure.Data
         // Add all required DbSet properties
         public DbSet<Shop> Shops { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<ShopVoucher> ShopVouchers { get; set; }
+
 
         public ShopContext(DbContextOptions<ShopContext> options) : base(options)
         {
@@ -183,6 +185,121 @@ namespace ShopService.Infrastructure.Data
                 entity.HasIndex(e => e.ShopId)
                     .HasDatabaseName("ix_wallets_shop_id")
                     .IsUnique(); // Ensure each shop has only one wallet
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+
+            modelBuilder.Entity<ShopVoucher>(entity =>
+            {
+                entity.ToTable("shop_vouchers");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id");
+
+                entity.Property(e => e.ShopId)
+                    .HasColumnName("shop_id")
+                    .IsRequired();
+
+                entity.Property(e => e.Code)
+                    .HasColumnName("code")
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Description)
+                    .HasColumnName("description")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .HasConversion<string>()
+                    .IsRequired();
+
+                entity.Property(e => e.Value)
+                    .HasColumnName("value")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.MaxValue)
+                    .HasColumnName("max_value")
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.MinOrderAmount)
+                    .HasColumnName("min_order_amount")
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.StartDate)
+                    .HasColumnName("start_date")
+                    .IsRequired();
+
+                entity.Property(e => e.EndDate)
+                    .HasColumnName("end_date")
+                    .IsRequired();
+
+                entity.Property(e => e.AvailableQuantity)
+                    .HasColumnName("available_quantity")
+                    .IsRequired();
+
+                entity.Property(e => e.UsedQuantity)
+                    .HasColumnName("used_quantity")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.IsActive)
+                    .HasColumnName("is_active")
+                    .HasDefaultValue(true);
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.IsDeleted)
+                    .HasColumnName("is_deleted")
+                    .HasDefaultValue(false);
+
+                // Foreign key relationship
+                entity.HasOne(v => v.Shop)
+                    .WithMany()
+                    .HasForeignKey(v => v.ShopId)
+                    .HasConstraintName("fk_shop_vouchers_shops")
+                    .OnDelete(DeleteBehavior.Cascade);
+                // Indexes for PostgreSQL
+                entity.HasIndex(e => e.Code)
+                    .HasDatabaseName("ix_shop_vouchers_code")
+                    .IsUnique();
+
+                entity.HasIndex(e => e.ShopId)
+                    .HasDatabaseName("ix_shop_vouchers_shop_id");
+
+                entity.HasIndex(e => e.Type)
+                    .HasDatabaseName("ix_shop_vouchers_type");
+
+                entity.HasIndex(e => e.StartDate)
+                    .HasDatabaseName("ix_shop_vouchers_start_date");
+
+                entity.HasIndex(e => e.EndDate)
+                    .HasDatabaseName("ix_shop_vouchers_end_date");
+
+                entity.HasIndex(e => e.IsActive)
+                    .HasDatabaseName("ix_shop_vouchers_is_active");
+
+                // Composite index for active vouchers lookup
+                entity.HasIndex(e => new { e.ShopId, e.IsActive, e.StartDate, e.EndDate })
+                    .HasDatabaseName("ix_shop_vouchers_active_lookup");
 
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);

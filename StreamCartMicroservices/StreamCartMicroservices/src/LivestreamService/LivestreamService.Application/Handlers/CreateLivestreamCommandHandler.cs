@@ -52,7 +52,7 @@ namespace LivestreamService.Application.Handlers
                 }
 
                 // Verify seller account
-                var seller = await _accountServiceClient.GetSellerByIdAsync(request.SellerId);
+                var seller = await _accountServiceClient.GetAccountByIdAsync(request.SellerId);
                 if (seller == null)
                 {
                     throw new ApplicationException($"Seller account with ID {request.SellerId} not found");

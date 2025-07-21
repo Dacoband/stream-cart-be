@@ -61,7 +61,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 string fullName = request.ShippingAddress.FullName;
                 string phone = request.ShippingAddress.Phone;
                 string addressLine1 = request.ShippingAddress.AddressLine1;
-                string addressLine2 = request.ShippingAddress.AddressLine2 ?? string.Empty;
+                string addressLine2 = request.ShippingAddress.Ward ?? string.Empty;
                 string city = request.ShippingAddress.City;
                 string state = request.ShippingAddress.State ?? string.Empty;
                 string postalCode = request.ShippingAddress.PostalCode ?? string.Empty;
@@ -115,7 +115,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         itemDto.ProductId,
                         itemDto.Quantity,
                         itemDto.UnitPrice,
-                        itemDto.Notes,
+                        "", // Notes can be set later if needed
                         itemDto.VariantId
                     );
 
@@ -161,7 +161,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         FullName = fullName,
                         Phone = phone,
                         AddressLine1 = addressLine1,
-                        AddressLine2 = addressLine2,
+                        Ward = addressLine2,
                         City = city,
                         State = state,
                         PostalCode = postalCode,

@@ -716,6 +716,19 @@
       "SwaggerKey": "shop"
     },
     {
+      "DownstreamPathTemplate": "/api/vouchers/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/vouchers/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shop"
+    },
+    {
       "DownstreamPathTemplate": "/api/wallets/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
