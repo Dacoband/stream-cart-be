@@ -74,7 +74,7 @@ namespace LivestreamService.Infrastructure.Services
                 _logger.LogInformation("Getting product variant: ProductId={ProductId}, VariantId={VariantId}",
                     productId, variantId);
 
-                var response = await _httpClient.GetAsync($"api/products/{productId}/variants/{variantId}");
+                var response = await _httpClient.GetAsync($"api/product-variants/{variantId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
