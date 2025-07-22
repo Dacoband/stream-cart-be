@@ -486,7 +486,7 @@ services:
         #Delivery Service
         - API_TOKEN_GHN=&{API_TOKEN_GHN}
         - GHN_SHOPID=${GHN_SHOPID}      
-        - ConnectionStrings__MongoDB=${MONGO_CONNECTION_STRING}
+        - MongoDB__ConnectionString=${MONGO_CONNECTION_STRING}
       # hoặc PostgreSQL
       # - ConnectionStrings__PostgreSQL=${POSTGRES_CONNECTION_STRING}
 
