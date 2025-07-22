@@ -11,5 +11,6 @@ namespace AccountService.Infrastructure.Interfaces
         Task<bool> IsUsernameUniqueAsync(string username);
         Task<bool> IsEmailUniqueAsync(string email);
         Task<IEnumerable<Account>> GetAccountsByRoleAsync(RoleType role);
+        Task<Account?> GetByRefreshTokenAsync(string refreshToken);
     }
 }

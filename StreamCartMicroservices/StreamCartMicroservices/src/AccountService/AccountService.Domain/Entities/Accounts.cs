@@ -40,7 +40,9 @@ namespace AccountService.Domain.Entities
         public bool IsActive { get; private set; } = true;
         
         public bool IsVerified { get; private set; } = false;
-        
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
+
         [Column(TypeName = "decimal(5,2)")]
         public decimal? CompleteRate { get; private set; }
         [ForeignKey("Shop")]
@@ -101,7 +103,24 @@ namespace AccountService.Domain.Entities
                 
             Password = newPassword; 
         }
-        
+        public void SetRefreshToken(string token, DateTime expiry)
+        {
+            RefreshToken = token;
+            RefreshTokenExpiry = expiry;
+        }
+
+        public void ClearRefreshToken()
+        {
+            RefreshToken = null;
+            RefreshTokenExpiry = null;
+        }
+
+        public bool IsRefreshTokenValid(string token)
+        {
+            return RefreshToken == token &&
+                   RefreshTokenExpiry.HasValue &&
+                   RefreshTokenExpiry > DateTime.UtcNow;
+        }
         public void ChangeRole(RoleType newRole)
         {
             Role = newRole;

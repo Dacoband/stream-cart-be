@@ -53,5 +53,12 @@ namespace AccountService.Infrastructure.Repositories
         {
             return await _dbSet.Where(a => a.Role == role).ToListAsync();
         }
+        public async Task<Account?> GetByRefreshTokenAsync(string refreshToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                throw new ArgumentException("Refresh token cannot be empty", nameof(refreshToken));
+            return await _dbSet.FirstOrDefaultAsync(a => a.RefreshToken == refreshToken);
+
+        }
     }
 }
