@@ -126,7 +126,7 @@ namespace ProductService.Application.Services
                     }
 
                     var existingFlashSale = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, existingVariant.Id);
-                    if (existingFlashSale != null || existingFlashSale.Count > 0)
+                    if (existingFlashSale.Count > 0)
                     {
                         errorMessages.Add($"Phân loại {variantId} đã có FlashSale trong cùng thời điểm.");
                         continue;
