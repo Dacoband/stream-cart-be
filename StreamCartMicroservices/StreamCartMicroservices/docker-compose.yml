@@ -331,6 +331,8 @@ services:
       - "5349:5349/udp"
       - "3478:3478/udp"
       - "9751:9751"
+    environment:
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}
     volumes:
       - ./Livekit.yaml:/etc/Livekit.yaml
     command: --dev --config /etc/Livekit.yaml 
