@@ -57,7 +57,8 @@ namespace LivestreamService.Application.Handlers
                 ApprovalDateContent = livestream.ApprovalDateContent,
                 IsPromoted = livestream.IsPromoted,
                 Tags = livestream.Tags,
-                LivekitRoomId = livestream.LivekitRoomId
+                LivekitRoomId = livestream.LivekitRoomId,
+                JoinToken = livestream.JoinToken,
             };
         }
     }

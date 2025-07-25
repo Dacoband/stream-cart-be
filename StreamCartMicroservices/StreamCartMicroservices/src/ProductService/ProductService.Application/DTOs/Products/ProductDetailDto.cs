@@ -16,7 +16,10 @@ namespace ProductService.Application.DTOs.Products
         public int StockQuantity { get; set; }
         public int QuantitySold { get; set; }
         public string? Weight { get; set; }
-        public string? Dimension { get; set; }
+        //public string? Dimension { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
         public List<string> PrimaryImage { get; set; } = new();
 
         // Shop information
