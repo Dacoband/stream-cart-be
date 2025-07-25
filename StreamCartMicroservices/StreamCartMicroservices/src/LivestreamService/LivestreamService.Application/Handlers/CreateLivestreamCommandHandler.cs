@@ -67,7 +67,11 @@ namespace LivestreamService.Application.Handlers
                 // Create LiveKit room
                 string roomId = $"shop-{request.ShopId}-{Guid.NewGuid()}";
                 string livekitRoomId = await _livekitService.CreateRoomAsync(roomId);
-
+                string joinToken = await _livekitService.GenerateJoinTokenAsync(
+                    livekitRoomId,
+                    request.SellerId.ToString(),
+                    true // Can publish
+                );
                 // Generate unique stream key
                 string streamKey = Guid.NewGuid().ToString("N");
 
@@ -82,6 +86,7 @@ namespace LivestreamService.Application.Handlers
                     streamKey,
                     request.ThumbnailUrl,
                     request.Tags,
+                    joinToken,
                     request.SellerId.ToString()
                 );
 
@@ -99,11 +104,7 @@ namespace LivestreamService.Application.Handlers
                 }
 
                 // Generate join token for the seller (with publisher permissions)
-                string joinToken = await _livekitService.GenerateJoinTokenAsync(
-                    livekitRoomId,
-                    request.SellerId.ToString(),
-                    true // Can publish
-                );
+                
 
                 // Return DTO
                 return new LivestreamDTO
@@ -124,6 +125,10 @@ namespace LivestreamService.Application.Handlers
                     JoinToken = joinToken,
                     ThumbnailUrl = livestream.ThumbnailUrl,
                     Tags = livestream.Tags,
+                    MaxViewer = livestream.MaxViewer,
+                    ApprovalStatusContent = livestream.ApprovalStatusContent,
+                    ApprovedByUserId = livestream.ApprovedByUserId,
+                    ApprovalDateContent = livestream.ApprovalDateContent,
                     IsPromoted = livestream.IsPromoted,
                     Products = createdProducts
                 };
