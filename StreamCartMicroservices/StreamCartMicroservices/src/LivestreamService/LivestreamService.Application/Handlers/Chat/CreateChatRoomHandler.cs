@@ -108,6 +108,8 @@ namespace LivestreamService.Application.Handlers.Chat
                 LastMessage = lastMessage != null ? new ChatMessageDTO
                 {
                     Id = lastMessage.Id,
+                    ChatRoomId = lastMessage.ChatRoomId, 
+                    SenderUserId = lastMessage.SenderUserId,
                     Content = lastMessage.Content,
                     SentAt = lastMessage.SentAt,
                     IsRead = lastMessage.IsRead,

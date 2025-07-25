@@ -35,7 +35,10 @@ namespace ProductService.Application.Services
                 DiscountPrice = createProductDto.DiscountPrice,
                 StockQuantity = createProductDto.StockQuantity,
                 Weight = createProductDto.Weight,
-                Dimensions = createProductDto.Dimensions ?? string.Empty,
+                //Dimensions = createProductDto.Dimensions ?? string.Empty,
+                Length = createProductDto.Length,
+                Width = createProductDto.Width,
+                Height = createProductDto.Height,
                 HasVariant = createProductDto.HasVariant,
                 ShopId = createProductDto.ShopId,
                 CreatedBy = createdBy
@@ -55,7 +58,10 @@ namespace ProductService.Application.Services
                 BasePrice = updateProductDto.BasePrice,
                 DiscountPrice = updateProductDto.DiscountPrice,
                 Weight = updateProductDto.Weight,
-                Dimensions = updateProductDto.Dimensions,
+                //Dimensions = updateProductDto.Dimensions,
+                Length = updateProductDto.Length,
+                Width = updateProductDto.Width,
+                Height = updateProductDto.Height,
                 HasVariant = updateProductDto.HasVariant,
                 UpdatedBy = updatedBy
             };

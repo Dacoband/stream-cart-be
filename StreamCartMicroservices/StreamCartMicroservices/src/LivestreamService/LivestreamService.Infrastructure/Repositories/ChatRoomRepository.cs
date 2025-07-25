@@ -1,6 +1,7 @@
 ﻿using LivestreamService.Application.Interfaces;
 using LivestreamService.Domain.Entities;
 using LivestreamService.Infrastructure.Data;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Shared.Common.Domain.Bases;
 using System;
@@ -131,11 +132,11 @@ namespace LivestreamService.Infrastructure.Repositories
         }
 
         public async Task<PagedResult<ChatRoom>> SearchAsync(
-            string searchTerm,
-            PaginationParams paginationParams,
-            string[]? searchableFields = null,
-            Expression<Func<ChatRoom, bool>>? filter = null,
-            bool exactMatch = false)
+     string searchTerm,
+     PaginationParams paginationParams,
+     string[]? searchableFields = null,
+     Expression<Func<ChatRoom, bool>>? filter = null,
+     bool exactMatch = false)
         {
             var filterBuilder = Builders<ChatRoom>.Filter;
             var baseFilter = filterBuilder.Eq(x => x.IsDeleted, false);
@@ -149,8 +150,6 @@ namespace LivestreamService.Infrastructure.Repositories
             // Add search filter
             if (!string.IsNullOrEmpty(searchTerm))
             {
-                // For ChatRoom, we can search in limited fields since it doesn't have many text fields
-                // We'll search by related order ID if it's a Guid
                 if (Guid.TryParse(searchTerm, out var searchGuid))
                 {
                     var guidFilter = filterBuilder.Or(
@@ -164,9 +163,14 @@ namespace LivestreamService.Infrastructure.Repositories
 
             var totalCount = await _collection.CountDocumentsAsync(baseFilter);
 
+            // ✅ Sửa thành multiple fields sort
+            var sort = Builders<ChatRoom>.Sort
+                .Descending(x => x.LastMessageAt)
+                .Descending(x => x.StartedAt);
+
             var chatRooms = await _collection
                 .Find(baseFilter)
-                .SortByDescending(x => x.LastMessageAt ?? x.StartedAt)
+                .Sort(sort)
                 .Skip((paginationParams.PageNumber - 1) * paginationParams.PageSize)
                 .Limit(paginationParams.PageSize)
                 .ToListAsync();
@@ -187,10 +191,10 @@ namespace LivestreamService.Infrastructure.Repositories
         }
 
         public async Task<PagedResult<ChatRoom>> GetUserChatRoomsAsync(
-            Guid userId,
-            int pageNumber,
-            int pageSize,
-            bool? isActive = null)
+    Guid userId,
+    int pageNumber,
+    int pageSize,
+    bool? isActive = null)
         {
             var filterBuilder = Builders<ChatRoom>.Filter;
             var filter = filterBuilder.And(
@@ -205,9 +209,14 @@ namespace LivestreamService.Infrastructure.Repositories
 
             var totalCount = await _collection.CountDocumentsAsync(filter);
 
+            // ✅ Sử dụng Sort với multiple fields thay vì aggregation
+            var sort = Builders<ChatRoom>.Sort
+                .Descending(x => x.LastMessageAt)
+                .Descending(x => x.StartedAt);
+
             var chatRooms = await _collection
                 .Find(filter)
-                .SortByDescending(x => x.LastMessageAt ?? x.StartedAt)
+                .Sort(sort)
                 .Skip((pageNumber - 1) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
@@ -216,10 +225,10 @@ namespace LivestreamService.Infrastructure.Repositories
         }
 
         public async Task<PagedResult<ChatRoom>> GetShopChatRoomsAsync(
-            Guid shopId,
-            int pageNumber,
-            int pageSize,
-            bool? isActive = null)
+    Guid shopId,
+    int pageNumber,
+    int pageSize,
+    bool? isActive = null)
         {
             var filterBuilder = Builders<ChatRoom>.Filter;
             var filter = filterBuilder.And(
@@ -234,9 +243,14 @@ namespace LivestreamService.Infrastructure.Repositories
 
             var totalCount = await _collection.CountDocumentsAsync(filter);
 
+            // ✅ Sửa thành multiple fields sort
+            var sort = Builders<ChatRoom>.Sort
+                .Descending(x => x.LastMessageAt)
+                .Descending(x => x.StartedAt);
+
             var chatRooms = await _collection
                 .Find(filter)
-                .SortByDescending(x => x.LastMessageAt ?? x.StartedAt)
+                .Sort(sort)
                 .Skip((pageNumber - 1) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
@@ -252,9 +266,14 @@ namespace LivestreamService.Infrastructure.Repositories
                 Builders<ChatRoom>.Filter.Eq(x => x.IsDeleted, false)
             );
 
+            // ✅ Sửa thành multiple fields sort
+            var sort = Builders<ChatRoom>.Sort
+                .Descending(x => x.LastMessageAt)
+                .Descending(x => x.StartedAt);
+
             return await _collection
                 .Find(filter)
-                .SortByDescending(x => x.LastMessageAt ?? x.StartedAt)
+                .Sort(sort)
                 .ToListAsync();
         }
     }
