@@ -15,7 +15,10 @@ namespace ProductService.Application.DTOs
         public int StockQuantity { get; set; }
         public bool IsActive { get; set; }
         public decimal? Weight { get; set; }
-        public string? Dimensions { get; set; }
+        //public string? Dimensions { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
         public bool HasVariant { get; set; }
         public int QuantitySold { get; set; }
         public Guid? ShopId { get; set; }

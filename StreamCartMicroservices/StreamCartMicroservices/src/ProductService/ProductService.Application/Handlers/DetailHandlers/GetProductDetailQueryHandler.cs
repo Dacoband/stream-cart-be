@@ -206,7 +206,10 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 StockQuantity = product.StockQuantity,
                 QuantitySold = product.QuantitySold,
                 Weight = product.Weight.HasValue ? $"{product.Weight}g" : null,
-                Dimension = product.Dimensions,
+                //Dimension = product.Dimensions,
+                Length = product.Length,
+                Width = product.Width,
+                Height = product.Height,
                 PrimaryImage = primaryImages,
 
                 ShopId = product.ShopId ?? Guid.Empty,
