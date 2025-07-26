@@ -65,7 +65,46 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error creating product: {ex.Message}"));
             }
         }
+        [HttpGet("{id}/exists")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> DoesProductExist(Guid id)
+        {
+            try
+            {
+                var product = await _productService.GetProductByIdAsync(id);
+                var exists = product != null;
+                return Ok(ApiResponse<bool>.SuccessResult(exists,
+                    exists ? "Product exists" : "Product not found"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product existence: {ex.Message}"));
+            }
+        }
 
+        
+        [HttpGet("{productId}/shop/{shopId}/owned")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> IsProductOwnedByShop(Guid productId, Guid shopId)
+        {
+            try
+            {
+                var product = await _productService.GetProductByIdAsync(productId);
+
+                if (product == null)
+                {
+                    return Ok(ApiResponse<bool>.SuccessResult(false, "Product not found"));
+                }
+
+                var isOwned = product.ShopId == shopId;
+                return Ok(ApiResponse<bool>.SuccessResult(isOwned,
+                    isOwned ? "Product belongs to the shop" : "Product does not belong to the shop"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product ownership: {ex.Message}"));
+            }
+        }
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
@@ -436,6 +475,60 @@ namespace ProductService.Api.Controllers
             {
                 _logger.LogError(ex, "Lỗi khi lấy sản phẩm trending");
                 return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra"));
+            }
+        }
+        [HttpGet("shop/{shopId}/count")]
+        [ProducesResponseType(typeof(ApiResponse<int>), 200)]
+        public async Task<IActionResult> GetProductCountByShopId(Guid shopId, [FromQuery] bool activeOnly = true)
+        {
+            try
+            {
+                var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+                if (!shopExists)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop with ID {shopId} not found"));
+
+                var products = await _productService.GetProductsByShopIdAsync(shopId, activeOnly);
+                var count = products?.Count() ?? 0;
+
+                return Ok(ApiResponse<int>.SuccessResult(count,
+                    $"Found {count} {(activeOnly ? "active " : "")}products for shop {shopId}"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error counting products: {ex.Message}"));
+            }
+        }
+        // ✅ BỔ SUNG: API cập nhật stock sản phẩm với quantity change
+        [HttpPut("{id}/stock")]
+        [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateProductStockQuantityChange(Guid id, [FromBody] UpdateStockQuantityChangeDto updateStockDto)
+        {
+            try
+            {
+                string? userId = _currentUserService.GetUserId().ToString();
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
+                // Lấy sản phẩm hiện tại
+                var currentProduct = await _productService.GetProductByIdAsync(id);
+                if (currentProduct == null)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
+
+                // Tính toán số lượng mới
+                var newQuantity = Math.Max(0, currentProduct.StockQuantity + updateStockDto.QuantityChange);
+
+                var updatedProduct = await _productService.UpdateProductStockAsync(id, newQuantity, userId);
+                return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct,
+                    $"Product stock updated by {updateStockDto.QuantityChange}. New stock: {newQuantity}"));
+            }
+            catch (ApplicationException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error updating product stock: {ex.Message}"));
             }
         }
     }
