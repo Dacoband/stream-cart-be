@@ -68,7 +68,8 @@ namespace LivestreamService.Api.Controllers
                     ShopId = request.ShopId,
                     RelatedOrderId = request.RelatedOrderId,
                     InitialMessage = request.InitialMessage,
-                    LiveKitRoomName = livekitRoomName // Thêm LiveKit room name
+                    LiveKitRoomName = livekitRoomName, 
+                    CustomerToken = customerToken,
                 };
 
                 var chatRoom = await _mediator.Send(command);
