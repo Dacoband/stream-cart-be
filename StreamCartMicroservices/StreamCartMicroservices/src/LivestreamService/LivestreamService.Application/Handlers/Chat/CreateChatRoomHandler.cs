@@ -45,14 +45,40 @@ namespace LivestreamService.Application.Handlers.Chat
                         existingRoom.ReactivateRoom(request.UserId.ToString());
                         await _chatRoomRepository.ReplaceAsync(existingRoom.Id.ToString(), existingRoom);
                     }
+                    existingRoom.UpdateChatRoomInfo(
+                       liveKitRoomName: request.LiveKitRoomName,
+                       customerToken: request.CustomerToken,
+                       userName: request.UserName,
+                       shopName: request.ShopName,
+                       modifiedBy: request.UserId.ToString()
+                   );
+                    await _chatRoomRepository.ReplaceAsync(existingRoom.Id.ToString(), existingRoom);
+
 
                     return await MapToChatRoomDTO(existingRoom, request.UserId);
                 }
+                string? userName = request.UserName;
+                string? shopName = request.ShopName;
 
+                if (string.IsNullOrEmpty(userName))
+                {
+                    var user = await _accountServiceClient.GetAccountByIdAsync(request.UserId);
+                    userName = user?.Fullname ?? user?.Username;
+                }
+
+                if (string.IsNullOrEmpty(shopName))
+                {
+                    var shop = await _shopServiceClient.GetShopByIdAsync(request.ShopId);
+                    shopName = shop?.ShopName;
+                }
                 // Create new chat room
                 var chatRoom = new ChatRoom(
                     request.UserId,
                     request.ShopId,
+                    request.LiveKitRoomName,
+                    request.CustomerToken,
+                    userName,
+                    shopName,
                     request.RelatedOrderId,
                     request.UserId.ToString()
                 );
