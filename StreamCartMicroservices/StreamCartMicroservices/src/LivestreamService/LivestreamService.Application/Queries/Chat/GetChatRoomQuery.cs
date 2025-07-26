@@ -12,5 +12,8 @@ namespace LivestreamService.Application.Queries.Chat
     {
         public Guid UserId { get; set; }
         public Guid ShopId { get; set; }
+        public Guid? ChatRoomId { get; set; }
+        public Guid? RequesterId { get; set; }
+
     }
 }
