@@ -178,8 +178,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             try
             {
@@ -226,8 +226,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             try
             {
@@ -262,8 +262,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.DeleteShopAsync(id, accountId);
             if (!result)
@@ -291,8 +291,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             var shop = await _shopManagementService.UpdateShopStatusAsync(id, active, accountId);
             if (shop == null)
@@ -396,8 +396,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var members = await _shopManagementService.GetShopMembersAsync(shopId);
             return Ok(members);
@@ -422,8 +422,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.AddShopMemberAsync(shopId, memberDto.AccountId, memberDto.Role, accountId);
             if (!result)
@@ -450,8 +450,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.RemoveShopMemberAsync(shopId, memberId, accountId);
             if (!result)
@@ -479,8 +479,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.ChangeShopMemberRoleAsync(shopId, memberId, roleDto.Role, accountId);
             if (!result)
@@ -511,8 +511,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var invitationId = await _shopManagementService.SendInvitationAsync(shopId, invitationDto.Email, invitationDto.Role, accountId);
             if (invitationId == Guid.Empty)
@@ -567,32 +567,24 @@ namespace ShopService.Api.Controllers
             return Ok(new { success = true });
         }
 
-        #endregion
-
-        #region Helper Methods
-
         private Guid GetCurrentUserId()
         {
-
-            var userIdClaim = User.FindFirst("id")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
+            var userIdClaim = _currentUserService.GetUserId();
+            if (userIdClaim == Guid.Empty)
                 return Guid.Empty;
 
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return Guid.Empty;
-
-            return userId;
+            return userIdClaim;
         }
 
-        private async Task<bool> HasShopPermission(Guid shopId, Guid accountId)
-        {
-            // Admin luôn có quyền
-            if (User.IsInRole("Admin") || User.IsInRole("ITAdmin"))
-                return true;
+        //private async Task<bool> HasShopPermission(Guid shopId, Guid accountId)
+        //{
+        //    // Admin luôn có quyền
+        //    if (User.IsInRole("Admin") || User.IsInRole("ITAdmin"))
+        //        return true;
 
-            // Kiểm tra quyền với shop
-            return await _shopManagementService.HasShopPermissionAsync(shopId, accountId, "Owner");
-        }
+        //    // Kiểm tra quyền với shop
+        //    return await _shopManagementService.HasShopPermissionAsync(shopId, accountId, "Owner");
+        //}
 
         #endregion
         [HttpPut("{id}/product-count")]
@@ -664,8 +656,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             try
             {
