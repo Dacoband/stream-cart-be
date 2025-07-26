@@ -15,5 +15,8 @@ namespace LivestreamService.Application.Commands.Chat
         public Guid? RelatedOrderId { get; set; }
         public string? InitialMessage { get; set; }
         public string? LiveKitRoomName { get; set; }
+        public string? CustomerToken { get; set; }
+        public string? UserName { get; set; }
+        public string? ShopName { get; set; }
     }
 }
