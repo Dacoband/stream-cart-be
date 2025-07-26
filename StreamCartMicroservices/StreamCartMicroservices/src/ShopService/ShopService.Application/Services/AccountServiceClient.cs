@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Shared.Common.Models;
+using ShopService.Application.DTOs;
 using ShopService.Application.DTOs.Account;
 using ShopService.Application.Interfaces;
 using System;
@@ -43,15 +44,34 @@ namespace ShopService.Application.Services
         }
        public async Task<AccountDetailDTO> GetAccountByAccountIdAsync(Guid accountId)
 {
-    var response = await _httpClient.GetFromJsonAsync<ApiResponse<AccountDetailDTO>>($"api/accounts/{accountId}");
+            var response = await _httpClient.GetFromJsonAsync<Shared.Common.Models.ApiResponse<AccountDetailDTO>>($"api/accounts/{accountId}");
 
-    if (response == null || !response.Success || response.Data == null)
+            if (response == null || !response.Success || response.Data == null)
     {
         throw new Exception($"Không thể lấy thông tin tài khoản {accountId}");
     }
 
     return response.Data;
-}
+    }
+        public async Task<List<ShopAccountDTO>> GetAccountsByShopIdAsync(Guid shopId)
+        {
+            try
+            {
+                var response = await _httpClient.GetFromJsonAsync<Shared.Common.Models.ApiResponse<List<ShopAccountDTO>>>($"api/accounts/by-shop/{shopId}");
+
+                if (response == null || !response.Success || response.Data == null)
+                {
+                    return new List<ShopAccountDTO>();
+                }
+
+                return response.Data;
+            }
+            catch (Exception)
+            {
+                // Trả về danh sách rỗng nếu có lỗi
+                return new List<ShopAccountDTO>();
+            }
+        }
     }
 
     // DTO nội bộ để nhận thông tin tài khoản từ API
