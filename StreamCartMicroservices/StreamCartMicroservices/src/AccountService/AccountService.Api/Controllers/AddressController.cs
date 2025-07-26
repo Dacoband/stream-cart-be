@@ -29,12 +29,11 @@ namespace AccountService.Api.Controllers
 
         private Guid GetCurrentAccountId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var accountId))
-            {
-                throw new UnauthorizedAccessException("User identity not found");
-            }
-            return accountId;
+            var userIdClaim = _currentUserService.GetUserId();
+            if (userIdClaim == Guid.Empty)
+                return Guid.Empty;
+
+            return userIdClaim;
         }
 
         [HttpPost]
