@@ -33,9 +33,21 @@ namespace LivestreamService.Infrastructure.Services
             _apiSecret = _configuration["LiveKit:ApiSecret"];
             _livekitUrl = _configuration["LiveKit:Url"];
 
+            // ✅ FIX: Better logging for debugging
+            _logger.LogInformation("LiveKit Configuration - ApiKey: {ApiKey}, Url: {Url}",
+                string.IsNullOrEmpty(_apiKey) ? "NOT SET" : $"{_apiKey.Substring(0, Math.Min(4, _apiKey.Length))}...",
+                _livekitUrl ?? "NOT SET");
+
             if (string.IsNullOrEmpty(_apiKey) || string.IsNullOrEmpty(_apiSecret) || string.IsNullOrEmpty(_livekitUrl))
             {
-                throw new InvalidOperationException("LiveKit configuration is missing or incomplete");
+                var missingConfigs = new List<string>();
+                if (string.IsNullOrEmpty(_apiKey)) missingConfigs.Add("ApiKey");
+                if (string.IsNullOrEmpty(_apiSecret)) missingConfigs.Add("ApiSecret");
+                if (string.IsNullOrEmpty(_livekitUrl)) missingConfigs.Add("Url");
+
+                var errorMsg = $"LiveKit configuration is missing: {string.Join(", ", missingConfigs)}";
+                _logger.LogError(errorMsg);
+                throw new InvalidOperationException(errorMsg);
             }
         }
 
@@ -260,6 +272,7 @@ namespace LivestreamService.Infrastructure.Services
             {
                 var claims = new
                 {
+                    iss = _apiKey,
                     room = roomName,
                     sub = participantName,
                     exp = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds(),
