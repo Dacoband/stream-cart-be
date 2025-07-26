@@ -22,16 +22,18 @@ namespace ShopService.Application.Services
         private readonly IMediator _mediator;
         private readonly ILogger<ShopManagementService> _logger;
         private readonly IMessagePublisher _messagePublisher;
-
+        private readonly IProductServiceClient _productServiceClient;
         public ShopManagementService(
             IShopRepository shopRepository,
             IAccountServiceClient accountServiceClient,
             IMediator mediator,
+            IProductServiceClient productServiceClient,
             ILogger<ShopManagementService> logger,
             IMessagePublisher messagePublisher)
         {
             _shopRepository = shopRepository;
             _accountServiceClient = accountServiceClient;
+            _productServiceClient = productServiceClient;
             _mediator = mediator;
             _logger = logger;
             _messagePublisher = messagePublisher;
@@ -126,6 +128,16 @@ namespace ShopService.Application.Services
             {
                 var query = new GetShopByIdQuery { Id = shopId };
                 var result = await _mediator.Send(query);
+                // Nếu có kết quả, cập nhật AccountId
+                if (result != null)
+                {
+                    var shop = await _shopRepository.GetByIdAsync(shopId.ToString());
+                    if (shop != null)
+                    {
+                        var enhancedResult = await MapShopToDtoAsync(shop);
+                        return enhancedResult;
+                    }
+                }
                 return result;
             }
             catch (Exception ex)
@@ -140,7 +152,15 @@ namespace ShopService.Application.Services
             try
             {
                 var shops = await _shopRepository.GetAllAsync();
-                return shops.Select(MapShopToDto).ToList();
+                var shopDtos = new List<ShopDto>();
+
+                foreach (var shop in shops)
+                {
+                    var shopDto = await MapShopToDtoAsync(shop);
+                    shopDtos.Add(shopDto);
+                }
+
+                return shopDtos;
             }
             catch (Exception ex)
             {
@@ -169,7 +189,12 @@ namespace ShopService.Application.Services
                     sortBy,
                     ascending);
 
-                var shopDtos = pagedShops.Items.Select(MapShopToDto).ToList();
+                var shopDtos = new List<ShopDto>();
+                foreach (var shop in pagedShops.Items)
+                {
+                    var shopDto = await MapShopToDtoAsync(shop);
+                    shopDtos.Add(shopDto);
+                }
 
                 return new PagedResult<ShopDto>
                 {
@@ -197,7 +222,16 @@ namespace ShopService.Application.Services
             try
             {
                 var shops = await _shopRepository.GetByStatusAsync(status);
-                return shops.Select(MapShopToDto).ToList();
+
+                // ✅ FIX: Sử dụng MapShopToDtoAsync thay vì MapShopToDto
+                var shopDtos = new List<ShopDto>();
+                foreach (var shop in shops)
+                {
+                    var shopDto = await MapShopToDtoAsync(shop);
+                    shopDtos.Add(shopDto);
+                }
+
+                return shopDtos;
             }
             catch (Exception ex)
             {
@@ -212,7 +246,23 @@ namespace ShopService.Application.Services
             {
                 var query = new GetShopsByApprovalStatusQuery { Status = approvalStatus };
                 var result = await _mediator.Send(query);
-                return result;
+                // ✅ FIX: Cập nhật AccountId cho kết quả từ Mediator
+                var enhancedResults = new List<ShopDto>();
+                foreach (var shopDto in result)
+                {
+                    var shop = await _shopRepository.GetByIdAsync(shopDto.Id.ToString());
+                    if (shop != null)
+                    {
+                        var enhancedShop = await MapShopToDtoAsync(shop);
+                        enhancedResults.Add(enhancedShop);
+                    }
+                    else
+                    {
+                        enhancedResults.Add(shopDto);
+                    }
+                }
+
+                return enhancedResults;
             }
             catch (Exception ex)
             {
@@ -227,7 +277,25 @@ namespace ShopService.Application.Services
             {
                 var query = new SearchShopsQuery { SearchTerm = nameQuery };
                 var result = await _mediator.Send(query);
-                return result.Items;
+
+                // ✅ FIX: Cập nhật AccountId cho kết quả từ Mediator
+                var enhancedResults = new List<ShopDto>();
+                foreach (var shopDto in result.Items)
+                {
+                    // Lấy shop entity để có thể map AccountId
+                    var shop = await _shopRepository.GetByIdAsync(shopDto.Id.ToString());
+                    if (shop != null)
+                    {
+                        var enhancedShop = await MapShopToDtoAsync(shop);
+                        enhancedResults.Add(enhancedShop);
+                    }
+                    else
+                    {
+                        enhancedResults.Add(shopDto); // Fallback nếu không tìm thấy
+                    }
+                }
+
+                return enhancedResults;
             }
             catch (Exception ex)
             {
@@ -242,7 +310,22 @@ namespace ShopService.Application.Services
             {
                 var query = new GetShopsByOwnerIdQuery { AccountId = accountId };
                 var result = await _mediator.Send(query);
-                return result;
+                var enhancedResults = new List<ShopDto>();
+                foreach (var shopDto in result)
+                {
+                    var shop = await _shopRepository.GetByIdAsync(shopDto.Id.ToString());
+                    if (shop != null)
+                    {
+                        var enhancedShop = await MapShopToDtoAsync(shop);
+                        enhancedResults.Add(enhancedShop);
+                    }
+                    else
+                    {
+                        enhancedResults.Add(shopDto);
+                    }
+                }
+
+                return enhancedResults;
             }
             catch (Exception ex)
             {
@@ -674,6 +757,9 @@ namespace ShopService.Application.Services
                 return null;
             }
         }
+        
+
+        #endregion
         public async Task<ShopDto> UpdateShopCompletionRateAsync(Guid shopId, decimal rateChange, Guid updatedByAccountId)
         {
             try
@@ -707,11 +793,102 @@ namespace ShopService.Application.Services
                 throw;
             }
         }
+        public async Task<ShopDto> SyncProductCountFromProductServiceAsync(Guid shopId)
+        {
+            try
+            {
+                // Kiểm tra shop tồn tại
+                var shop = await _shopRepository.GetByIdAsync(shopId.ToString());
+                if (shop == null)
+                {
+                    _logger.LogWarning("Không thể đồng bộ số lượng sản phẩm: Shop {ShopId} không tồn tại", shopId);
+                    return null;
+                }
 
-        #endregion
+                // Lấy số lượng sản phẩm từ Product Service
+                var productCount = await _productServiceClient.GetProductCountByShopIdAsync(shopId, activeOnly: true);
 
+                // Cập nhật số lượng sản phẩm
+                shop.UpdateProductCount(productCount, "System");
+
+                // Lưu thay đổi
+                await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
+
+                // Chuyển đổi sang DTO
+                var shopDto = await MapShopToDtoWithAccountIdAsync(shop);
+
+                _logger.LogInformation("Đã đồng bộ số lượng sản phẩm của shop {ShopId} thành {TotalProduct}", shopId, productCount);
+                return shopDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi đồng bộ số lượng sản phẩm của shop {ShopId}", shopId);
+                return null;
+            }
+        }
+        #region Helper Methods
         #region Helper Methods
 
+        private async Task<ShopDto> MapShopToDtoAsync(Shop shop)
+        {
+            var shopDto = new ShopDto
+            {
+                Id = shop.Id,
+                ShopName = shop.ShopName,
+                Description = shop.Description,
+                LogoURL = shop.LogoURL,
+                CoverImageURL = shop.CoverImageURL,
+                RatingAverage = shop.RatingAverage,
+                TotalReview = shop.TotalReview,
+                RegistrationDate = shop.RegistrationDate,
+                ApprovalStatus = shop.ApprovalStatus.ToString(),
+                ApprovalDate = shop.ApprovalDate,
+                BankAccountNumber = shop.BankAccountNumber,
+                BankName = shop.BankName,
+                TaxNumber = shop.TaxNumber,
+                TotalProduct = shop.TotalProduct,
+                CompleteRate = shop.CompleteRate,
+                Status = shop.Status == ShopStatus.Active,
+                CreatedAt = shop.CreatedAt,
+                CreatedBy = shop.CreatedBy,
+                LastModifiedAt = shop.LastModifiedAt,
+                LastModifiedBy = shop.LastModifiedBy,
+                AccountId = Guid.Empty
+            };
+
+            try
+            {
+                // Lấy thông tin account từ Account Service
+                var accounts = await _accountServiceClient.GetAccountsByShopIdAsync(shop.Id);
+                if (accounts?.Any() == true)
+                {
+                    // Ưu tiên lấy account đầu tiên (thường là owner)
+                    shopDto.AccountId = accounts.First().Id;
+                }
+                else
+                {
+                    // Fallback: thử parse từ CreatedBy nếu không tìm được qua Account Service
+                    if (Guid.TryParse(shop.CreatedBy, out var createdByGuid))
+                    {
+                        shopDto.AccountId = createdByGuid;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không thể lấy AccountId cho shop {ShopId}", shop.Id);
+
+                // Fallback: thử parse từ CreatedBy
+                if (Guid.TryParse(shop.CreatedBy, out var createdByGuid))
+                {
+                    shopDto.AccountId = createdByGuid;
+                }
+            }
+
+            return shopDto;
+        }
+
+        #endregion
         private ShopDto MapShopToDto(Shop shop)
         {
             return new ShopDto
@@ -739,7 +916,37 @@ namespace ShopService.Application.Services
                 AccountId = Guid.Empty
             };
         }
+        private async Task<ShopDto> MapShopToDtoWithAccountIdAsync(Shop shop)
+        {
+            var shopDto = MapShopToDto(shop);
 
+            try
+            {
+                // Lấy thông tin account từ repository dựa trên shop
+                var accountShop = await _shopRepository.GetByIdForAccountAsync(shop.Id, Guid.Empty);
+                if (accountShop != null)
+                {
+                    // Tìm account ID từ CreatedBy hoặc thông qua Account Service
+                    if (Guid.TryParse(shop.CreatedBy, out var createdByGuid))
+                    {
+                        shopDto.AccountId = createdByGuid;
+                    }
+                    else
+                    {
+                        // Nếu không parse được, có thể dùng Account Service để tìm
+                        // Tạm thời để Guid.Empty
+                        shopDto.AccountId = Guid.Empty;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không thể lấy AccountId cho shop {ShopId}", shop.Id);
+                shopDto.AccountId = Guid.Empty;
+            }
+
+            return shopDto;
+        }
         #endregion
     }
 }

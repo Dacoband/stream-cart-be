@@ -25,8 +25,16 @@ namespace ShopService.Application.Extensions
                     client.BaseAddress = new Uri(baseUrl);
                 }
             });
+            services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
+            {
+                var serviceUrl = configuration["ServiceUrls:ProductService"];
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
+            });
             services.AddScoped<IShopManagementService, ShopManagementService>();
-
+            //services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
             services.AddScoped<IAdminNotificationService, AdminNotificationService>();
             services.AddScoped<IEmailService, MailJetEmailService>();
 
