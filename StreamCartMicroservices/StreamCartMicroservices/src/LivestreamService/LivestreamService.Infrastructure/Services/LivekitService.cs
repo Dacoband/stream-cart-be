@@ -29,9 +29,9 @@ namespace LivestreamService.Infrastructure.Services
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            _apiKey = _configuration["LiveKit:ApiKey"];
-            _apiSecret = _configuration["LiveKit:ApiSecret"];
-            _livekitUrl = _configuration["LiveKit:Url"];
+            _apiKey = _configuration["LIVEKIT_API_KEY"] ?? _configuration["LiveKit:ApiKey"];
+            _apiSecret = _configuration["LIVEKIT_API_SECRET"] ?? _configuration["LiveKit:ApiSecret"];
+            _livekitUrl = _configuration["LIVEKIT_URL"] ?? _configuration["LiveKit:Url"];
 
             // ✅ FIX: Better logging for debugging
             _logger.LogInformation("LiveKit Configuration - ApiKey: {ApiKey}, Url: {Url}",
