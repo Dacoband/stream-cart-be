@@ -35,12 +35,32 @@ namespace LivestreamService.Application.Handlers.Chat
         {
             try
             {
-                var chatRoom = await _chatRoomRepository.GetByUserAndShopAsync(request.UserId, request.ShopId);
+                var chatRoom = request.ChatRoomId.HasValue
+                    ? await _chatRoomRepository.GetByIdAsync(request.ChatRoomId.Value.ToString())
+                    : await _chatRoomRepository.GetByUserAndShopAsync(request.UserId, request.ShopId);
+
                 if (chatRoom == null)
                 {
                     return null;
                 }
+                if (request.RequesterId.HasValue)
+                {
+                    // Check if requester is either the customer or belongs to the shop
+                    var hasAccess = chatRoom.UserId == request.RequesterId.Value;
 
+                    if (!hasAccess)
+                    {
+                        // Check if requester is from the shop (you may need to implement shop membership check)
+                        // For now, we'll allow access if ShopId matches (this should be enhanced with proper shop membership validation)
+                        var requesterAccount = await _accountServiceClient.GetAccountByIdAsync(request.RequesterId.Value);
+                        if (requesterAccount?.ShopId != chatRoom.ShopId)
+                        {
+                            _logger.LogWarning("Access denied. Requester {RequesterId} does not have access to chat room {ChatRoomId}",
+                                request.RequesterId.Value, chatRoom.Id);
+                            return null;
+                        }
+                    }
+                }
                 var user = await _accountServiceClient.GetAccountByIdAsync(chatRoom.UserId);
                 var shop = await _shopServiceClient.GetShopByIdAsync(chatRoom.ShopId);
                 var lastMessage = await _chatMessageRepository.GetLastMessageAsync(chatRoom.Id);
