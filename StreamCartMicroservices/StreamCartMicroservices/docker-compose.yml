@@ -326,18 +326,26 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "5349:5349/udp"
-      - "3478:3478/udp"
-      - "9751:9751"
+      - "7880:7880"                     # signal
+      - "7881:7881/udp"                 # rtc udp
+      - "7882:7882"                     # rtc tcp (nếu cần)
+      - "5349:5349/udp"                 # TURN over TLS
+      - "3478:3478/udp"                 # TURN over UDP
+      - "9751:9751"                     # optional (metrics/debug)
+      - "50000-50100:50000-50100/udp"  # UDP port range cho media
+      - "60000-60100:60000-60100/udp"  # (optional nếu bạn cần thêm)
     environment:
       - LIVEKIT_KEYS=${LIVEKIT_KEYS}
+      - LIVEKIT_CONFIG_FILE=/etc/livekit.yaml
+      - LIVEKIT_EXTERNAL_IP=160.187.241.81
     volumes:
-      - ./Livekit.yaml:/etc/Livekit.yaml
-    command: --dev --config /etc/Livekit.yaml 
+      - ./Livekit.yaml:/etc/livekit.yaml
+      - /etc/letsencrypt/live/livekitserver.dacoban.studio/fullchain.pem:/etc/livekit-certs/fullchain.pem
+      - /etc/letsencrypt/live/livekitserver.dacoban.studio/privkey.pem:/etc/livekit-certs/privkey.pem
+    command: --config /etc/livekit.yaml
     networks:
       - app-network
+
     
 
 
