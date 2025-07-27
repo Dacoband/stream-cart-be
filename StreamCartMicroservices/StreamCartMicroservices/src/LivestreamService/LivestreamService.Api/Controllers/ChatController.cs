@@ -120,7 +120,9 @@ namespace LivestreamService.Api.Controllers
                 }
 
                 // Tạo LiveKit room name từ chat room info
-                var livekitRoomName = $"chat-shop-{chatRoom.ShopId}-customer-{chatRoom.UserId}";
+                var livekitRoomName = !string.IsNullOrEmpty(chatRoom.LiveKitRoomName)
+                 ? chatRoom.LiveKitRoomName
+                  : $"chat-shop-{chatRoom.ShopId}-customer-{chatRoom.UserId}";
 
                 // Generate token cho shop
                 var shopToken = await _livekitService.GenerateChatTokenAsync(
