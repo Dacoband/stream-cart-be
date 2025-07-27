@@ -24,15 +24,21 @@ namespace LivestreamService.Api.Controllers
         private readonly ILogger<ChatController> _logger;
         private readonly ILivekitService _livekitService;
 
+        // Add a private readonly field for IConfiguration
+        private readonly IConfiguration _configuration;
+
         public ChatController(
             IMediator mediator,
             ICurrentUserService currentUserService,
-            ILogger<ChatController> logger, ILivekitService livekitService)
+            ILogger<ChatController> logger,
+            ILivekitService livekitService,
+            IConfiguration configuration)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
             _livekitService = livekitService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -372,6 +378,70 @@ namespace LivestreamService.Api.Controllers
                 _logger.LogError(ex, "Error joining livestream chat");
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
+        }
+        [HttpGet("debug/livekit-config")]
+        [AllowAnonymous]
+        public IActionResult GetLiveKitDebugInfo()
+        {
+            try
+            {
+                var livekitUrl = _configuration["LIVEKIT_URL"] ?? _configuration["LiveKit:Url"];
+                var apiKey = _configuration["LIVEKIT_API_KEY"] ?? _configuration["LiveKit:ApiKey"];
+                var apiSecret = _configuration["LIVEKIT_API_SECRET"] ?? _configuration["LiveKit:ApiSecret"];
+
+                return Ok(new
+                {
+                    LiveKitUrl = livekitUrl,
+                    ApiKeyPresent = !string.IsNullOrEmpty(apiKey),
+                    ApiSecretPresent = !string.IsNullOrEmpty(apiSecret),
+                    ApiKeyPreview = !string.IsNullOrEmpty(apiKey) ? $"{apiKey.Substring(0, Math.Min(4, apiKey.Length))}..." : "NOT SET",
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                    AllEnvironmentVars = Environment.GetEnvironmentVariables()
+                        .Cast<System.Collections.DictionaryEntry>()
+                        .Where(x => x.Key.ToString().Contains("LIVEKIT"))
+                        .ToDictionary(x => x.Key.ToString(), x => x.Value?.ToString()),
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    Error = ex.Message,
+                    StackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        [HttpPost("debug/test-room")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestCreateRoom([FromBody] TestRoomRequest request)
+        {
+            try
+            {
+                var roomName = request.RoomName ?? $"test-room-{Guid.NewGuid()}";
+                var result = await _livekitService.CreateChatRoomAsync(Guid.NewGuid(), Guid.NewGuid());
+
+                return Ok(new
+                {
+                    Success = true,
+                    RoomName = result,
+                    Message = "Room created successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    Success = false,
+                    Error = ex.Message,
+                    StackTrace = ex.StackTrace
+                });
+            }
+        }
+        public class TestRoomRequest
+        {
+            public string? RoomName { get; set; }
         }
     }
     public class LiveKitChatRoomDTO
