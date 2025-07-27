@@ -104,7 +104,7 @@ namespace LivestreamService.Infrastructure.Services
             {
                 var claims = new
                 {
-                    room = roomName,
+                    iss = _apiKey,
                     sub = identity,
                     exp = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds(),
                     iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),

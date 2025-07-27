@@ -1,11 +1,40 @@
-bind_addresses:
+﻿bind_addresses:
   - 0.0.0.0
+
 port: 7880
+
 rtc:
   udp_port: 7881
   tcp_port: 7882
+  port_range_start: 50000
+  port_range_end: 50100
   use_external_ip: true
+  stun_servers:
+    - stun.l.google.com:19302
+
+turn:
+  enabled: true
+  domain: livekitserver.dacoban.studio
+  tls_port: 5349
+  udp_port: 3478
+  cert_file: /etc/livekit-certs/fullchain.pem
+  key_file: /etc/livekit-certs/privkey.pem
+
 room:
+  enabled_codecs:
+    - mime: audio/opus
+    - mime: video/VP8
+    - mime: video/H264
   enable_remote_unmute: true
-  max_participants: 20
+  max_participants: 50
   empty_timeout: 300
+  departure_timeout: 60
+
+logging:
+  level: debug
+  component_levels:
+    livekit: debug
+    rtc: debug
+    signal: debug
+    ice: debug
+    turn: debug
