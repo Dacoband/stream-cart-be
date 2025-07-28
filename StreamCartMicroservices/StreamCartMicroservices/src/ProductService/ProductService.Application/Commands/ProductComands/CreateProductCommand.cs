@@ -14,7 +14,10 @@ namespace ProductService.Application.Commands.ProductComands
         public decimal? DiscountPrice { get; set; }
         public int StockQuantity { get; set; }
         public decimal? Weight { get; set; }
-        public string? Dimensions { get; set; }
+        //public string? Dimensions { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
         public bool HasVariant { get; set; }
         public Guid? ShopId { get; set; }
         public string? CreatedBy { get; set; }

@@ -29,13 +29,25 @@ namespace LivestreamService.Infrastructure.Services
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            _apiKey = _configuration["LiveKit:ApiKey"];
-            _apiSecret = _configuration["LiveKit:ApiSecret"];
-            _livekitUrl = _configuration["LiveKit:Url"];
+            _apiKey = _configuration["LIVEKIT_API_KEY"] ?? _configuration["LiveKit:ApiKey"];
+            _apiSecret = _configuration["LIVEKIT_API_SECRET"] ?? _configuration["LiveKit:ApiSecret"];
+            _livekitUrl = _configuration["LIVEKIT_URL"] ?? _configuration["LiveKit:Url"];
+
+            // ✅ FIX: Better logging for debugging
+            _logger.LogInformation("LiveKit Configuration - ApiKey: {ApiKey}, Url: {Url}",
+                string.IsNullOrEmpty(_apiKey) ? "NOT SET" : $"{_apiKey.Substring(0, Math.Min(4, _apiKey.Length))}...",
+                _livekitUrl ?? "NOT SET");
 
             if (string.IsNullOrEmpty(_apiKey) || string.IsNullOrEmpty(_apiSecret) || string.IsNullOrEmpty(_livekitUrl))
             {
-                throw new InvalidOperationException("LiveKit configuration is missing or incomplete");
+                var missingConfigs = new List<string>();
+                if (string.IsNullOrEmpty(_apiKey)) missingConfigs.Add("ApiKey");
+                if (string.IsNullOrEmpty(_apiSecret)) missingConfigs.Add("ApiSecret");
+                if (string.IsNullOrEmpty(_livekitUrl)) missingConfigs.Add("Url");
+
+                var errorMsg = $"LiveKit configuration is missing: {string.Join(", ", missingConfigs)}";
+                _logger.LogError(errorMsg);
+                throw new InvalidOperationException(errorMsg);
             }
         }
 
@@ -92,7 +104,7 @@ namespace LivestreamService.Infrastructure.Services
             {
                 var claims = new
                 {
-                    room = roomName,
+                    iss = _apiKey,
                     sub = identity,
                     exp = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds(),
                     iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
@@ -174,6 +186,7 @@ namespace LivestreamService.Infrastructure.Services
                 video = new
                 {
                     roomCreate = true,
+                    roomAdmin = true,
                     room = roomName
                 }
             };
@@ -236,6 +249,113 @@ namespace LivestreamService.Infrastructure.Services
             output = output.Replace('/', '_');
             return output;
         }
+        //Phần chat realtime 
+        public async Task<string> CreateChatRoomAsync(Guid shopId, Guid customerId)
+        {
+            var chatRoomName = $"chat-shop-{shopId}-customer-{customerId}";
+
+            try
+            {
+                await CreateRoomAsync(chatRoomName);
+                _logger.LogInformation("Created chat room: {ChatRoomName}", chatRoomName);
+                return chatRoomName;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating chat room for shop {ShopId} and customer {CustomerId}", shopId, customerId);
+                throw;
+            }
+        }
+        public async Task<string> GenerateChatTokenAsync(string roomName, string participantName, bool isShop = false)
+        {
+            try
+            {
+                var claims = new
+                {
+                    iss = _apiKey,
+                    room = roomName,
+                    sub = participantName,
+                    exp = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds(),
+                    iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    nbf = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    video = new
+                    {
+                        room = roomName,
+                        roomJoin = true,
+                        canPublish = false,  // Không cần publish video/audio cho chat
+                        canSubscribe = false, // Không cần subscribe video/audio
+                        canPublishData = true,  // Cho phép gửi data (chat messages)
+                        canUpdateOwnMetadata = true,
+                        hidden = false
+                    }
+                };
+
+                var token = GenerateJwt(claims);
+                _logger.LogInformation("Generated chat token for {ParticipantName} in room {RoomName}", participantName, roomName);
+                return token;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating chat token for room {RoomName} and participant {ParticipantName}", roomName, participantName);
+                throw;
+            }
+        }
+        public async Task<bool> SendDataMessageAsync(string roomName, string senderId, object message)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var url = $"{_livekitUrl}/twirp/livekit.RoomService/SendData";
+
+                var payload = new
+                {
+                    room = roomName,
+                    data = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))),
+                    kind = "reliable", // hoặc "lossy" 
+                    destination_sids = new string[] { } // Gửi cho tất cả participants
+                };
+
+                var token = GenerateAccessTokenForRoomCreate(roomName);
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                var response = await client.PostAsync(url, new StringContent(
+                    JsonSerializer.Serialize(payload),
+                    Encoding.UTF8,
+                    "application/json"));
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Data message sent successfully to room {RoomName}", roomName);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogError("Failed to send data message to room {RoomName}: {StatusCode}", roomName, response.StatusCode);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending data message to room {RoomName}", roomName);
+                return false;
+            }
+        }
+        public async Task<bool> IsRoomActiveAsync(string roomName)
+        {
+            try
+            {
+                var participantCount = await GetParticipantCountAsync(roomName);
+                return participantCount > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if room {RoomName} is active", roomName);
+                return false;
+            }
+        }
+
+
+
     }
 
     internal class ParticipantsResponse
@@ -245,10 +365,10 @@ namespace LivestreamService.Infrastructure.Services
 
     internal class ParticipantInfo
     {
-        public string Sid { get; set; }
-        public string Identity { get; set; }
-        public string State { get; set; }
-        public string Name { get; set; }
+        public string? Sid { get; set; }
+        public string? Identity { get; set; }
+        public string? State { get; set; }
+        public string? Name { get; set; }
         public long JoinedAt { get; set; }
     }
 }

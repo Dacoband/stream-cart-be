@@ -73,7 +73,7 @@ namespace OrderService.Infrastructure.Services
                     VariantId = createOrderItemDto.VariantId,
                     Quantity = createOrderItemDto.Quantity,
                     UnitPrice = createOrderItemDto.UnitPrice,
-                    Notes = createOrderItemDto.Notes
+                    //Notes = createOrderItemDto.Notes
                 };
                 return await _mediator.Send(command);
             }

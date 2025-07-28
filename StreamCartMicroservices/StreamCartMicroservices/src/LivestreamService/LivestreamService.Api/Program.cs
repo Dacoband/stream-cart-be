@@ -1,3 +1,4 @@
+using AutoMapper;
 using dotenv.net;
 using LivestreamService.Api.Services;
 using LivestreamService.Application.Commands;
@@ -5,9 +6,11 @@ using LivestreamService.Application.Extensions;
 using LivestreamService.Application.Interfaces;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Extensions;
+using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL; // Add this import for PostgreSQL
 using Shared.Common.Extensions;
@@ -23,20 +26,14 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecificOrigin", policy =>
-    {
-        policy.WithOrigins("*")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
+
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
 
 builder.Services.AddScoped<ILivestreamRepository, LivestreamRepository>();
+
+builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddScoped<ILivekitService, LivekitService>();
 
@@ -99,9 +96,8 @@ if (!builder.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-
+app.MapHub<ChatHub>("/chatHub");
 app.UseRouting();
-app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
 app.UseConfiguredCors();
 app.UseAuthHeaderMiddleware();

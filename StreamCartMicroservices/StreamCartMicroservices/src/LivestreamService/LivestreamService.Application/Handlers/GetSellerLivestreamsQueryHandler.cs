@@ -50,6 +50,14 @@ namespace LivestreamService.Application.Handlers
                     ActualEndTime = livestream.ActualEndTime,
                     Status = livestream.Status,
                     ThumbnailUrl = livestream.ThumbnailUrl,
+                    MaxViewer = livestream.MaxViewer,
+                    ApprovalStatusContent = livestream.ApprovalStatusContent,
+                    ApprovedByUserId = livestream.ApprovedByUserId,
+                    ApprovalDateContent = livestream.ApprovalDateContent,
+                    StreamKey = livestream.StreamKey,
+                    PlaybackUrl = livestream.PlaybackUrl,
+                    LivekitRoomId = livestream.LivekitRoomId,
+                    JoinToken = livestream.JoinToken,
                     IsPromoted = livestream.IsPromoted,
                     Tags = livestream.Tags
                 });

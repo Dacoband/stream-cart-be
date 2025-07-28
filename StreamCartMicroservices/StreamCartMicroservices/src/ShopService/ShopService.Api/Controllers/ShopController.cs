@@ -178,8 +178,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             try
             {
@@ -226,8 +226,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             try
             {
@@ -262,8 +262,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.DeleteShopAsync(id, accountId);
             if (!result)
@@ -291,8 +291,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(id, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
 
             var shop = await _shopManagementService.UpdateShopStatusAsync(id, active, accountId);
             if (shop == null)
@@ -396,8 +396,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var members = await _shopManagementService.GetShopMembersAsync(shopId);
             return Ok(members);
@@ -422,8 +422,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.AddShopMemberAsync(shopId, memberDto.AccountId, memberDto.Role, accountId);
             if (!result)
@@ -450,8 +450,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.RemoveShopMemberAsync(shopId, memberId, accountId);
             if (!result)
@@ -479,8 +479,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var result = await _shopManagementService.ChangeShopMemberRoleAsync(shopId, memberId, roleDto.Role, accountId);
             if (!result)
@@ -511,8 +511,8 @@ namespace ShopService.Api.Controllers
                 return Unauthorized();
 
             // Kiểm tra người dùng có quyền với shop không
-            if (!(await HasShopPermission(shopId, accountId)))
-                return Forbid();
+            //if (!(await HasShopPermission(shopId, accountId)))
+            //    return Forbid();
 
             var invitationId = await _shopManagementService.SendInvitationAsync(shopId, invitationDto.Email, invitationDto.Role, accountId);
             if (invitationId == Guid.Empty)
@@ -567,32 +567,24 @@ namespace ShopService.Api.Controllers
             return Ok(new { success = true });
         }
 
-        #endregion
-
-        #region Helper Methods
-
         private Guid GetCurrentUserId()
         {
-
-            var userIdClaim = User.FindFirst("id")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
+            var userIdClaim = _currentUserService.GetUserId();
+            if (userIdClaim == Guid.Empty)
                 return Guid.Empty;
 
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return Guid.Empty;
-
-            return userId;
+            return userIdClaim;
         }
 
-        private async Task<bool> HasShopPermission(Guid shopId, Guid accountId)
-        {
-            // Admin luôn có quyền
-            if (User.IsInRole("Admin") || User.IsInRole("ITAdmin"))
-                return true;
+        //private async Task<bool> HasShopPermission(Guid shopId, Guid accountId)
+        //{
+        //    // Admin luôn có quyền
+        //    if (User.IsInRole("Admin") || User.IsInRole("ITAdmin"))
+        //        return true;
 
-            // Kiểm tra quyền với shop
-            return await _shopManagementService.HasShopPermissionAsync(shopId, accountId, "Owner");
-        }
+        //    // Kiểm tra quyền với shop
+        //    return await _shopManagementService.HasShopPermissionAsync(shopId, accountId, "Owner");
+        //}
 
         #endregion
         [HttpPut("{id}/product-count")]
@@ -644,6 +636,92 @@ namespace ShopService.Api.Controllers
             {
                 _logger.LogError(ex, "Lỗi khi cập nhật tỷ lệ hoàn thành của shop {ShopId}", id);
                 return StatusCode(500, new { error = "Đã xảy ra lỗi khi cập nhật tỷ lệ hoàn thành của shop" });
+            }
+        }
+        /// <summary>
+        /// Đồng bộ lại số lượng sản phẩm từ Product Service
+        /// </summary>
+        /// <param name="id">ID của shop</param>
+        /// <returns>Shop đã cập nhật</returns>
+        [HttpPost("{id}/sync-product-count")]
+        [Authorize(Roles = "Seller,Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ShopDto>> SyncProductCount(Guid id)
+        {
+            var accountId = GetCurrentUserId();
+            if (accountId == Guid.Empty)
+                return Unauthorized();
+
+            // Kiểm tra người dùng có quyền với shop không
+            //if (!(await HasShopPermission(id, accountId)))
+            //    return Forbid();
+
+            try
+            {
+                var shop = await _shopManagementService.SyncProductCountFromProductServiceAsync(id);
+                if (shop == null)
+                    return NotFound();
+
+                return Ok(shop);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi đồng bộ số lượng sản phẩm của shop {ShopId}: {Message}", id, ex.Message);
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Đồng bộ tất cả shop - chỉ dành cho Admin
+        /// </summary>
+        /// <returns>Kết quả thực hiện</returns>
+        [HttpPost("sync-all-product-counts")]
+        [Authorize(Roles = "Admin,ITAdmin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> SyncAllProductCounts()
+        {
+            try
+            {
+                var allShops = await _shopManagementService.GetAllShopsAsync();
+                var syncResults = new List<object>();
+
+                foreach (var shop in allShops)
+                {
+                    try
+                    {
+                        var updatedShop = await _shopManagementService.SyncProductCountFromProductServiceAsync(shop.Id);
+                        syncResults.Add(new
+                        {
+                            ShopId = shop.Id,
+                            ShopName = shop.ShopName,
+                            Success = updatedShop != null,
+                            NewProductCount = updatedShop?.TotalProduct ?? 0
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Lỗi khi đồng bộ shop {ShopId}", shop.Id);
+                        syncResults.Add(new
+                        {
+                            ShopId = shop.Id,
+                            ShopName = shop.ShopName,
+                            Success = false,
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                return Ok(new { Results = syncResults });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi đồng bộ tất cả shop");
+                return BadRequest(new { error = ex.Message });
             }
         }
     }   

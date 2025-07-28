@@ -68,8 +68,17 @@ namespace ProductService.Infrastructure.Data
                     .HasColumnName("weight")
                     .HasColumnType("decimal(10,2)");
 
-                entity.Property(e => e.Dimensions)
-                    .HasColumnName("dimensions")
+                //entity.Property(e => e.Dimensions)
+                //    .HasColumnName("dimensions")
+                //    .HasMaxLength(100);
+                entity.Property(e => e.Length)
+                    .HasColumnName("length")
+                    .HasMaxLength(100);
+                entity.Property(e => e.Width)
+                    .HasColumnName("width")
+                    .HasMaxLength(100);
+                entity.Property(e => e.Height)
+                    .HasColumnName("height")
                     .HasMaxLength(100);
 
                 entity.Property(e => e.HasVariant)

@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
+using ProductService.Application.Queries.ProductQueries;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
@@ -20,12 +23,16 @@ namespace ProductService.Api.Controllers
         private readonly IProductService _productService;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IMediator _mediator;
+        private readonly ILogger<ProductController> _logger;
 
-        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService )
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService, IMediator mediator, ILogger<ProductController> logger)
         {
             _productService = productService;
             _shopServiceClient = shopServiceClient;
             _currentUserService = currentUserService;
+            _mediator = mediator;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -58,7 +65,46 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error creating product: {ex.Message}"));
             }
         }
+        [HttpGet("{id}/exists")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> DoesProductExist(Guid id)
+        {
+            try
+            {
+                var product = await _productService.GetProductByIdAsync(id);
+                var exists = product != null;
+                return Ok(ApiResponse<bool>.SuccessResult(exists,
+                    exists ? "Product exists" : "Product not found"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product existence: {ex.Message}"));
+            }
+        }
 
+        
+        [HttpGet("{productId}/shop/{shopId}/owned")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> IsProductOwnedByShop(Guid productId, Guid shopId)
+        {
+            try
+            {
+                var product = await _productService.GetProductByIdAsync(productId);
+
+                if (product == null)
+                {
+                    return Ok(ApiResponse<bool>.SuccessResult(false, "Product not found"));
+                }
+
+                var isOwned = product.ShopId == shopId;
+                return Ok(ApiResponse<bool>.SuccessResult(isOwned,
+                    isOwned ? "Product belongs to the shop" : "Product does not belong to the shop"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error checking product ownership: {ex.Message}"));
+            }
+        }
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
@@ -294,6 +340,328 @@ namespace ProductService.Api.Controllers
             catch (ApplicationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("flash-sales")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetProductsWithFlashSale()
+        {
+            try
+            {
+                var query = new GetProductsWithFlashSaleQuery();
+                var response = await _mediator.Send(query);
+
+                if (response.Success)
+                {
+                    return Ok(response);
+                }
+                else
+                {
+                    return BadRequest(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách sản phẩm có Flash Sale: {ex.Message}"));
+            }
+        }
+        /// </summary>
+        /// <param name="request">Thông tin tìm kiếm và bộ lọc</param>
+        /// <returns>Danh sách sản phẩm phù hợp</returns>
+        [HttpGet("search")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<SearchProductResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> SearchProducts([FromQuery] SearchProductRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu tìm kiếm không hợp lệ"));
+            }
+
+            try
+            {
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = request.SearchTerm,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    CategoryId = request.CategoryId,
+                    MinPrice = request.MinPrice,
+                    MaxPrice = request.MaxPrice,
+                    ShopId = request.ShopId,
+                    SortBy = request.SortBy,
+                    InStockOnly = request.InStockOnly,
+                    MinRating = request.MinRating,
+                    OnSaleOnly = request.OnSaleOnly
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<SearchProductResponseDto>.SuccessResult(
+                    result,
+                    $"Tìm thấy {result.TotalResults} sản phẩm cho '{request.SearchTerm}' trong {result.SearchTimeMs:F2}ms"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tìm kiếm sản phẩm với từ khóa: {SearchTerm}", request.SearchTerm);
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi tìm kiếm sản phẩm"));
+            }
+        }
+        /// <summary>
+        /// Lấy gợi ý tìm kiếm nhanh
+        /// </summary>
+        /// <param name="q">Từ khóa cần gợi ý</param>
+        /// <returns>Danh sách gợi ý</returns>
+        [HttpGet("search/suggestions")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<List<string>>), 200)]
+        public async Task<IActionResult> GetSearchSuggestions([FromQuery] string q)
+        {
+            try
+            {
+                // Simple suggestion logic - could be enhanced with Redis cache or Elasticsearch
+                var suggestions = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(q) && q.Length >= 2)
+                {
+                    // Mock suggestions - in reality, this would query popular search terms
+                    suggestions.AddRange(new[]
+                    {
+                        $"{q} áo",
+                        $"{q} quần",
+                        $"{q} giày",
+                        $"{q} túi xách",
+                        $"{q} phụ kiện"
+                    }.Take(5));
+                }
+
+                return Ok(ApiResponse<List<string>>.SuccessResult(suggestions));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy gợi ý tìm kiếm cho: {Query}", q);
+                return Ok(ApiResponse<List<string>>.SuccessResult(new List<string>()));
+            }
+        }
+        /// <summary>
+        /// Lấy sản phẩm phổ biến/trending
+        /// </summary>
+        [HttpGet("trending")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductSearchItemDto>>), 200)]
+        public async Task<IActionResult> GetTrendingProducts([FromQuery] int limit = 10)
+        {
+            try
+            {
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = "",
+                    PageNumber = 1,
+                    PageSize = limit,
+                    SortBy = "best_selling"
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<List<ProductSearchItemDto>>.SuccessResult(
+                    result.Products.Items.ToList(),
+                    "Lấy danh sách sản phẩm trending thành công"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm trending");
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra"));
+            }
+        }
+        [HttpGet("shop/{shopId}/count")]
+        [ProducesResponseType(typeof(ApiResponse<int>), 200)]
+        public async Task<IActionResult> GetProductCountByShopId(Guid shopId, [FromQuery] bool activeOnly = true)
+        {
+            try
+            {
+                var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+                if (!shopExists)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop with ID {shopId} not found"));
+
+                var products = await _productService.GetProductsByShopIdAsync(shopId, activeOnly);
+                var count = products?.Count() ?? 0;
+
+                return Ok(ApiResponse<int>.SuccessResult(count,
+                    $"Found {count} {(activeOnly ? "active " : "")}products for shop {shopId}"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error counting products: {ex.Message}"));
+            }
+        }
+        // ✅ BỔ SUNG: API cập nhật stock sản phẩm với quantity change
+        [HttpPut("{id}/stock")]
+        [ProducesResponseType(typeof(ApiResponse<ProductDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateProductStockQuantityChange(Guid id, [FromBody] UpdateStockQuantityChangeDto updateStockDto)
+        {
+            try
+            {
+                string? userId = _currentUserService.GetUserId().ToString();
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
+                // Lấy sản phẩm hiện tại
+                var currentProduct = await _productService.GetProductByIdAsync(id);
+                if (currentProduct == null)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
+
+                // Tính toán số lượng mới
+                var newQuantity = Math.Max(0, currentProduct.StockQuantity + updateStockDto.QuantityChange);
+
+                var updatedProduct = await _productService.UpdateProductStockAsync(id, newQuantity, userId);
+                return Ok(ApiResponse<ProductDto>.SuccessResult(updatedProduct,
+                    $"Product stock updated by {updateStockDto.QuantityChange}. New stock: {newQuantity}"));
+            }
+            catch (ApplicationException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error updating product stock: {ex.Message}"));
+            }
+        }
+        [HttpGet("shop/{shopId}/search")]
+        [ProducesResponseType(typeof(ApiResponse<SearchProductResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> SearchProductsInShop(
+    Guid shopId,
+    [FromQuery] SearchProductInShopRequestDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu tìm kiếm không hợp lệ"));
+            }
+
+            try
+            {
+                // Kiểm tra shop có tồn tại không
+                var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+                if (!shopExists)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop với ID {shopId} không tồn tại"));
+                }
+
+                // Tạo query tìm kiếm với filter theo shop
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = request.SearchTerm ?? "",
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    ShopId = shopId, // Lọc theo shop cụ thể
+                    CategoryId = request.CategoryId,
+                    MinPrice = request.MinPrice,
+                    MaxPrice = request.MaxPrice,
+                    SortBy = request.SortBy,
+                    InStockOnly = request.InStockOnly,
+                    MinRating = request.MinRating,
+                    OnSaleOnly = request.OnSaleOnly
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<SearchProductResponseDto>.SuccessResult(
+                    result,
+                    $"Tìm thấy {result.TotalResults} sản phẩm cho '{request.SearchTerm}' trong shop trong {result.SearchTimeMs:F2}ms"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tìm kiếm sản phẩm trong shop {ShopId} với từ khóa: {SearchTerm}", shopId, request.SearchTerm);
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi tìm kiếm sản phẩm trong shop"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy sản phẩm phổ biến trong shop
+        /// </summary>
+        [HttpGet("shop/{shopId}/trending")]
+        [ProducesResponseType(typeof(ApiResponse<List<ProductSearchItemDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetTrendingProductsInShop(Guid shopId, [FromQuery] int limit = 10)
+        {
+            try
+            {
+                // Kiểm tra shop có tồn tại không
+                var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+                if (!shopExists)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop với ID {shopId} không tồn tại"));
+                }
+
+                var query = new SearchProductsQuery
+                {
+                    SearchTerm = "",
+                    PageNumber = 1,
+                    PageSize = limit,
+                    ShopId = shopId,
+                    SortBy = "best_selling"
+                };
+
+                var result = await _mediator.Send(query);
+
+                return Ok(ApiResponse<List<ProductSearchItemDto>>.SuccessResult(
+                    result.Products.Items.ToList(),
+                    $"Lấy danh sách {result.Products.Items.Count()} sản phẩm trending của shop thành công"
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm trending của shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi lấy sản phẩm trending"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy gợi ý tìm kiếm trong shop
+        /// </summary>
+        [HttpGet("shop/{shopId}/search/suggestions")]
+        [ProducesResponseType(typeof(ApiResponse<List<string>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetSearchSuggestionsInShop(Guid shopId, [FromQuery] string q)
+        {
+            try
+            {
+                // Kiểm tra shop có tồn tại không
+                var shopExists = await _shopServiceClient.DoesShopExistAsync(shopId);
+                if (!shopExists)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop với ID {shopId} không tồn tại"));
+                }
+
+                var suggestions = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(q) && q.Length >= 2)
+                {
+                    // Có thể tích hợp với cache hoặc database để lấy gợi ý thực tế
+                    // Hiện tại tạo gợi ý đơn giản
+                    suggestions.AddRange(new[]
+                    {
+                $"{q}",
+                $"{q} sale",
+                $"{q} giảm giá",
+                $"{q} mới",
+                $"{q} hot"
+            }.Take(5));
+                }
+
+                return Ok(ApiResponse<List<string>>.SuccessResult(suggestions));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy gợi ý tìm kiếm cho shop {ShopId}: {Query}", shopId, q);
+                return Ok(ApiResponse<List<string>>.SuccessResult(new List<string>()));
             }
         }
     }

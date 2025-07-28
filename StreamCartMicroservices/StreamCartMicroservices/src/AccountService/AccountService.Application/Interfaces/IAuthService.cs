@@ -14,5 +14,7 @@ namespace AccountService.Application.Interfaces
         Task<bool> RequestPasswordResetAsync(string email);
         Task<bool> ResetPasswordAsync(Guid accountId, string token, string newPassword);
         Task<AccountDto> GetCurrentUserAsync(Guid accountId);
+        Task<AuthResultDto> RefreshTokenAsync(string refreshToken);
+
     }
 }

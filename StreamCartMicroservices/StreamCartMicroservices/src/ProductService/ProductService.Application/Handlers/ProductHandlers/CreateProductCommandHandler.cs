@@ -53,10 +53,9 @@ namespace ProductService.Application.Handlers
                 product.UpdatePricing(request.BasePrice, request.DiscountPrice);
             }
 
-            if (request.Weight.HasValue || !string.IsNullOrWhiteSpace(request.Dimensions))
-            {
-                product.UpdatePhysicalAttributes(request.Weight, request.Dimensions ?? string.Empty); // Fix: Ensure 'dimensions' is not null
-            }
+            
+                product.UpdatePhysicalAttributes(request.Weight, request.Length, request.Width, request.Height); // Fix: Ensure 'dimensions' is not null
+            
 
             if (request.HasVariant)
             {
@@ -87,7 +86,9 @@ namespace ProductService.Application.Handlers
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
                 Weight = product.Weight,
-                Dimensions = product.Dimensions,
+                Length = product.Length,
+                Width = product.Width,
+                Height = product.Height,
                 HasVariant = product.HasVariant,
                 QuantitySold = product.QuantitySold,
                 ShopId = product.ShopId,

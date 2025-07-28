@@ -16,15 +16,18 @@ namespace DeliveryService.Application.Services
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GHNSettings _ghnSettings;
+        private readonly IAddressClientService _addressClientService;
 
         private const string BaseUrl = "https://dev-online-gateway.ghn.vn/shiip/public-api";
 
         public DeliveryAddressService(
             IHttpClientFactory httpClientFactory,
-            IOptions<GHNSettings> ghnOptions)
+            IOptions<GHNSettings> ghnOptions,
+            IAddressClientService addressClientService)
         {
             _httpClientFactory = httpClientFactory;
             _ghnSettings = ghnOptions.Value;
+            _addressClientService = addressClientService;   
         }
 
         public async Task<ApiResponse<CreateOrderResult>> CreateOrderAsync(UserCreateOrderRequest input)
@@ -253,94 +256,110 @@ namespace DeliveryService.Application.Services
         {
             var response = new ApiResponse<PreviewOrderResponse>();
             var client = _httpClientFactory.CreateClient();
+            var result = new PreviewOrderResponse { ServiceResponses = new List<ServiceResponse>() };
 
             try
             {
-                // Lấy địa chỉ người gửi
-                var fromProvinceId = await FindProvinceIdAsync(client, input.FromProvince)
-                    ?? throw new Exception($"Không tìm thấy tỉnh/thành người gửi: {input.FromProvince}");
-                var fromDistrictId = await FindDistrictIdAsync(client, input.FromDistrict, fromProvinceId)
-                    ?? throw new Exception($"Không tìm thấy quận/huyện người gửi: {input.FromDistrict}");
-                var fromWardCode = await FindWardCodeAsync(client, input.FromWard, fromDistrictId)
-                    ?? throw new Exception($"Không tìm thấy phường/xã người gửi: {input.FromWard}");
-
-                // Lấy địa chỉ người nhận
-                var toProvinceId = await FindProvinceIdAsync(client, input.ToProvince)
-                    ?? throw new Exception($"Không tìm thấy tỉnh/thành người nhận: {input.ToProvince}");
-                var toDistrictId = await FindDistrictIdAsync(client, input.ToDistrict, toProvinceId)
-                    ?? throw new Exception($"Không tìm thấy quận/huyện người nhận: {input.ToDistrict}");
-                var toWardCode = await FindWardCodeAsync(client, input.ToWard, toDistrictId)
-                    ?? throw new Exception($"Không tìm thấy phường/xã người nhận: {input.ToWard}");
-
-                // Lấy danh sách dịch vụ GHN trả về
-                var serviceList = await GetServiceIdAsync(client, fromDistrictId, toDistrictId);
-                if (serviceList == null || serviceList.Count == 0)
-                    throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
-
-                var result = new PreviewOrderResponse { ServiceResponses = new List<ServiceResponse>() };
-                //Tính ngày giao dự kiến
-                
-                var ghnItems = input.Items.Select(i => new GHNItem
+                foreach (var shopId in input.FromShops)
                 {
-                    Name = i.Name,
-                    Quantity = i.Quantity,
-                    Weight = i.Weight,
-                    Length = i.Length,
-                    Width = i.Width,
-                    Height = i.Height
-                }).ToList();
-                var totalWeight = input.Items.Sum(x => x.Weight);
-                var totalLength = input.Items.Sum(x => x.Length);
-                var totalWidth = input.Items.Sum(x => x.Width);
-                var totalHeight = input.Items.Sum(x => x.Height);
-                foreach (var service in serviceList)
-                {
-                    var feePayload = new GHNCalculateFeeRequest
+                    // 1. Lấy địa chỉ shop
+                    var fromAddress = await _addressClientService.GetShopAddress(shopId);
+                    if (fromAddress == null)
+                        throw new Exception($"Không tìm thấy địa chỉ mặc định của shop: {shopId}");
+
+                    // 2. Lấy thông tin hành chính người gửi
+                    var fromProvinceId = await FindProvinceIdAsync(client, fromAddress.City)
+                        ?? throw new Exception($"Không tìm thấy tỉnh/thành người gửi: {fromAddress.City}");
+
+                    var fromDistrictId = await FindDistrictIdAsync(client, fromAddress.District, fromProvinceId)
+                        ?? throw new Exception($"Không tìm thấy quận/huyện người gửi: {fromAddress.District}");
+
+                    var fromWardCode = await FindWardCodeAsync(client, fromAddress.Ward, fromDistrictId)
+                        ?? throw new Exception($"Không tìm thấy phường/xã người gửi: {fromAddress.Ward}");
+
+                    // 3. Lấy thông tin hành chính người nhận
+                    var toProvinceId = await FindProvinceIdAsync(client, input.ToProvince)
+                        ?? throw new Exception($"Không tìm thấy tỉnh/thành người nhận: {input.ToProvince}");
+
+                    var toDistrictId = await FindDistrictIdAsync(client, input.ToDistrict, toProvinceId)
+                        ?? throw new Exception($"Không tìm thấy quận/huyện người nhận: {input.ToDistrict}");
+
+                    var toWardCode = await FindWardCodeAsync(client, input.ToWard, toDistrictId)
+                        ?? throw new Exception($"Không tìm thấy phường/xã người nhận: {input.ToWard}");
+
+                    // 4. Lấy danh sách dịch vụ vận chuyển
+                    var serviceList = await GetServiceIdAsync(client, fromDistrictId, toDistrictId);
+                    if (serviceList == null )
+                        throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
+
+                    // 5. Tính khối lượng, kích thước đơn hàng
+                    var ghnItems = input.Items.Select(i => new GHNItem
                     {
-                        FromDistrictId = fromDistrictId,
-                        ToDistrictId = toDistrictId,
-                        FromWardCode = fromWardCode,
-                        ToWardCode = toWardCode,
-                        ServiceTypeId = service.ServiceTypeId,
-                        Items = ghnItems,
-                        Weight = totalWeight,
-                        Length = totalLength,
-                        Width = totalWidth,
-                        Height = totalHeight,
+                        Name = i.Name,
+                        Quantity = i.Quantity,
+                        Weight = i.Weight,
+                        Length = i.Length,
+                        Width = i.Width,
+                        Height = i.Height
+                    }).ToList();
 
-                    };
+                    var totalWeight = input.Items.Sum(x => x.Weight);
+                    var totalLength = input.Items.Sum(x => x.Length);
+                    var totalWidth = input.Items.Sum(x => x.Width);
+                    var totalHeight = input.Items.Sum(x => x.Height);
 
-                    var feeRequest = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/shipping-order/fee");
-                    feeRequest.Headers.Add("Token", _ghnSettings.Token);
-                    feeRequest.Headers.Add("ShopId", _ghnSettings.ShopId);
-                    feeRequest.Content = new StringContent(JsonSerializer.Serialize(feePayload), Encoding.UTF8, "application/json");
-
-                    var feeResponse = await client.SendAsync(feeRequest);
-                    var json = await feeResponse.Content.ReadAsStringAsync();
-
-                    if (!feeResponse.IsSuccessStatusCode)
-                        continue; // bỏ qua dịch vụ nếu lỗi
-
-                    var feeResult = JsonSerializer.Deserialize<GHNResponseDTO<JsonElement>>(json);
-
-                    if (feeResult?.Code != 200 || feeResult.Data.ValueKind == JsonValueKind.Null)
-                        continue;
-
-                    int total = feeResult.Data.GetProperty("total").GetInt32();
-                    //Tính ngày giao dự kiến
-                    var expectedDeliveryTime = await GetLeadTimeAsync(client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, service.ServiceTypeId);
-                    expectedDeliveryTime = expectedDeliveryTime.AddDays(1);
-                    
-
-                    result.ServiceResponses.Add(new ServiceResponse
+                    // 6. Lặp từng dịch vụ GHN để tính phí + thời gian giao
+                    foreach (var service in serviceList)
                     {
-                        ServiceTypeId = service.ServiceTypeId,
-                        ServiceName = service.ShortName ?? $"Dịch vụ {service.ServiceTypeId}",
-                        TotalAmount = total,
-                        ExpectedDeliveryDate = expectedDeliveryTime,
-                    });
+                        var feePayload = new GHNCalculateFeeRequest
+                        {
+                            FromDistrictId = fromDistrictId,
+                            ToDistrictId = toDistrictId,
+                            FromWardCode = fromWardCode,
+                            ToWardCode = toWardCode,
+                            ServiceTypeId = service.ServiceTypeId,
+                            Items = ghnItems,
+                            Weight = totalWeight,
+                            Length = totalLength,
+                            Width = totalWidth,
+                            Height = totalHeight
+                        };
+
+                        var feeRequest = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/shipping-order/fee");
+                        feeRequest.Headers.Add("Token", _ghnSettings.Token);
+                        feeRequest.Headers.Add("ShopId", _ghnSettings.ShopId);
+                        feeRequest.Content = new StringContent(JsonSerializer.Serialize(feePayload), Encoding.UTF8, "application/json");
+
+                        var feeResponse = await client.SendAsync(feeRequest);
+                        var json = await feeResponse.Content.ReadAsStringAsync();
+                        if (!feeResponse.IsSuccessStatusCode)
+                            continue;
+
+                        var feeResult = JsonSerializer.Deserialize<GHNResponseDTO<JsonElement>>(json);
+                        if (feeResult?.Code != 200 || feeResult.Data.ValueKind == JsonValueKind.Null)
+                            continue;
+
+                        int total = feeResult.Data.GetProperty("total").GetInt32();
+
+                        // 7. Lấy thời gian giao dự kiến
+                        var expectedDelivery = await GetLeadTimeAsync(
+                            client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, service.ServiceTypeId);
+
+                        expectedDelivery = expectedDelivery.AddDays(1); // buffer 1 ngày
+
+                        // 8. Ghi vào danh sách kết quả
+                        result.ServiceResponses.Add(new ServiceResponse
+                        {
+                            ShopId = shopId,
+                            ServiceTypeId = service.ServiceTypeId,
+                            ServiceName = service.ShortName ?? $"Dịch vụ {service.ServiceTypeId}",
+                            TotalAmount = total,
+                            ExpectedDeliveryDate = expectedDelivery
+                        });
+                    }
                 }
-                
+                result.TotalAmount = result.ServiceResponses.Sum(x => x.TotalAmount);
+
                 response.Data = result;
                 response.Success = true;
                 response.Message = "Xem trước chi phí thành công";

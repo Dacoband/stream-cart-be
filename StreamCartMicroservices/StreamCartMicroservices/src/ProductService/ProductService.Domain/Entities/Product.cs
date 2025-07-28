@@ -33,9 +33,17 @@ namespace ProductService.Domain.Entities
         [Column(TypeName = "decimal(10,2)")]
         public decimal? Weight { get; private set; }
 
-        [StringLength(100)]
-        public string Dimensions { get; private set; }
+        //[StringLength(100)]
+        //public string Dimensions { get; private set; }
+        // With these three properties:
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Length { get; private set; }
 
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Width { get; private set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Height { get; private set; }
         public bool HasVariant { get; private set; }
 
         public int QuantitySold { get; private set; }
@@ -147,10 +155,12 @@ namespace ProductService.Domain.Entities
             LastModifiedAt = DateTime.UtcNow;
         }
 
-        public void UpdatePhysicalAttributes(decimal? weight, string dimensions)
+        public void UpdatePhysicalAttributes(decimal? weight, decimal? length, decimal? width, decimal? height)
         {
             Weight = weight;
-            Dimensions = dimensions;
+            Length = length;
+            Width = width;
+            Height = height;
             LastModifiedAt = DateTime.UtcNow;
         }
 

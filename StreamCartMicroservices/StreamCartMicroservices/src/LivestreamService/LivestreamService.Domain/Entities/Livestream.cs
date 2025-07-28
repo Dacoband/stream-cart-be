@@ -25,6 +25,9 @@ namespace LivestreamService.Domain.Entities
         public string LivekitRoomId { get; private set; }
 
         // Private constructor for EF Core
+
+        public string? JoinToken { get; private set; }
+
         private Livestream() { }
 
         public Livestream(
@@ -37,6 +40,7 @@ namespace LivestreamService.Domain.Entities
             string streamKey = "",
             string thumbnailUrl = "",
             string tags = "",
+            string? joinToken = null,
             string createdBy = "system")
         {
             Title = title;
@@ -51,6 +55,7 @@ namespace LivestreamService.Domain.Entities
             ApprovalStatusContent = false;
             IsPromoted = false;
             Tags = tags;
+            JoinToken = joinToken;
             SetCreator(createdBy);
             SetModifier(createdBy);
         }
@@ -65,6 +70,14 @@ namespace LivestreamService.Domain.Entities
             SetModifier(modifiedBy);
         }
 
+        public void SetJoinToken(string joinToken, string? modifiedBy = null)
+        {
+            JoinToken = joinToken;
+            if (!string.IsNullOrEmpty(modifiedBy))
+            {
+                SetModifier(modifiedBy);
+            }
+        }
         public void Start(string modifiedBy)
         {
             ActualStartTime = DateTime.UtcNow;

@@ -199,12 +199,6 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
 
-                    b.Property<string>("Dimensions")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("dimensions");
-
                     b.Property<decimal?>("DiscountPrice")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("discount_price");
@@ -215,6 +209,11 @@ namespace ProductService.Infrastructure.Migrations
                     b.Property<bool>("HasVariant")
                         .HasColumnType("boolean")
                         .HasColumnName("has_variant");
+
+                    b.Property<decimal?>("Height")
+                        .HasMaxLength(100)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("height");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
@@ -232,6 +231,11 @@ namespace ProductService.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("last_modified_by");
+
+                    b.Property<decimal?>("Length")
+                        .HasMaxLength(100)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("length");
 
                     b.Property<string>("ProductName")
                         .IsRequired()
@@ -263,6 +267,11 @@ namespace ProductService.Infrastructure.Migrations
                     b.Property<decimal?>("Weight")
                         .HasColumnType("decimal(10,2)")
                         .HasColumnName("weight");
+
+                    b.Property<decimal?>("Width")
+                        .HasMaxLength(100)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("width");
 
                     b.HasKey("Id");
 

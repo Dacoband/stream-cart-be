@@ -42,10 +42,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
             }
 
             // Validate dimensions to prevent null reference issues
-            if (request.Dimensions == null)
-            {
-                throw new ArgumentException("Dimensions cannot be null", nameof(request.Dimensions));
-            }
+            
 
             // Tìm sản phẩm dựa trên ID
             var product = await _productRepository.GetByIdAsync(request.Id.ToString());
@@ -78,9 +75,8 @@ namespace ProductService.Application.Handlers.ProductHandlers
             }
 
             // Cập nhật thuộc tính vật lý
-            product.UpdatePhysicalAttributes(
-                request.Weight,
-                request.Dimensions!); // Use null-forgiving operator since null is already validated
+           product.UpdatePhysicalAttributes(request.Weight, request.Length, request.Width, request.Height);
+
 
             // Cập nhật tùy chọn biến thể
             if (request.HasVariant.HasValue)
@@ -137,7 +133,10 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
                 Weight = product.Weight,
-                Dimensions = product.Dimensions,
+                //Dimensions = product.Dimensions,
+                Length = product.Length,
+                Width = product.Width,
+                Height = product.Height,
                 HasVariant = product.HasVariant,
                 QuantitySold = product.QuantitySold,
                 PrimaryImageUrl = primaryImageUrl,

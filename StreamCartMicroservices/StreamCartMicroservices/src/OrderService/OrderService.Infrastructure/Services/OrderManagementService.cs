@@ -97,7 +97,7 @@ namespace OrderService.Infrastructure.Services
                         VariantId = i.VariantId,
                         Quantity = i.Quantity,
                         UnitPrice = i.UnitPrice,
-                        Notes = i.Notes
+                        //Notes = i.Notes
                     }).ToList() ?? new List<CreateOrderItemDto>()
                 };
 

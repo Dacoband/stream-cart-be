@@ -31,6 +31,9 @@ namespace CartService.Application.DTOs
         public Dictionary<string, string>? Attributes { get; set; }
         public int StockQuantity { get; set; }
         public bool ProductStatus { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
     }
     public class ProductInShopCart
     {

@@ -68,22 +68,38 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     throw new ApplicationException($"Shop với ID {dto.ShopId.Value} không tồn tại");
             }
 
+            decimal basePrice = dto.BasePrice;
+            int stockQuantity = dto.StockQuantity;
+
+            // If product has variants, these values will be overridden later
+            if (dto.HasVariant)
+            {
+                // Ensure variants exist if HasVariant is true
+                if (dto.Variants == null || !dto.Variants.Any())
+                    throw new ArgumentException("Sản phẩm được đánh dấu có biến thể nhưng không có biến thể nào được cung cấp", nameof(dto.Variants));
+            }
+            else
+            {
+                // If not using variants, clear any variant-related data
+                dto.Attributes = null;
+                dto.Variants = null;
+            }
+
             // 2. Create base product
             var product = new Product(
                 dto.ProductName,
                 dto.Description,
                 dto.SKU,
                 dto.CategoryId,
-                dto.BasePrice,
-                dto.StockQuantity,
+                basePrice,
+                stockQuantity,
                 dto.ShopId);
 
             // Set HasVariant flag
             product.SetHasVariant(dto.HasVariant);
 
             // Set physical attributes
-            if (dto.Weight.HasValue || !string.IsNullOrWhiteSpace(dto.Dimensions))
-                product.UpdatePhysicalAttributes(dto.Weight, dto.Dimensions ?? string.Empty);
+            product.UpdatePhysicalAttributes(dto.Weight, dto.Length, dto.Width, dto.Height);
 
             // Set creator
             if (!string.IsNullOrWhiteSpace(createdBy))
@@ -102,8 +118,8 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 {
                     var image = new ProductImage(
                         product.Id,
-                        imageDto.ImageUrl ?? string.Empty ,
-                        null, 
+                        imageDto.ImageUrl ?? string.Empty,
+                        null,
                         imageDto.IsPrimary,
                         imageDto.DisplayOrder,
                         imageDto.AltText,
@@ -113,63 +129,67 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 }
             }
 
-            // 4. Create product attributes and values
-            var attributeMap = new Dictionary<string, Guid>(); // Map attribute names to IDs
-            var valueMap = new Dictionary<(string, string), Guid>(); // Map (attribute, value) pairs to IDs
-
-            if (dto.Attributes != null && dto.Attributes.Any())
+            // Only process variants if HasVariant is true
+            if (dto.HasVariant && dto.Variants != null && dto.Variants.Any())
             {
-                foreach (var attributeDto in dto.Attributes)
+                // 4. Create product attributes and values
+                var attributeMap = new Dictionary<string, Guid>(); // Map attribute names to IDs
+                var valueMap = new Dictionary<(string, string), Guid>(); // Map (attribute, value) pairs to IDs
+
+                if (dto.Attributes != null && dto.Attributes.Any())
                 {
-                    // Check if attribute already exists
-                    var existingAttribute = await _attributeRepository.FindOneAsync(a => a.Name == attributeDto.Name);
-
-                    Guid attributeId;
-                    if (existingAttribute == null)
+                    foreach (var attributeDto in dto.Attributes)
                     {
-                        // Create new attribute
-                        var attribute = new ProductAttribute(attributeDto.Name ?? string.Empty, createdBy);
-                        await _attributeRepository.InsertAsync(attribute);
-                        attributeId = attribute.Id;
-                    }
-                    else
-                    {
-                        attributeId = existingAttribute.Id;
-                    }
+                        // Check if attribute already exists
+                        var existingAttribute = await _attributeRepository.FindOneAsync(a => a.Name == attributeDto.Name);
 
-                    attributeMap[attributeDto.Name ?? string.Empty] = attributeId;
-
-                    // Create attribute values
-                    if (attributeDto.Values != null && attributeDto.Values.Any())
-                    {
-                        foreach (var valueName in attributeDto.Values)
+                        Guid attributeId;
+                        if (existingAttribute == null)
                         {
-                            // Check if value already exists
-                            var existingValue = await _attributeValueRepository.FindOneAsync(
-                                v => v.AttributeId == attributeId && v.ValueName == valueName);
+                            // Create new attribute
+                            var attribute = new ProductAttribute(attributeDto.Name ?? string.Empty, createdBy);
+                            await _attributeRepository.InsertAsync(attribute);
+                            attributeId = attribute.Id;
+                        }
+                        else
+                        {
+                            attributeId = existingAttribute.Id;
+                        }
 
-                            Guid valueId;
-                            if (existingValue == null)
-                            {
-                                // Create new value
-                                var value = new AttributeValue(attributeId, valueName, createdBy);
-                                await _attributeValueRepository.InsertAsync(value);
-                                valueId = value.Id;
-                            }
-                            else
-                            {
-                                valueId = existingValue.Id;
-                            }
+                        attributeMap[attributeDto.Name ?? string.Empty] = attributeId;
 
-                            valueMap[(attributeDto.Name ?? string.Empty, valueName)] = valueId;
+                        // Create attribute values
+                        if (attributeDto.Values != null && attributeDto.Values.Any())
+                        {
+                            foreach (var valueName in attributeDto.Values)
+                            {
+                                // Check if value already exists
+                                var existingValue = await _attributeValueRepository.FindOneAsync(
+                                    v => v.AttributeId == attributeId && v.ValueName == valueName);
+
+                                Guid valueId;
+                                if (existingValue == null)
+                                {
+                                    // Create new value
+                                    var value = new AttributeValue(attributeId, valueName, createdBy);
+                                    await _attributeValueRepository.InsertAsync(value);
+                                    valueId = value.Id;
+                                }
+                                else
+                                {
+                                    valueId = existingValue.Id;
+                                }
+
+                                valueMap[(attributeDto.Name ?? string.Empty, valueName)] = valueId;
+                            }
                         }
                     }
                 }
-            }
 
-            // 5. Create variants and combinations
-            if (dto.HasVariant && dto.Variants != null && dto.Variants.Any())
-            {
+                // 5. Create variants and combinations
+                decimal minPrice = decimal.MaxValue;
+                int totalStock = 0;
+
                 foreach (var variantDto in dto.Variants)
                 {
                     // Create variant
@@ -181,6 +201,14 @@ namespace ProductService.Application.Handlers.ProductHandlers
                         createdBy);
 
                     await _variantRepository.InsertAsync(variant);
+
+                    // Track minimum price and sum of stock
+                    if (variantDto.Price < minPrice)
+                    {
+                        minPrice = variantDto.Price;
+                    }
+
+                    totalStock += variantDto.Stock;
 
                     // Create combinations
                     if (variantDto.Attributes != null && variantDto.Attributes.Any())
@@ -199,6 +227,15 @@ namespace ProductService.Application.Handlers.ProductHandlers
                         }
                     }
                 }
+
+                // Update product with calculated values from variants
+                if (minPrice < decimal.MaxValue)
+                {
+                    product.UpdatePricing(minPrice, product.DiscountPrice);
+                }
+
+                product.UpdateStock(totalStock);
+                await _productRepository.ReplaceAsync(product.Id.ToString(), product);
             }
 
             // Return product DTO
@@ -214,7 +251,9 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
                 Weight = product.Weight,
-                Dimensions = product.Dimensions,
+                Length = product.Length,
+                Width = product.Width,
+                Height = product.Height,
                 HasVariant = product.HasVariant,
                 QuantitySold = product.QuantitySold,
                 ShopId = product.ShopId,

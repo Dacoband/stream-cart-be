@@ -31,5 +31,6 @@ namespace ProductService.Infrastructure.Interfaces
             Guid? categoryId = null);
 
         Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeProductId = null);
+        Task<IEnumerable<Product>> GetProductsHaveFlashSale();
     }
 }

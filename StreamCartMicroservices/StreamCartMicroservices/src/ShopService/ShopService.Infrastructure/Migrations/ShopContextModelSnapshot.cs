@@ -273,6 +273,124 @@ namespace ShopService.Infrastructure.Migrations
                     b.ToTable("Shop_memberships", (string)null);
                 });
 
+            modelBuilder.Entity("ShopService.Domain.Entities.ShopVoucher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AvailableQuantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("available_quantity");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_at");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal?>("MaxValue")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("max_value");
+
+                    b.Property<decimal>("MinOrderAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("min_order_amount");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<int>("UsedQuantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("used_quantity");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shop_vouchers_code");
+
+                    b.HasIndex("EndDate")
+                        .HasDatabaseName("ix_shop_vouchers_end_date");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_shop_vouchers_is_active");
+
+                    b.HasIndex("ShopId")
+                        .HasDatabaseName("ix_shop_vouchers_shop_id");
+
+                    b.HasIndex("StartDate")
+                        .HasDatabaseName("ix_shop_vouchers_start_date");
+
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_shop_vouchers_type");
+
+                    b.HasIndex("ShopId", "IsActive", "StartDate", "EndDate")
+                        .HasDatabaseName("ix_shop_vouchers_active_lookup");
+
+                    b.ToTable("shop_vouchers", (string)null);
+                });
+
             modelBuilder.Entity("ShopService.Domain.Entities.Wallet", b =>
                 {
                     b.Property<Guid>("Id")
@@ -440,6 +558,18 @@ namespace ShopService.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Membership");
+
+                    b.Navigation("Shop");
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.ShopVoucher", b =>
+                {
+                    b.HasOne("ShopService.Domain.Entities.Shop", "Shop")
+                        .WithMany()
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_shop_vouchers_shops");
 
                     b.Navigation("Shop");
                 });

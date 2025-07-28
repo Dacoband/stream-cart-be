@@ -716,6 +716,32 @@
       "SwaggerKey": "shop"
     },
     {
+      "DownstreamPathTemplate": "/api/vouchers/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/vouchers/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shop"
+    },
+    {
+      "DownstreamPathTemplate": "/api/wallets/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/wallets/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "shop"
+    },
+    {
       "DownstreamPathTemplate": "/api/shops",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -801,7 +827,7 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "notification-service", 
+          "Host": "notification-service",
           "Port": 80
         }
       ],
@@ -938,6 +964,96 @@
       "UpstreamPathTemplate": "/api/deliveries/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
       "SwaggerKey": "delivery"
+    },
+    {
+      "DownstreamPathTemplate": "/api/livestreams/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/livestreams/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/livestream-products/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/livestream-products/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/stream-events/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/stream-events/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "DELETE" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/stream-views/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/stream-views/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/chat/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/chat/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/api/livestream-chat/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/livestream-chat/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH" ],
+      "SwaggerKey": "livestream"
+    },
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/livestream/{everything}",
+      "UpstreamHttpMethod": [ "GET" ]
     }
   ],
   "SwaggerEndPoints": [
@@ -1018,6 +1134,16 @@
           "Name": "Notification API",
           "Version": "v1",
           "Url": "http://notification-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "livestream",
+      "Config": [
+        {
+          "Name": "Livestream API",
+          "Version": "v1",
+          "Url": "http://livestream-service/swagger/v1/swagger.json"
         }
       ]
     }

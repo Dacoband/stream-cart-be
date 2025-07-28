@@ -15,7 +15,10 @@ namespace ProductService.Application.DTOs.Products
         public decimal? BasePrice { get; set; }
         public decimal? DiscountPrice { get; set; }
         public decimal? Weight { get; set; }
-        public string? Dimensions { get; set; }
+        //public string? Dimensions { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
         public bool? HasVariant { get; set; }
     }
 }

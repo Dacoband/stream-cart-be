@@ -13,5 +13,7 @@ namespace LivestreamService.Application.Commands
         public string? ThumbnailUrl { get; set; }
         public string? Tags { get; set; }
         public Guid SellerId { get; set; }
+        public List<CreateLivestreamProductItemDTO>? Products { get; set; } = new();
+
     }
 }
