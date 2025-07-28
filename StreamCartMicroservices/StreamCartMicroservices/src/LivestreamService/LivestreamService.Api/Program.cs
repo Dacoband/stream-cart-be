@@ -1,3 +1,4 @@
+using AutoMapper;
 using dotenv.net;
 using LivestreamService.Api.Services;
 using LivestreamService.Application.Commands;
@@ -9,6 +10,7 @@ using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL; // Add this import for PostgreSQL
 using Shared.Common.Extensions;
@@ -31,6 +33,7 @@ builder.Services.AddHostedService<DatabaseInitializer>();
 
 builder.Services.AddScoped<ILivestreamRepository, LivestreamRepository>();
 
+builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddScoped<ILivekitService, LivekitService>();
 
