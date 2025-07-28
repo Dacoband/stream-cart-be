@@ -1,12 +1,11 @@
-﻿using AutoMapper;
-using LivestreamService.Application.DTOs.Chat;
+﻿using LivestreamService.Application.DTOs.Chat;
 using LivestreamService.Application.Interfaces;
 using LivestreamService.Application.Queries.Chat;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Domain.Bases;
-using Shared.Common.Models;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,16 +14,13 @@ namespace LivestreamService.Application.Handlers.Chat
     public class GetShopChatRoomsQueryHandler : IRequestHandler<GetShopChatRoomsQuery, PagedResult<ChatRoomDTO>>
     {
         private readonly IChatRoomRepository _chatRoomRepository;
-        private readonly IMapper _mapper;
         private readonly ILogger<GetShopChatRoomsQueryHandler> _logger;
 
         public GetShopChatRoomsQueryHandler(
             IChatRoomRepository chatRoomRepository,
-            IMapper mapper,
             ILogger<GetShopChatRoomsQueryHandler> logger)
         {
             _chatRoomRepository = chatRoomRepository;
-            _mapper = mapper;
             _logger = logger;
         }
 
@@ -40,7 +36,25 @@ namespace LivestreamService.Application.Handlers.Chat
                     request.PageSize,
                     request.IsActive);
 
-                var chatRoomDTOs = _mapper.Map<IEnumerable<ChatRoomDTO>>(result.Items);
+                // Manual mapping thay vì sử dụng AutoMapper
+                var chatRoomDTOs = result.Items.Select(chatRoom => new ChatRoomDTO
+                {
+                    Id = chatRoom.Id,
+                    UserId = chatRoom.UserId,
+                    ShopId = chatRoom.ShopId,
+                    StartedAt = chatRoom.StartedAt,
+                    LastMessageAt = chatRoom.LastMessageAt,
+                    RelatedOrderId = chatRoom.RelatedOrderId,
+                    IsActive = chatRoom.IsActive,
+                    UserName = chatRoom.UserName,
+                    ShopName = chatRoom.ShopName,
+                    LiveKitRoomName = chatRoom.LiveKitRoomName,
+                    IsLiveKitActive = false, // Sẽ được cập nhật từ controller
+                    UnreadCount = 0, // Có thể tính toán sau nếu cần
+                    LastMessage = null, // Có thể lấy từ repository khác nếu cần
+                    UserAvatarUrl = null, // Có thể lấy từ Account Service nếu cần
+                    ShopLogoUrl = null // Có thể lấy từ Shop Service nếu cần
+                }).ToList();
 
                 return new PagedResult<ChatRoomDTO>(
                     chatRoomDTOs,
