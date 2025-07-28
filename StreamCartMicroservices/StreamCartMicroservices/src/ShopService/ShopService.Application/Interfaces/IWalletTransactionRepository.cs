@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 
 namespace ShopService.Application.Interfaces
 {
-    public interface IShopMembershipRepository : IGenericRepository<ShopMembership>
+    public interface IWalletTransactionRepository : IGenericRepository<WalletTransaction>
     {
-        Task<ShopMembership?> GetActiveMembership(string shopId);
     }
 }

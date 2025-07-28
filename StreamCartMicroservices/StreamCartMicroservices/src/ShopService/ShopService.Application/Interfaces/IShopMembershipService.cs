@@ -1,4 +1,4 @@
-﻿using Shared.Common.Data.Interfaces;
+﻿using Shared.Common.Models;
 using ShopService.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace ShopService.Application.Interfaces
 {
-    public interface IShopMembershipRepository : IGenericRepository<ShopMembership>
+    public interface IShopMembershipService
     {
-        Task<ShopMembership?> GetActiveMembership(string shopId);
+        public Task<ApiResponse<ShopMembership>> CreateShopMembership(string membershipId, string userId);
+
     }
 }

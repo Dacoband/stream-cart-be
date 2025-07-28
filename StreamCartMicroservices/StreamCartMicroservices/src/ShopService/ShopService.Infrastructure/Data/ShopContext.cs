@@ -12,7 +12,7 @@ namespace ShopService.Infrastructure.Data
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<Membership> Membership { get; set; }
         public DbSet<ShopMembership> ShopMembership { get; set; }
-
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
 
         public ShopContext(DbContextOptions<ShopContext> options) : base(options)
         {
@@ -297,7 +297,68 @@ namespace ShopService.Infrastructure.Data
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });
+            modelBuilder.Entity<WalletTransaction>(entity =>
+            {
+                entity.ToTable("Wallet_Transactions");
 
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id).HasColumnName("id");
+
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Amount)
+                    .HasColumnName("amount")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasColumnName("description")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Target)
+                    .HasColumnName("target")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.WalletId)
+                    .HasColumnName("wallet_id");
+
+                entity.Property(e => e.ShopMembershipId)
+                    .HasColumnName("shop_membership_id");
+
+                entity.Property(e => e.OrderId)
+                    .HasColumnName("order_id");
+
+                entity.Property(e => e.RefundId)
+                    .HasColumnName("refund_id");
+
+                // Base entity fields
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt).HasColumnName("last_modified_at");
+                entity.Property(e => e.LastModifiedBy).HasColumnName("last_modified_by").HasMaxLength(50);
+                entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+                // Foreign key to Wallet
+                entity.HasOne<Wallet>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WalletId)
+                    .HasConstraintName("fk_wallet_transactions_wallets")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes
+                entity.HasIndex(e => e.WalletId).HasDatabaseName("ix_wallet_transactions_wallet_id");
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
 
         }
     }

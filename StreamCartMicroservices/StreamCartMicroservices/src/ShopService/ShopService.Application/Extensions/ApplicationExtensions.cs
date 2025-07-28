@@ -30,6 +30,7 @@ namespace ShopService.Application.Extensions
             services.AddScoped<IAdminNotificationService, AdminNotificationService>();
             services.AddScoped<IEmailService, MailJetEmailService>();
             services.AddScoped<IMembershipService, MembershipService>();
+            services.AddScoped<IShopMembershipService, ShopMembershipService>();
 
             return services;
         }
