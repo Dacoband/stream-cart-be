@@ -414,7 +414,44 @@ namespace LivestreamService.Api.Controllers
                 });
             }
         }
+        /// <summary>
+        /// Lấy danh sách chat rooms mà customers đã tạo cho shop (dành cho shop)
+        /// </summary>
+        [HttpGet("shop-rooms")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<ChatRoomDTO>>), 200)]
+        public async Task<IActionResult> GetShopChatRooms(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] bool? isActive = null)
+        {
+            try
+            {
+                var shopId = Guid.Parse(_currentUserService.GetShopId());
+                var query = new GetShopChatRoomsQuery
+                {
+                    ShopId = shopId,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    IsActive = isActive
+                };
 
+                var result = await _mediator.Send(query);
+
+                // Enhance với LiveKit room status
+                foreach (var room in result.Items)
+                {
+                    var livekitRoomName = $"chat-shop-{room.ShopId}-customer-{room.UserId}";
+                    room.IsLiveKitActive = await _livekitService.IsRoomActiveAsync(livekitRoomName);
+                }
+
+                return Ok(ApiResponse<PagedResult<ChatRoomDTO>>.SuccessResult(result, "Lấy danh sách chat rooms của shop thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting shop chat rooms");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
         [HttpPost("debug/test-room")]
         [AllowAnonymous]
         public async Task<IActionResult> TestCreateRoom([FromBody] TestRoomRequest request)
