@@ -58,7 +58,7 @@ namespace LivestreamService.Api.Controllers
                     Price = request.Price,
                     Stock = request.Stock,
                     IsPin = request.IsPin,
-                    FlashSaleId = request.FlashSaleId,
+                    //FlashSaleId = request.FlashSaleId,
                     SellerId = userId
                 };
 
@@ -226,7 +226,7 @@ namespace LivestreamService.Api.Controllers
                 var command = new UpdateDisplayOrderCommand
                 {
                     Id = id,
-                    DisplayOrder = request.DisplayOrder,
+                    //DisplayOrder = request.DisplayOrder,
                     SellerId = userId
                 };
 
@@ -266,7 +266,7 @@ namespace LivestreamService.Api.Controllers
                     Price = request.Price,
                     Stock = request.Stock,
                     IsPin = request.IsPin,
-                    FlashSaleId = request.FlashSaleId,
+                    //FlashSaleId = request.FlashSaleId,
                     SellerId = userId
                 };
 
@@ -377,7 +377,7 @@ namespace LivestreamService.Api.Controllers
                 var command = new ApplyFlashSaleCommand
                 {
                     Id = id,
-                    FlashSaleId = request.FlashSaleId,
+                   // FlashSaleId = request.FlashSaleId,
                     Price = request.Price,
                     SellerId = userId
                 };

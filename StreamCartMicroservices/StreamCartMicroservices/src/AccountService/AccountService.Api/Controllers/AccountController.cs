@@ -107,10 +107,8 @@ namespace AccountService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var sellerAccountId))
-                return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
-
+            var userIdClaim = _currentUserService.GetUserId();
+       
             try
             {
                 if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
@@ -132,7 +130,7 @@ namespace AccountService.Api.Controllers
                     AvatarURL = createAccountDto.AvatarURL
                 };
 
-                var createdAccount = await _accountService.CreateModeratorAccountAsync(command, shopId, sellerAccountId);
+                var createdAccount = await _accountService.CreateModeratorAccountAsync(command, shopId, userIdClaim);
 
                 return CreatedAtAction(
                     nameof(GetAccountById),
@@ -164,9 +162,8 @@ namespace AccountService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var itAdminAccountId))
-                return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
+            var userIdClaim = _currentUserService.GetUserId();
+            
             try
             {
                 if (!await _accountService.IsUsernameUniqueAsync(createAccountDto.Username))
@@ -189,7 +186,7 @@ namespace AccountService.Api.Controllers
                     AvatarURL = createAccountDto.AvatarURL
                 };
 
-                var createdAccount = await _accountService.CreateOperationManagerAccountAsync(command, itAdminAccountId);
+                var createdAccount = await _accountService.CreateOperationManagerAccountAsync(command, userIdClaim);
 
                 return CreatedAtAction(
                     nameof(GetAccountById),
@@ -216,15 +213,14 @@ namespace AccountService.Api.Controllers
         public async Task<IActionResult> UpdateAccountStatus(Guid id, [FromBody] bool isActive)
         {
             // Get the current user's ID
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                return Unauthorized(ApiResponse<object>.ErrorResult("User identity not found"));
+            var userIdClaim = _currentUserService.GetUserId();
+
             try
             {
-                if (!await _accountService.CanManageAccountStatusAsync(userId, id))
+                if (!await _accountService.CanManageAccountStatusAsync(userIdClaim, id))
                     return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to change this account's status").ToString());
 
-                var updatedAccount = await _accountService.UpdateAccountStatusAsync(id, isActive, userId);
+                var updatedAccount = await _accountService.UpdateAccountStatusAsync(id, isActive, userIdClaim);
 
                 string status = isActive ? "activated" : "deactivated";
                 return Ok(ApiResponse<AccountDto>.SuccessResult(updatedAccount, $"Account successfully {status}"));
@@ -245,12 +241,11 @@ namespace AccountService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
         public async Task<IActionResult> GetModeratorsByShop(Guid shopId)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                return Unauthorized(ApiResponse<object>.ErrorResult("User identity not found"));
+            var userIdClaim = _currentUserService.GetUserId();
+
             try
             {
-                var sellerAccount = await _accountService.GetAccountByIdAsync(userId);
+                var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
                 if (sellerAccount == null || sellerAccount.Role != RoleType.Seller || sellerAccount.ShopId != shopId)
                     return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to access moderators for this shop").ToString());
 

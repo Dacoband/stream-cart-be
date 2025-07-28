@@ -56,7 +56,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             LivestreamId = lp.LivestreamId,
                             ProductId = lp.ProductId,
                             VariantId = lp.VariantId,
-                            FlashSaleId = lp.FlashSaleId,
+                            //FlashSaleId = lp.FlashSaleId,
                             IsPin = lp.IsPin,
                             Price = lp.Price,
                             Stock = lp.Stock,

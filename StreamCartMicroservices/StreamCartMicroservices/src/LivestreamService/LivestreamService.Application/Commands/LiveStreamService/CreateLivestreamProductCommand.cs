@@ -16,7 +16,7 @@ namespace LivestreamService.Application.Commands.LiveStreamService
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public bool IsPin { get; set; }
-        public Guid? FlashSaleId { get; set; }
+        //public Guid? FlashSaleId { get; set; }
         public Guid SellerId { get; set; }
     }
 }
