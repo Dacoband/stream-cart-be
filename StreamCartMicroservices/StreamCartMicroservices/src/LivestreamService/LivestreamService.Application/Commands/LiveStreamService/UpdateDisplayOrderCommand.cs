@@ -7,7 +7,7 @@ namespace LivestreamService.Application.Commands.LiveStreamService
     public class UpdateDisplayOrderCommand : IRequest<LivestreamProductDTO>
     {
         public Guid Id { get; set; }
-        public int DisplayOrder { get; set; }
+        //public int DisplayOrder { get; set; }
         public Guid SellerId { get; set; }
     }
 }

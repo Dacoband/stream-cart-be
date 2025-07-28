@@ -48,9 +48,9 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             Price = lp.Price,
                             Stock = lp.Stock,
                             IsPin = lp.IsPin,
-                            HasFlashSale = lp.FlashSaleId.HasValue,
+                           // HasFlashSale = lp.FlashSaleId.HasValue,
                             SoldQuantity = product.QuantitySold ?? 0,
-                            DisplayOrder = lp.DisplayOrder
+                            //DisplayOrder = lp.DisplayOrder
                         });
                     }
                 }

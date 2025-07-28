@@ -44,8 +44,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                 if (livestream.SellerId != request.SellerId)
                     throw new UnauthorizedAccessException("You can only update products in your own livestream");
 
-                // Update display order
-                livestreamProduct.UpdateDisplayOrder(request.DisplayOrder, request.SellerId.ToString());
+                
                 await _repository.ReplaceAsync(livestreamProduct.Id.ToString(), livestreamProduct);
 
                 // Get product details for response
@@ -64,7 +63,6 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    FlashSaleId = livestreamProduct.FlashSaleId,
                     IsPin = livestreamProduct.IsPin,
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,

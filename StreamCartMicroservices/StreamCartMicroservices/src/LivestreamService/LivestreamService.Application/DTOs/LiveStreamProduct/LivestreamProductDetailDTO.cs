@@ -26,10 +26,7 @@ namespace LivestreamService.Application.DTOs
         public bool ProductIsActive { get; set; }
 
         // Flash Sale info (if exists)
-        public decimal? FlashSalePrice { get; set; }
-        public DateTime? FlashSaleStartTime { get; set; }
-        public DateTime? FlashSaleEndTime { get; set; }
-        public bool IsFlashSaleActive { get; set; }
+        
 
         // Shop info
         public Guid ShopId { get; set; }

@@ -60,20 +60,13 @@ namespace LivestreamService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-                var shopId = request.ShopId;
-
-                // Verify the user has rights to this shop
-                //var hasPermission = await _shopServiceClient.IsShopMemberAsync(shopId, userId);
-                //if (!hasPermission)
-                //{
-                //    return BadRequest(ApiResponse<object>.ErrorResult("You can only create livestreams for your own shop"));
-                //}
+                var shopId = _currentUserService.GetShopId(); 
 
                 var command = new CreateLivestreamCommand
                 {
                     Title = request.Title,
                     Description = request.Description,
-                    ShopId = shopId,
+                    ShopId =Guid.Parse(shopId),
                     ScheduledStartTime = request.ScheduledStartTime,
                     ThumbnailUrl = request.ThumbnailUrl,
                     Tags = request.Tags,

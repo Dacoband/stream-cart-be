@@ -32,9 +32,8 @@ namespace LivestreamService.Infrastructure.Repositories
             {
                 return await _context.LivestreamProducts
                     .Where(p => p.LivestreamId == livestreamId && !p.IsDeleted)
-                    .OrderBy(p => p.DisplayOrder)
-                    .ThenByDescending(p => p.IsPin)
-                    .ThenByDescending(p => p.CreatedAt)
+                    .OrderByDescending(p => p.IsPin) // Sản phẩm ghim lên đầu
+                    .ThenByDescending(p => p.CreatedAt) // Sau đó sắp xếp theo thời gian tạo
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -82,8 +81,7 @@ namespace LivestreamService.Infrastructure.Repositories
             {
                 return await _context.LivestreamProducts
                     .Where(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted)
-                    .OrderBy(p => p.DisplayOrder)
-                    .ThenByDescending(p => p.LastModifiedAt)
+                    .OrderByDescending(p => p.LastModifiedAt) // Sắp xếp theo thời gian cập nhật gần nhất
                     .Take(limit)
                     .ToListAsync();
             }
@@ -98,12 +96,10 @@ namespace LivestreamService.Infrastructure.Repositories
         {
             try
             {
+                // Vì FlashSaleId đã bị xóa, trả về danh sách rỗng hoặc có thể implement logic khác
                 return await _context.LivestreamProducts
-                    .Where(p => p.LivestreamId == livestreamId &&
-                               p.FlashSaleId.HasValue &&
-                               !p.IsDeleted)
-                    .OrderBy(p => p.DisplayOrder)
-                    .ThenByDescending(p => p.CreatedAt)
+                    .Where(p => p.LivestreamId == livestreamId && !p.IsDeleted)
+                    .OrderByDescending(p => p.CreatedAt)
                     .ToListAsync();
             }
             catch (Exception ex)
@@ -117,13 +113,10 @@ namespace LivestreamService.Infrastructure.Repositories
         {
             try
             {
-                var product = await _context.LivestreamProducts.FindAsync(id);
-                if (product == null || product.IsDeleted)
-                    return false;
-
-                product.UpdateDisplayOrder(displayOrder, "system");
-                await _context.SaveChangesAsync();
-                return true;
+                // Vì DisplayOrder đã bị xóa, method này không còn có tác dụng
+                // Có thể trả về false hoặc throw NotSupportedException
+                _logger.LogWarning("UpdateDisplayOrderAsync is no longer supported as DisplayOrder field has been removed");
+                return false;
             }
             catch (Exception ex)
             {
@@ -138,9 +131,8 @@ namespace LivestreamService.Infrastructure.Repositories
             {
                 return await _context.LivestreamProducts
                     .Where(p => p.LivestreamId == livestreamId && !p.IsDeleted)
-                    .OrderBy(p => p.DisplayOrder)
-                    .ThenByDescending(p => p.IsPin)
-                    .ThenByDescending(p => p.CreatedAt)
+                    .OrderByDescending(p => p.IsPin) // Sản phẩm ghim lên đầu
+                    .ThenByDescending(p => p.CreatedAt) // Sau đó sắp xếp theo thời gian tạo
                     .ToListAsync();
             }
             catch (Exception ex)
