@@ -102,7 +102,7 @@ namespace AccountService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<AccountDto>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 401)]
-        public async Task<IActionResult> CreateModeratorAccount([FromBody] CreateAccountDto createAccountDto, [FromQuery] Guid shopId)
+        public async Task<IActionResult> CreateModeratorAccount([FromBody] CreateAccountModeratorDto createAccountDto, [FromQuery] Guid shopId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Invalid account data"));
