@@ -194,9 +194,7 @@ namespace LivestreamService.Application.Handlers
                         productItem.VariantId ?? string.Empty,
                         finalPrice,
                         finalStock,
-                        productItem.FlashSaleId,
                         productItem.IsPin,
-                        productItem.DisplayOrder,
                         sellerId.ToString()
                     );
 
@@ -209,7 +207,6 @@ namespace LivestreamService.Application.Handlers
                         LivestreamId = livestreamProduct.LivestreamId,
                         ProductId = livestreamProduct.ProductId,
                         VariantId = livestreamProduct.VariantId,
-                        FlashSaleId = livestreamProduct.FlashSaleId,
                         IsPin = livestreamProduct.IsPin,
                         Price = livestreamProduct.Price,
                         Stock = livestreamProduct.Stock,

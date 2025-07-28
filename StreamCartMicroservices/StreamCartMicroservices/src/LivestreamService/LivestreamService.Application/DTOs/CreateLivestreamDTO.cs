@@ -14,9 +14,6 @@ namespace LivestreamService.Application.DTOs
         public string? Description { get; set; }
 
         [Required]
-        public Guid ShopId { get; set; }
-
-        [Required]
         public DateTime ScheduledStartTime { get; set; }
 
         [StringLength(500)]
@@ -44,9 +41,9 @@ namespace LivestreamService.Application.DTOs
 
         public bool IsPin { get; set; } = false;
 
-        public Guid? FlashSaleId { get; set; }
+        //public Guid? FlashSaleId { get; set; }
 
-        [Range(0, int.MaxValue)]
-        public int DisplayOrder { get; set; } = 0;
+        //[Range(0, int.MaxValue)]
+        //public int DisplayOrder { get; set; } = 0;
     }
 }
