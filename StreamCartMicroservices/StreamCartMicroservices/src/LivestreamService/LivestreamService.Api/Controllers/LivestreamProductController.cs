@@ -163,28 +163,6 @@ namespace LivestreamService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách sản phẩm có Flash Sale trong livestream
-        /// </summary>
-        [HttpGet("livestream/{livestreamId}/flash-sale")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductDTO>>), 200)]
-        public async Task<IActionResult> GetFlashSaleProducts(Guid livestreamId)
-        {
-            try
-            {
-                var query = new GetFlashSaleProductsQuery { LivestreamId = livestreamId };
-                var result = await _mediator.Send(query);
-
-                return Ok(ApiResponse<IEnumerable<LivestreamProductDTO>>.SuccessResult(result, "Lấy danh sách sản phẩm Flash Sale thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi lấy danh sách sản phẩm Flash Sale");
-                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
         /// Lấy chi tiết sản phẩm trong livestream
         /// </summary>
         [HttpGet("{id}/detail")]
@@ -207,43 +185,6 @@ namespace LivestreamService.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi lấy chi tiết sản phẩm livestream");
-                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Cập nhật thứ tự hiển thị sản phẩm
-        /// </summary>
-        [HttpPatch("{id}/display-order")]
-        [Authorize(Roles = "Seller")]
-        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
-        public async Task<IActionResult> UpdateDisplayOrder(Guid id, [FromBody] UpdateDisplayOrderDTO request)
-        {
-            try
-            {
-                var userId = _currentUserService.GetUserId();
-
-                var command = new UpdateDisplayOrderCommand
-                {
-                    Id = id,
-                    //DisplayOrder = request.DisplayOrder,
-                    SellerId = userId
-                };
-
-                var result = await _mediator.Send(command);
-                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, "Cập nhật thứ tự hiển thị thành công"));
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi cập nhật thứ tự hiển thị sản phẩm");
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
@@ -358,44 +299,6 @@ namespace LivestreamService.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi cập nhật số lượng tồn kho");
-                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Áp dụng Flash Sale cho sản phẩm
-        /// </summary>
-        [HttpPost("{id}/flash-sale")]
-        [Authorize(Roles = "Seller")]
-        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
-        public async Task<IActionResult> ApplyFlashSale(Guid id, [FromBody] ApplyFlashSaleDTO request)
-        {
-            try
-            {
-                var userId = _currentUserService.GetUserId();
-
-                var command = new ApplyFlashSaleCommand
-                {
-                    Id = id,
-                   // FlashSaleId = request.FlashSaleId,
-                    Price = request.Price,
-                    SellerId = userId
-                };
-
-                var result = await _mediator.Send(command);
-                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, "Đã áp dụng Flash Sale"));
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi áp dụng Flash Sale");
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
