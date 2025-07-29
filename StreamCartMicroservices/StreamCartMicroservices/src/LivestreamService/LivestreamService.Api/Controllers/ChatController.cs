@@ -121,8 +121,8 @@ namespace LivestreamService.Api.Controllers
                 var currentUserId = _currentUserService.GetUserId();
                 
                 // ✅ Check user role để xác định loại token
-                var userRole = _currentUserService.GetRole(); // "Customer" hoặc "Shop"
-                var isShopUser = userRole?.Equals("Shop", StringComparison.OrdinalIgnoreCase) == true;
+                var userRoles = _currentUserService.GetRoles();
+                var isShopUser = userRoles?.Contains("Shop", StringComparer.OrdinalIgnoreCase) == true;
                 
                 // Sử dụng userId từ query parameter hoặc current user
                 var targetUserId = userId ?? currentUserId;
@@ -190,7 +190,7 @@ namespace LivestreamService.Api.Controllers
                     Timestamp = uniqueTimestamp,
                     // ✅ Thêm info về role
                     IsShopToken = isShopUser,
-                    UserRole = userRole
+                    UserRole = isShopUser ? "Seller" : "Customer", 
                 };
 
                 var message = isShopUser ? "Lấy shop token thành công" : "Lấy customer token thành công";
