@@ -122,11 +122,11 @@ namespace LivestreamService.Api.Controllers
                 
                 // ✅ Check user role để xác định loại token
                 var userRoles = _currentUserService.GetRoles();
-                var isShopUser = userRoles?.Contains("Shop", StringComparer.OrdinalIgnoreCase) == true;
+                var isShopUser = userRoles?.Contains("Seller", StringComparer.OrdinalIgnoreCase) == true;
                 
                 // ✅ Debug logs
-                _logger.LogInformation("GetShopChatToken - UserId: {UserId}, ChatRoomId: {ChatRoomId}, IsShopUser: {IsShopUser}, Roles: {Roles}", 
-                    currentUserId, chatRoomId, isShopUser, string.Join(",", userRoles ?? new string[0]));
+                __logger.LogInformation("GetShopChatToken - UserId: {UserId}, ChatRoomId: {ChatRoomId}, IsShopUser: {IsShopUser}, Roles: {Roles}", 
+                        currentUserId, chatRoomId, isShopUser, string.Join(",", userRoles ?? new string[0]));
                 
                 // Sử dụng userId từ query parameter hoặc current user
                 var targetUserId = userId ?? currentUserId;
