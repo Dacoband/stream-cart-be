@@ -1,4 +1,4 @@
-﻿using ChatBoxService.Application.DTOs.Product;
+﻿using ChatBoxService.Application.DTOs;
 using ChatBoxService.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

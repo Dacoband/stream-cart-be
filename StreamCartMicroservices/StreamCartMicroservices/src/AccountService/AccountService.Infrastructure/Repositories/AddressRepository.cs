@@ -51,10 +51,9 @@ namespace AccountService.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<bool> SetDefaultShippingAddressAsync(string addressId, Guid accountId)
+        public async Task<bool> SetDefaultShippingAddressAsync(Guid addressId, Guid accountId)
         {
-            if (!Guid.TryParse(addressId, out var id))
-                return false;
+            
 
             using var transaction = await _accountContext.Database.BeginTransactionAsync();
             try
@@ -63,9 +62,12 @@ namespace AccountService.Infrastructure.Repositories
                 await UnsetAllDefaultShippingAddressesAsync(accountId);
 
                 // Tiếp theo, đánh dấu địa chỉ được chọn là mặc định
-                var address = await _dbSet.FirstOrDefaultAsync(a => a.Id == id && a.AccountId == accountId && !a.IsDeleted);
+                var address = await _dbSet.FirstOrDefaultAsync(a => a.Id == addressId && a.AccountId == accountId && !a.IsDeleted);
                 if (address == null)
-                    return false;
+                {
+                    await transaction.RollbackAsync();
+                    return false; 
+                }
 
                 address.SetAsDefaultShipping();
                 _accountContext.Entry(address).State = EntityState.Modified;
@@ -77,7 +79,7 @@ namespace AccountService.Infrastructure.Repositories
             catch
             {
                 await transaction.RollbackAsync();
-                return false;
+                throw; 
             }
         }
 

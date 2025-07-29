@@ -1054,6 +1054,44 @@
       ],
       "UpstreamPathTemplate": "/swagger/livestream/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/chatbot/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "chatbot-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/chatbot/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "SwaggerKey": "chatbot"
+    },
+    {
+      "DownstreamPathTemplate": "/api/chat-history/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "chatbot-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/chat-history/{everything}",
+      "UpstreamHttpMethod": [ "GET", "DELETE" ],
+      "SwaggerKey": "chatbot"
+    },
+    {
+      "DownstreamPathTemplate": "/swagger/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "chatbot-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/swagger/chatbot/{everything}",
+      "UpstreamHttpMethod": [ "GET" ]
     }
   ],
   "SwaggerEndPoints": [
@@ -1144,6 +1182,16 @@
           "Name": "Livestream API",
           "Version": "v1",
           "Url": "http://livestream-service/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "chatbot",
+      "Config": [
+        {
+          "Name": "Chatbot API",
+          "Version": "v1",
+          "Url": "http://chatbot-service/swagger/v1/swagger.json"
         }
       ]
     }

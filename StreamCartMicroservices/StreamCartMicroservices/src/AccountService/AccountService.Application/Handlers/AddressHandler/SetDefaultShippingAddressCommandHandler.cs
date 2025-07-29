@@ -20,7 +20,7 @@ namespace AccountService.Application.Handlers.AddressHandler
 
         public async Task<bool> Handle(SetDefaultShippingAddressCommand request, CancellationToken cancellationToken)
         {
-            return await _addressRepository.SetDefaultShippingAddressAsync(request.AddressId.ToString(), request.AccountId);
+            return await _addressRepository.SetDefaultShippingAddressAsync(request.AddressId, request.AccountId);
         }
     }
 }

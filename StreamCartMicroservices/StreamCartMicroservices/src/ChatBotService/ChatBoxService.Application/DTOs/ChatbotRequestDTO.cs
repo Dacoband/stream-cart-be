@@ -16,18 +16,18 @@ namespace ChatBoxService.Application.DTOs
         [Required(ErrorMessage = "Shop ID là bắt buộc")]
         public Guid ShopId { get; set; }
 
-        public Guid? ProductId { get; set; }
+        //public Guid? ProductId { get; set; }
 
-        public Guid? ChatRoomId { get; set; }
+        //public Guid? ChatRoomId { get; set; }
 
         /// <summary>
         /// Context from previous conversation for better responses
         /// </summary>
-        public string? ConversationContext { get; set; }
+        //public string? ConversationContext { get; set; }
 
-        /// <summary>
-        /// Customer's preferred language (vi, en)
-        /// </summary>
-        public string Language { get; set; } = "vi";
+        ///// <summary>
+        ///// Customer's preferred language (vi, en)
+        ///// </summary>
+        //public string Language { get; set; } = "vi";
     }
 }
