@@ -7,8 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="Dockerfile" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <PackageReference Include="dotenv.net" Version="3.2.1" />
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+	  <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.0" />
+	  <PackageReference Include="StackExchange.Redis" Version="2.8.58" />
+	  <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.1"/>
+
   </ItemGroup>
 
   <ItemGroup>

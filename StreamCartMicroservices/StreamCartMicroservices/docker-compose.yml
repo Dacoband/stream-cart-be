@@ -407,7 +407,104 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    
+
+  redis:
+    image: redis:7-alpine
+    container_name: streamcart-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network  
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]  
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s 
+
+  chatbot-service:
+    build:
+      context: ./src
+      dockerfile: ./ChatBotService/ChatBoxService.Api/Dockerfile
+    container_name: streamcart-chatbot-service
+    restart: unless-stopped
+    ports:
+      - "7211:80"
+    depends_on:
+      redis:
+        condition: service_healthy
+      product-service:      
+        condition: service_started
+      shop-service:        
+        condition: service_started
+      rabbitmq:           
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      # ✅ ASPNETCORE Configuration
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_SECRET_KEY=${EMAIL_SECRET_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      # Appwrite Settings
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}
+      - APPWRITE_BUCKET_ID=${APPWRITE_BUCKET_ID}
+      - APPWRITE_API_KEY=${APPWRITE_API_KEY}
+      
+      # ✅ Redis Configuration
+      - REDIS_CONNECTION_STRING=redis:6379,password=${REDIS_PASSWORD}
+      
+      # ✅ Service URLs (External Services)
+      - PRODUCT_SERVICE_URL=http://product-service
+      - SHOP_SERVICE_URL=http://shop-service
+      
+      # ✅ Gemini AI Configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_URL=${GEMINI_API_URL}
+      
+      # ✅ Application Settings
+      - TZ=Asia/Ho_Chi_Minh
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis Insight (Optional - Redis Management UI)
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: streamcart-chatbot-redis-insight
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    networks:
+      - app-network
+    environment:
+      - RITRUSTEDORIGINS=http://localhost:8001
+    profiles:
+      - tools
+
   
   
   delivery-service:
@@ -515,6 +612,8 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+    driver: local
 networks:
   app-network:
     driver: bridge

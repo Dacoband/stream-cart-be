@@ -3,7 +3,10 @@ using ChatBoxService.Infrastructure.Services;
 using dotenv.net;
 using Microsoft.OpenApi.Models;
 using Shared.Common.Extensions;
+using StackExchange.Redis;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Caching.StackExchangeRedis; 
+
 
 // Existing code
 var builder = WebApplication.CreateBuilder(args);
@@ -14,13 +17,11 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-// ✅ THÊM DÒNG NÀY - Thay thế placeholders với environment variables
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Configure HttpClients for external services
 builder.Services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
 {
     var serviceUrl = builder.Configuration["ServiceUrls:ProductService"];
@@ -38,9 +39,28 @@ builder.Services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
         client.BaseAddress = new Uri(serviceUrl);
     }
 });
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    if (string.IsNullOrEmpty(redisConnection))
+    {
+        throw new InvalidOperationException("Redis connection string is not configured");
+    }
 
-// Register services
+    var configuration = ConfigurationOptions.Parse(redisConnection);
+    return ConnectionMultiplexer.Connect(configuration);
+});
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrEmpty(redisConnection))
+    {
+        options.Configuration = redisConnection;
+    }
+});
 builder.Services.AddScoped<IGeminiChatbotService, GeminiChatbotService>();
+builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
 builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
@@ -52,13 +72,29 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add shared settings configuration
 builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCurrentUserService();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy())
+    .AddCheck("redis", () =>
+    {
+        try
+        {
+            var redis = builder.Services.BuildServiceProvider().GetService<IConnectionMultiplexer>();
+            var database = redis?.GetDatabase();
+            database?.Ping();
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Redis is responding");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy($"Redis is not responding: {ex.Message}");
+        }
+    });
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -70,7 +106,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API endpoints for AI chatbot functionality"
     });
 
-    // Cấu hình JWT Authentication cho Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -98,7 +133,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -107,7 +141,6 @@ app.UseSwaggerUI(c =>
     c.DefaultModelsExpandDepth(0);
 });
 
-// Bỏ hoặc điều kiện hóa HTTPS Redirection nếu sử dụng proxy
 if (!app.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
@@ -123,7 +156,6 @@ app.MapControllers();
 
 app.Run();
 
-// ✅ THÊM HÀM NÀY
 void ReplaceConfigurationPlaceholders(IConfigurationRoot config)
 {
     var regex = new Regex(@"\${([^}]+)}");

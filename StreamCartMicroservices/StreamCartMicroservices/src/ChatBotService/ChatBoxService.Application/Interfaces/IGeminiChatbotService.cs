@@ -14,9 +14,10 @@ namespace ChatBoxService.Application.Interfaces
         /// </summary>
         /// <param name="customerMessage">Customer's message</param>
         /// <param name="shopId">Shop ID for context</param>
+        /// <param name="userID">User ID for context</param>
         /// <param name="productId">Optional product ID for specific product questions</param>
         /// <returns>AI-generated friendly response</returns>
-        Task<string> GenerateResponseAsync(string customerMessage, Guid shopId, Guid? productId = null);
+        Task<string> GenerateResponseAsync(string customerMessage, Guid shopId, Guid userID, Guid? productId = null);
 
         /// <summary>
         /// Generates product-specific responses with detailed information
