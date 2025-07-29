@@ -48,35 +48,47 @@ namespace ProductService.Application.Services
                 {
                     if (fs.VariantId == null)
                     {
-                        var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                        if (product != null)
-                        {
-                            product.UpdatePricing(product.BasePrice, fs.FlashSalePrice);
-                            await _productRepo.ReplaceAsync(product.Id.ToString(), product);
-
-                            // 👇 Chỉ gửi ProductUpdatedEvent nếu chưa gửi thông báo
-                            if (!fs.NotificationSent)
+                        try {
+                            var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
+                            if (product != null)
                             {
-                                var productEvent = new ProductUpdatedEvent()
-                                {
-                                    ProductId = product.Id,
-                                    ProductName = product.ProductName,
-                                    Price = fs.FlashSalePrice,
-                                    Stock = product.StockQuantity
-                                };
+                                product.UpdatePricing(product.BasePrice, fs.FlashSalePrice);
+                                product.StartTime = fs.StartTime;
+                                product.EndTime = fs.EndTime;
+                                await _productRepo.ReplaceAsync(product.Id.ToString(), product);
 
-                                await _publishEndpoint.Publish(productEvent);
-                                fs.NotificationSent = true;
-                                await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
+                                // 👇 Chỉ gửi ProductUpdatedEvent nếu chưa gửi thông báo
+                                if (!fs.NotificationSent)
+                                {
+                                    var productEvent = new ProductUpdatedEvent()
+                                    {
+                                        ProductId = product.Id,
+                                        ProductName = product.ProductName,
+                                        Price = product.BasePrice - ((fs.FlashSalePrice / 100) * product.BasePrice),
+                                        Stock = product.StockQuantity
+                                    };
+
+                                    await _publishEndpoint.Publish(productEvent);
+                                    fs.NotificationSent = true;
+                                    await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
+                                }
                             }
                         }
+                        catch (Exception ex) {
+                        _logger.LogWarning(ex.Message);
+                        }
+                        
                     }
                     else
                     {
+                        var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
                         if (variant != null)
                         {
                             variant.UpdatePrice(variant.Price, fs.FlashSalePrice);
+                            product.StartTime = fs.StartTime;
+                            product.EndTime = fs.EndTime;
+                            await _productRepo.ReplaceAsync(product.Id.ToString(), product);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
 
                             if (!fs.NotificationSent)
@@ -85,7 +97,7 @@ namespace ProductService.Application.Services
                                 {
                                     ProductId = fs.ProductId,
                                     VariantId = variant.Id,
-                                    Price = fs.FlashSalePrice
+                                    Price =variant.Price-( (fs.FlashSalePrice / 100)* variant.Price),
                                 };
 
                                 await _publishEndpoint.Publish(productEvent);
@@ -100,9 +112,12 @@ namespace ProductService.Application.Services
                     if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
+                        
                         if (product != null)
                         {
                             product.UpdatePricing(product.BasePrice, 0);
+                            product.StartTime = null;
+                            product.EndTime = null;
                             await _productRepo.ReplaceAsync(product.Id.ToString(), product);
 
                             var productEvent = new ProductUpdatedEvent()
@@ -119,10 +134,15 @@ namespace ProductService.Application.Services
                     else
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
+                        var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
+                       
                         if (variant != null)
                         {
+                            product.StartTime = null;
+                            product.EndTime = null;
                             variant.UpdatePrice(variant.Price, 0);
                             await _variantRepo.ReplaceAsync(variant.Id.ToString(), variant);
+                            await _productRepo.ReplaceAsync(product.Id.ToString(), product);
 
                             var productEvent = new ProductUpdatedEvent()
                             {

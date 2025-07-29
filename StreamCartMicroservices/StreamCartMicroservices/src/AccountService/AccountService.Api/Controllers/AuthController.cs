@@ -167,9 +167,17 @@ namespace AccountService.Api.Controllers
         [HttpPost("refresh-token")]
         [ProducesResponseType(typeof(ApiResponse<AuthResultDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public IActionResult RefreshToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
         {
-            return BadRequest(ApiResponse<object>.ErrorResult("Refresh token functionality not implemented yet"));
+            if (string.IsNullOrWhiteSpace(refreshTokenDto.RefreshToken))
+                return BadRequest(ApiResponse<object>.ErrorResult("Refresh token is required"));
+
+            var result = await _authService.RefreshTokenAsync(refreshTokenDto.RefreshToken);
+
+            if (!result.Success)
+                return BadRequest(ApiResponse<object>.ErrorResult(result.Message));
+
+            return Ok(ApiResponse<AuthResultDto>.SuccessResult(result, "Token refreshed successfully"));
         }
 
         [HttpGet("me")]

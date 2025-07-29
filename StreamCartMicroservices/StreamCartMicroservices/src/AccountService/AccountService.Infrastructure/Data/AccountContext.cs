@@ -99,6 +99,11 @@ namespace AccountService.Infrastructure.Data
 
                 entity.Property(e => e.VerificationTokenExpiry)
                     .HasColumnName("verification_token_expiry");
+                entity.Property(e => e.RefreshToken)
+                   .HasColumnName("refresh_token")
+                   .HasMaxLength(255); 
+                entity.Property(e => e.RefreshTokenExpiry)
+                    .HasColumnName("refresh_token_expiry");
                 // Base entity properties
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("created_at")

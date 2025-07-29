@@ -212,6 +212,10 @@ namespace AccountService.Application.Services
 
             return accountDto;
         }
+        public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken)
+        {
+            return await _mediator.Send(new RefreshTokenCommand { RefreshToken = refreshToken });
+        }
 
         private string GenerateJwtToken(Account account)
         {

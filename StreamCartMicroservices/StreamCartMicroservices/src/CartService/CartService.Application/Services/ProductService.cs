@@ -66,7 +66,10 @@ namespace CartService.Application.Services
                     PriceOriginal = product.BasePrice,
                     PriceCurrent = product.BasePrice,
                     Stock = product.StockQuantity,
-                    PrimaryImage = product.PrimaryImage?.FirstOrDefault() ?? ""
+                    PrimaryImage = product.PrimaryImage?.FirstOrDefault() ?? "",
+                    Length = product.Length,
+                    Width = product.Width,
+                    Height = product.Height
 ,
                 };
                 if(product.Variants.Count > 0 && variantId.IsNullOrEmpty() && variantId.IsNullOrWhiteSpace())
@@ -85,6 +88,11 @@ namespace CartService.Application.Services
                     productSnapshot.PrimaryImage = !string.IsNullOrEmpty(variant.VariantImage?.Url)
                         ? variant.VariantImage.Url
                         : productSnapshot.PrimaryImage;
+                    productSnapshot.Length = variant.Length ?? product.Length;
+                    productSnapshot.Width = variant.Width ?? product.Width;
+                    productSnapshot.Height = variant.Height ?? product.Height;  
+                   
+
                 }
                 return productSnapshot;
             }

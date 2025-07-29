@@ -15,5 +15,6 @@
 		<PackageReference Include="FluentValidation" Version="12.0.0" />
 		<PackageReference Include="MassTransit" Version="8.4.1" />
 		<PackageReference Include="MediatR" Version="12.5.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="9.0.3" />
 	</ItemGroup>
 </Project>

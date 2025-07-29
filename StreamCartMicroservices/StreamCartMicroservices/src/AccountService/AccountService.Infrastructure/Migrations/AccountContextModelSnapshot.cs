@@ -94,6 +94,15 @@ namespace AccountService.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone_number");
 
+                    b.Property<string>("RefreshToken")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("refresh_token");
+
+                    b.Property<DateTime?>("RefreshTokenExpiry")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refresh_token_expiry");
+
                     b.Property<DateTime>("RegistrationDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("registration_date");

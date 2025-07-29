@@ -8,9 +8,7 @@ namespace DeliveryService.Application.DTOs.DeliveryOrder
 {
     public class UserPreviewOrderRequestDTO
     {
-        public string FromProvince { get; set; }
-        public string FromDistrict { get; set; }
-        public string FromWard { get; set; }
+        public List<string> FromShops { get; set; }
         public string ToProvince { get; set; }
         public string ToDistrict { get; set; }
         public string ToWard { get; set; }

@@ -30,9 +30,9 @@ namespace AccountService.Application.Handlers
             // Tạo refresh token
             var refreshToken = GenerateRandomToken();
 
-            // Trong thực tế, bạn nên lưu refresh token vào database
-            // Ví dụ: account.SetRefreshToken(refreshToken, expiryDate);
-            // await _accountRepository.ReplaceAsync(account.Id.ToString(), account);
+            // Lưu refresh token vào database với thời hạn 7 ngày
+            account.SetRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7));
+            await _accountRepository.ReplaceAsync(account.Id.ToString(), account);
 
             return refreshToken;
         }
