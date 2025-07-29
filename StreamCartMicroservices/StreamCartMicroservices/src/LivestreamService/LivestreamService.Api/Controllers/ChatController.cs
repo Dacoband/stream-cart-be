@@ -124,6 +124,10 @@ namespace LivestreamService.Api.Controllers
                 var userRoles = _currentUserService.GetRoles();
                 var isShopUser = userRoles?.Contains("Shop", StringComparer.OrdinalIgnoreCase) == true;
                 
+                // ✅ Debug logs
+                _logger.LogInformation("GetShopChatToken - UserId: {UserId}, ChatRoomId: {ChatRoomId}, IsShopUser: {IsShopUser}, Roles: {Roles}", 
+                    currentUserId, chatRoomId, isShopUser, string.Join(",", userRoles ?? new string[0]));
+                
                 // Sử dụng userId từ query parameter hoặc current user
                 var targetUserId = userId ?? currentUserId;
                 
@@ -136,16 +140,30 @@ namespace LivestreamService.Api.Controllers
                 
                 if (chatRoom == null)
                 {
+                    _logger.LogWarning("Chat room not found: {ChatRoomId}", chatRoomId);
                     return NotFound(ApiResponse<object>.ErrorResult("Chat room không tồn tại"));
                 }
+                
+                _logger.LogInformation("Chat room found - ShopId: {ShopId}, UserId: {UserId}", chatRoom.ShopId, chatRoom.UserId);
                 
                 // ✅ Verify user permission: Shop owner hoặc customer trong room
                 if (isShopUser)
                 {
-                    var shopId = Guid.Parse(_currentUserService.GetShopId());
-                    if (chatRoom.ShopId != shopId)
+                    try 
                     {
-                        return Forbid("Bạn không có quyền truy cập chat room này");
+                        var shopId = Guid.Parse(_currentUserService.GetShopId());
+                        _logger.LogInformation("Seller verification - Current shopId: {ShopId}, ChatRoom shopId: {ChatRoomShopId}", shopId, chatRoom.ShopId);
+                        
+                        if (chatRoom.ShopId != shopId)
+                        {
+                            _logger.LogWarning("Access denied - Seller shopId mismatch");
+                            return StatusCode(403, ApiResponse<object>.ErrorResult("Bạn không có quyền truy cập chat room này"));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error getting shop ID for seller");
+                        return BadRequest(ApiResponse<object>.ErrorResult($"Không thể lấy thông tin shop: {ex.Message}"));
                     }
                 }
                 else
@@ -153,7 +171,8 @@ namespace LivestreamService.Api.Controllers
                     // Customer chỉ có thể access room của mình
                     if (chatRoom.UserId != currentUserId)
                     {
-                        return Forbid("Bạn không có quyền truy cập chat room này");
+                        _logger.LogWarning("Access denied - Customer userId mismatch");
+                        return StatusCode(403, ApiResponse<object>.ErrorResult("Bạn không có quyền truy cập chat room này"));
                     }
                 }
                 
@@ -168,10 +187,12 @@ namespace LivestreamService.Api.Controllers
                 {
                     var shopId = Guid.Parse(_currentUserService.GetShopId());
                     uniqueIdentity = $"shop-{shopId}-user-{targetUserId}-{uniqueTimestamp}";
+                    _logger.LogInformation("Generated seller identity: {Identity}", uniqueIdentity);
                 }
                 else
                 {
                     uniqueIdentity = $"customer-{targetUserId}-{uniqueTimestamp}";
+                    _logger.LogInformation("Generated customer identity: {Identity}", uniqueIdentity);
                 }
 
                 // Generate token với unique identity
@@ -180,17 +201,20 @@ namespace LivestreamService.Api.Controllers
                     uniqueIdentity,
                     isShop: isShopUser);
 
+                _logger.LogInformation("Generated token for {Role} in room {RoomName} with identity {Identity}", 
+                    isShopUser ? "seller" : "customer", livekitRoomName, uniqueIdentity);
+
                 var result = new ShopChatTokenDTO
                 {
                     ChatRoomId = chatRoomId,
                     LiveKitRoomName = livekitRoomName,
-                    ShopToken = token, // Rename to just "Token" would be better
+                    ShopToken = token,
                     CustomerName = chatRoom.UserName,
-                    ShopIdentity = uniqueIdentity, // Rename to just "Identity" would be better
+                    ShopIdentity = uniqueIdentity,
                     Timestamp = uniqueTimestamp,
                     // ✅ Thêm info về role
                     IsShopToken = isShopUser,
-                    UserRole = isShopUser ? "Seller" : "Customer", 
+                    UserRole = isShopUser ? "Seller" : "Customer",
                 };
 
                 var message = isShopUser ? "Lấy shop token thành công" : "Lấy customer token thành công";
