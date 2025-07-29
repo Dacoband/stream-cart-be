@@ -208,7 +208,7 @@ namespace CartService.Application.Services
                {
                    CurrentPrice = ci.PriceCurrent,
                    OriginalPrice = ci.PriceSnapShot,
-                   Discount =(int) Math.Floor(ci.PriceSnapShot/ci.PriceCurrent)
+                   Discount =(int) Math.Floor(ci.PriceSnapShot/(ci.PriceSnapShot - ci.PriceCurrent))
                },
                Quantity = ci.Quantity,
                StockQuantity = ci.Stock,
@@ -224,77 +224,98 @@ namespace CartService.Application.Services
                 CartId = cartResponse.Id,
                 CustomerId = userId,
                 CartItemByShop = grouped,
-                TotalProduct = cartResponse.Items.Sum(x => x.Quantity)
+                TotalProduct = cartResponse.Items.Count(),
             };
             return result;
         }
 
-        public async Task<ApiResponse<PreviewOrderResponseDTO>> PreviewOrder(PreviewOrderRequestDTO request) { 
-            //Initiate response
-            var result = new ApiResponse<PreviewOrderResponseDTO>()
+        public async Task<ApiResponse<PreviewOrderResponseDTO>> PreviewOrder(PreviewOrderRequestDTO request)
+        {
+            var result = new ApiResponse<PreviewOrderResponseDTO>
             {
                 Message = "Tạo PreviewOrder",
                 Success = true,
             };
+
             if (request.CartItemId == null || !request.CartItemId.Any())
             {
                 result.Success = false;
                 result.Message = "Không tìm thấy sản phẩm nào trong giỏ hàng";
                 return result;
             }
-            //GetListOrderItem
-            var cartItems = await _cartItemRepository.GetAllAsync();
-            cartItems = cartItems.Where(ci => request.CartItemId.Contains(ci.Id));
+
+            var cartItems = (await _cartItemRepository.GetAllAsync())
+                .Where(ci => request.CartItemId.Contains(ci.Id))
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
             if (!cartItems.Any())
             {
                 result.Success = false;
                 result.Message = "Không tìm thấy giỏ hàng";
                 return result;
             }
-            var sortedItems = cartItems.OrderByDescending(x => x.CreatedAt);
-            //GroupByShop
-            var grouped = sortedItems
-             .GroupBy(ci => new { ci.ShopId, ci.ShopName })
-              .Select(g => new ProductInShopCart
-              {
-                  ShopId = g.Key.ShopId,
-                  ShopName = g.Key.ShopName,
-                  Products = g.Select(ci => new ProductCart
-                  {
-                      CartItemId = ci.Id,
-                      ProductId = ci.ProductId,
-                      VariantID = ci.VariantId,
-                      ProductName = ci.ProductName,
-                      PriceData = new PriceData
-                      {
-                          CurrentPrice = ci.PriceCurrent,
-                          OriginalPrice = ci.PriceSnapShot,
-                          Discount = (int)100 - (Math.Floor(ci.PriceCurrent / ci.PriceSnapShot) * 100)
-                      },
-                      Quantity = ci.Quantity,
-                      StockQuantity = ci.Stock,
-                      Attributes = ci.Attributes,
-                      PrimaryImage = ci.PrimaryImage,
-                      ProductStatus = ci.ProductStatus,
-                  }).ToList(),
-                  NumberOfProduct = g.Sum(x=>x.Quantity),
-                  TotalPriceInShop = g.Sum(x => x.PriceCurrent *x.Quantity),
-              }).ToList();
-            
-            //InitiateResponse
-            int totalItem = cartItems.Sum(ci => ci.Quantity);
-            decimal totalAmount = cartItems.Sum(ci => ci.PriceCurrent * ci.Quantity);
-            decimal discount = cartItems.Sum(x => x.PriceSnapShot) - cartItems.Sum(x=> x.PriceCurrent);
-            decimal subTotal = cartItems.Sum(x=> x.PriceSnapShot * x.Quantity);
-            PreviewOrderResponseDTO response = new PreviewOrderResponseDTO()
+
+            var grouped = new List<ProductInShopCart>();
+
+            foreach (var shopGroup in cartItems.GroupBy(ci => new { ci.ShopId, ci.ShopName }))
+            {
+                var productList = new List<ProductCart>();
+
+                foreach (var ci in shopGroup)
+                {
+                    // Gọi lại ProductService để lấy kích thước
+                    var productInfo = await _productService.GetProductInfoAsync(ci.ProductId.ToString(), ci.VariantId?.ToString());
+
+                    productList.Add(new ProductCart
+                    {
+                        CartItemId = ci.Id,
+                        ProductId = ci.ProductId,
+                        VariantID = ci.VariantId,
+                        ProductName = ci.ProductName,
+                        PriceData = new PriceData
+                        {
+                            CurrentPrice = ci.PriceCurrent,
+                            OriginalPrice = ci.PriceSnapShot,
+                            Discount = (int)Math.Floor(ci.PriceSnapShot / (ci.PriceSnapShot - ci.PriceCurrent))
+                        },
+                        Quantity = ci.Quantity,
+                        StockQuantity = ci.Stock,
+                        Attributes = ci.Attributes,
+                        PrimaryImage = ci.PrimaryImage,
+                        ProductStatus = ci.ProductStatus,
+
+                        // Gán chiều dài, rộng, cao từ productInfo
+                        Length = productInfo?.Length,
+                        Width = productInfo?.Width,
+                        Height = productInfo?.Height
+                    });
+                }
+
+                grouped.Add(new ProductInShopCart
+                {
+                    ShopId = shopGroup.Key.ShopId,
+                    ShopName = shopGroup.Key.ShopName,
+                    Products = productList,
+                    NumberOfProduct = productList.Sum(p => p.Quantity),
+                    TotalPriceInShop = productList.Sum(p => p.PriceData.CurrentPrice * p.Quantity)
+                });
+            }
+
+            var totalItem = cartItems.Sum(ci => ci.Quantity);
+            var totalAmount = cartItems.Sum(ci => ci.PriceCurrent * ci.Quantity);
+            var discount = cartItems.Sum(x => x.PriceSnapShot - x.PriceCurrent);
+            var subTotal = cartItems.Sum(x => x.PriceSnapShot * x.Quantity);
+
+            result.Data = new PreviewOrderResponseDTO
             {
                 TotalAmount = totalAmount,
                 Discount = discount,
                 TotalItem = totalItem,
                 SubTotal = subTotal,
-                ListCartItem = grouped,
+                ListCartItem = grouped
             };
-            result.Data = response;
+
             return result;
         }
 

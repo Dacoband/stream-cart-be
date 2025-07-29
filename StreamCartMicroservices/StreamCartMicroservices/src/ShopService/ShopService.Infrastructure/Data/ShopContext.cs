@@ -10,6 +10,9 @@ namespace ShopService.Infrastructure.Data
         // Add all required DbSet properties
         public DbSet<Shop> Shops { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<Membership> Membership { get; set; }
+        public DbSet<ShopMembership> ShopMembership { get; set; }
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<ShopVoucher> ShopVouchers { get; set; }
 
 
@@ -300,6 +303,228 @@ namespace ShopService.Infrastructure.Data
                 // Composite index for active vouchers lookup
                 entity.HasIndex(e => new { e.ShopId, e.IsActive, e.StartDate, e.EndDate })
                     .HasDatabaseName("ix_shop_vouchers_active_lookup");
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<Membership>(entity =>
+            {
+                entity.ToTable("Membership");
+
+
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                      .HasColumnName("id");
+
+                entity.Property(e => e.Name)
+                      .HasColumnName("name")
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Type)
+                      .HasColumnName("type")
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.Description)
+                      .HasColumnName("description")
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.Price)
+                      .HasColumnName("price")
+                      .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.Duration)
+                      .HasColumnName("duration");
+
+                entity.Property(e => e.MaxProduct)
+                      .HasColumnName("max_product");
+
+                entity.Property(e => e.MaxLivestream)
+                      .HasColumnName("max_livestream");
+
+                entity.Property(e => e.Commission)
+                      .HasColumnName("commission")
+                      .HasColumnType("decimal(5,2)");
+
+                // BaseEntity fields
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnName("created_at");
+
+                entity.Property(e => e.CreatedBy)
+                      .HasColumnName("created_by")
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                      .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                      .HasColumnName("last_modified_by")
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.IsDeleted)
+                      .HasColumnName("is_deleted");
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<ShopMembership>(entity =>
+            {
+                entity.ToTable("Shop_memberships");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id).HasColumnName("id");
+
+                entity.Property(e => e.MembershipID)
+                    .HasColumnName("membership_id")
+                    .IsRequired();
+
+                entity.Property(e => e.ShopID)
+                    .HasColumnName("shop_id")
+                    .IsRequired();
+
+                entity.Property(e => e.StartDate)
+                    .HasColumnName("start_date");
+
+                entity.Property(e => e.EndDate)
+                    .HasColumnName("end_date");
+
+                // Navigation mapping
+                entity.HasOne(e => e.Membership)
+                    .WithMany(m => m.ShopMemberships)
+                    .HasForeignKey(e => e.MembershipID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Shop)
+                    .WithMany(s => s.ShopMemberships)
+                    .HasForeignKey(e => e.ShopID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Base entity fields
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt).HasColumnName("last_modified_at");
+                entity.Property(e => e.LastModifiedBy).HasColumnName("last_modified_by").HasMaxLength(50);
+                entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+                // Index
+                entity.HasIndex(e => new { e.ShopID, e.MembershipID }).HasDatabaseName("ix_shop_memberships_unique");
+
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<WalletTransaction>(entity =>
+            {
+                entity.ToTable("Wallet_Transactions");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id).HasColumnName("id");
+
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Amount)
+                    .HasColumnName("amount")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasColumnName("description")
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Target)
+                    .HasColumnName("target")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.WalletId)
+                    .HasColumnName("wallet_id");
+
+                entity.Property(e => e.ShopMembershipId)
+                    .HasColumnName("shop_membership_id");
+
+                entity.Property(e => e.OrderId)
+                    .HasColumnName("order_id");
+
+                entity.Property(e => e.RefundId)
+                    .HasColumnName("refund_id");
+
+                // Base entity fields
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(50);
+                entity.Property(e => e.LastModifiedAt).HasColumnName("last_modified_at");
+                entity.Property(e => e.LastModifiedBy).HasColumnName("last_modified_by").HasMaxLength(50);
+                entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+                // Foreign key to Wallet
+                entity.HasOne<Wallet>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WalletId)
+                    .HasConstraintName("fk_wallet_transactions_wallets")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes
+                entity.HasIndex(e => e.WalletId).HasDatabaseName("ix_wallet_transactions_wallet_id");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);

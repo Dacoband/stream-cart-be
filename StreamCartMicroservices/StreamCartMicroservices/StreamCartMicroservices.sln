@@ -38,8 +38,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Application", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Domain", "src\ShopService\ShopService.Domain\ShopService.Domain.csproj", "{202208EB-9690-78CD-8039-6872C96B433E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Infrastructure", "src\ShopService\ShopService.Infrastructure\ShopService.Infrastructure.csproj", "{E9A84D90-5D0A-C822-4C2B-EAF8FB385057}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CartService.Application", "src\CartService\CartService.Application\CartService.Application.csproj", "{961229D3-7430-B3C3-46ED-5749E1ED7B14}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CartService.Domain", "src\CartService\CartService.Domain\CartService.Domain.csproj", "{8ADE0CFF-6D18-B0CF-FA60-095080556AFF}"
@@ -87,6 +85,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Infrastructure", "src\LivestreamService\LivestreamService.Infrastructure\LivestreamService.Infrastructure.csproj", "{D38467B2-F66A-A6C6-080F-C44D6A5BC398}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification.Infrastructure", "src\NotificationService\Notification.Infrastructure\Notification.Infrastructure.csproj", "{1BDA8EC0-1EA9-4336-A174-60833476DEBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Infrastructure", "src\ShopService\ShopService.Infrastructure\ShopService.Infrastructure.csproj", "{9C766915-2F87-45F9-B02D-C0F1692E3C27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -150,10 +150,6 @@ Global
 		{202208EB-9690-78CD-8039-6872C96B433E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{202208EB-9690-78CD-8039-6872C96B433E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{202208EB-9690-78CD-8039-6872C96B433E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E9A84D90-5D0A-C822-4C2B-EAF8FB385057}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E9A84D90-5D0A-C822-4C2B-EAF8FB385057}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E9A84D90-5D0A-C822-4C2B-EAF8FB385057}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E9A84D90-5D0A-C822-4C2B-EAF8FB385057}.Release|Any CPU.Build.0 = Release|Any CPU
 		{961229D3-7430-B3C3-46ED-5749E1ED7B14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{961229D3-7430-B3C3-46ED-5749E1ED7B14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{961229D3-7430-B3C3-46ED-5749E1ED7B14}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -250,6 +246,10 @@ Global
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C766915-2F87-45F9-B02D-C0F1692E3C27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C766915-2F87-45F9-B02D-C0F1692E3C27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C766915-2F87-45F9-B02D-C0F1692E3C27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C766915-2F87-45F9-B02D-C0F1692E3C27}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

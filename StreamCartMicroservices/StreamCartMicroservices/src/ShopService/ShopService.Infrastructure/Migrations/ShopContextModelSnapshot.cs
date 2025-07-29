@@ -22,6 +22,78 @@ namespace ShopService.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ShopService.Domain.Entities.Membership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Commission")
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("commission");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_at");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<int>("MaxLivestream")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_livestream");
+
+                    b.Property<int>("MaxProduct")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_product");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("price");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Membership", (string)null);
+                });
+
             modelBuilder.Entity("ShopService.Domain.Entities.Shop", b =>
                 {
                     b.Property<Guid>("Id")
@@ -143,6 +215,62 @@ namespace ShopService.Infrastructure.Migrations
                         .HasDatabaseName("ix_shops_status");
 
                     b.ToTable("shops", (string)null);
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.ShopMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_at");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<Guid>("MembershipID")
+                        .HasColumnType("uuid")
+                        .HasColumnName("membership_id");
+
+                    b.Property<Guid>("ShopID")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MembershipID");
+
+                    b.HasIndex("ShopID", "MembershipID")
+                        .HasDatabaseName("ix_shop_memberships_unique");
+
+                    b.ToTable("Shop_memberships", (string)null);
                 });
 
             modelBuilder.Entity("ShopService.Domain.Entities.ShopVoucher", b =>
@@ -334,6 +462,106 @@ namespace ShopService.Infrastructure.Migrations
                     b.ToTable("wallets", (string)null);
                 });
 
+            modelBuilder.Entity("ShopService.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_at");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid?>("RefundId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("refund_id");
+
+                    b.Property<Guid?>("ShopMembershipId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_membership_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("target");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WalletId")
+                        .HasDatabaseName("ix_wallet_transactions_wallet_id");
+
+                    b.ToTable("Wallet_Transactions", (string)null);
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.ShopMembership", b =>
+                {
+                    b.HasOne("ShopService.Domain.Entities.Membership", "Membership")
+                        .WithMany("ShopMemberships")
+                        .HasForeignKey("MembershipID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShopService.Domain.Entities.Shop", "Shop")
+                        .WithMany("ShopMemberships")
+                        .HasForeignKey("ShopID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Membership");
+
+                    b.Navigation("Shop");
+                });
+
             modelBuilder.Entity("ShopService.Domain.Entities.ShopVoucher", b =>
                 {
                     b.HasOne("ShopService.Domain.Entities.Shop", "Shop")
@@ -353,6 +581,26 @@ namespace ShopService.Infrastructure.Migrations
                         .HasForeignKey("ShopService.Domain.Entities.Wallet", "ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_wallets_shops");
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.HasOne("ShopService.Domain.Entities.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_transactions_wallets");
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.Membership", b =>
+                {
+                    b.Navigation("ShopMemberships");
+                });
+
+            modelBuilder.Entity("ShopService.Domain.Entities.Shop", b =>
+                {
+                    b.Navigation("ShopMemberships");
                 });
 #pragma warning restore 612, 618
         }
