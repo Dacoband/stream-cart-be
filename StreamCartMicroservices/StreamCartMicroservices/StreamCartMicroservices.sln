@@ -88,6 +88,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivestreamService.Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification.Infrastructure", "src\NotificationService\Notification.Infrastructure\Notification.Infrastructure.csproj", "{1BDA8EC0-1EA9-4336-A174-60833476DEBD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatBoxService.Api", "src\ChatBotService\ChatBoxService.Api\ChatBoxService.Api.csproj", "{34E7F95D-14E3-EC1C-3AA1-C6A1D276C696}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatBoxService.Application", "src\ChatBotService\ChatBoxService.Application\ChatBoxService.Application.csproj", "{AE28B177-1E77-397F-789B-4FAA31428C9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatBoxService.Domain", "src\ChatBotService\ChatBoxService.Domain\ChatBoxService.Domain.csproj", "{106D2303-31A2-4D69-6517-0BD48FB67DB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatBoxService.Infrastructure", "src\ChatBotService\ChatBoxService.Infrastructure\ChatBoxService.Infrastructure.csproj", "{BD4D408B-D20A-EA6D-24E0-A747299EBFDE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -250,6 +258,22 @@ Global
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BDA8EC0-1EA9-4336-A174-60833476DEBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34E7F95D-14E3-EC1C-3AA1-C6A1D276C696}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34E7F95D-14E3-EC1C-3AA1-C6A1D276C696}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34E7F95D-14E3-EC1C-3AA1-C6A1D276C696}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34E7F95D-14E3-EC1C-3AA1-C6A1D276C696}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE28B177-1E77-397F-789B-4FAA31428C9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE28B177-1E77-397F-789B-4FAA31428C9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE28B177-1E77-397F-789B-4FAA31428C9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE28B177-1E77-397F-789B-4FAA31428C9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{106D2303-31A2-4D69-6517-0BD48FB67DB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{106D2303-31A2-4D69-6517-0BD48FB67DB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{106D2303-31A2-4D69-6517-0BD48FB67DB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{106D2303-31A2-4D69-6517-0BD48FB67DB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD4D408B-D20A-EA6D-24E0-A747299EBFDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD4D408B-D20A-EA6D-24E0-A747299EBFDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD4D408B-D20A-EA6D-24E0-A747299EBFDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD4D408B-D20A-EA6D-24E0-A747299EBFDE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
