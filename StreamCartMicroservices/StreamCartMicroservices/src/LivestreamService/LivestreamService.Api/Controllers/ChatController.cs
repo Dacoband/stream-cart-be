@@ -125,7 +125,7 @@ namespace LivestreamService.Api.Controllers
                 var isShopUser = userRoles?.Contains("Seller", StringComparer.OrdinalIgnoreCase) == true;
                 
                 // ✅ Debug logs
-                __logger.LogInformation("GetShopChatToken - UserId: {UserId}, ChatRoomId: {ChatRoomId}, IsShopUser: {IsShopUser}, Roles: {Roles}", 
+                _logger.LogInformation("GetShopChatToken - UserId: {UserId}, ChatRoomId: {ChatRoomId}, IsShopUser: {IsShopUser}, Roles: {Roles}", 
                         currentUserId, chatRoomId, isShopUser, string.Join(",", userRoles ?? new string[0]));
                 
                 // Sử dụng userId từ query parameter hoặc current user
