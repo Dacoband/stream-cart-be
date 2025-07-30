@@ -36,7 +36,8 @@ namespace ChatBoxService.Infrastructure.Services
             _shopServiceClient = shopServiceClient;
             _logger = logger;
             _geminiApiKey = configuration["GEMINI_API_KEY"] ?? configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Gemini API Key is not configured");
-            _geminiApiUrl = configuration["GEMINI_API_URL"] ?? "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+            _geminiApiUrl = configuration["GEMINI_API_URL"] ?? configuration["Gemini:ApiUrl"] ??
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
             _chatHistoryService = chatHistoryService;
         }
 
