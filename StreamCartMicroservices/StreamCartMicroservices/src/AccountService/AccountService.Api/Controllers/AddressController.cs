@@ -15,7 +15,6 @@ namespace AccountService.Api.Controllers
 {
     [Route("api/addresses")]
     [ApiController]
-    [Authorize]
     public class AddressController : ControllerBase
     {
         private readonly IAddressManagementService _addressService;
@@ -35,6 +34,7 @@ namespace AccountService.Api.Controllers
 
             return userIdClaim;
         }
+        [Authorize]
 
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<AddressDto>), StatusCodes.Status201Created)]
@@ -80,6 +80,7 @@ namespace AccountService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error creating address: {ex.Message}"));
             }
         }
+        [Authorize]
 
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ApiResponse<AddressDto>), StatusCodes.Status200OK)]
@@ -129,6 +130,7 @@ namespace AccountService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error updating address: {ex.Message}"));
             }
         }
+        [Authorize]
 
         [HttpDelete("{id}")]
         [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
@@ -251,6 +253,7 @@ namespace AccountService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error retrieving addresses by type: {ex.Message}"));
             }
         }
+        [Authorize]
 
         [HttpPut("{id}/set-default-shipping")]
         [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
@@ -278,6 +281,7 @@ namespace AccountService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error setting default shipping address: {ex.Message}"));
             }
         }
+        [Authorize]
 
         [HttpPut("{id}/assign-to-shop/{shopId}")]
         [ProducesResponseType(typeof(ApiResponse<AddressDto>), StatusCodes.Status200OK)]
@@ -304,6 +308,7 @@ namespace AccountService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error assigning address to shop: {ex.Message}"));
             }
         }
+        [Authorize]
 
         [HttpPut("{id}/unassign-from-shop")]
         [ProducesResponseType(typeof(ApiResponse<AddressDto>), StatusCodes.Status200OK)]
