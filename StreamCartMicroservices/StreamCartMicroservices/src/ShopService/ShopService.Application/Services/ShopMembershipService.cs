@@ -1,5 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Appwrite;
+using Appwrite.Models;
+using Appwrite.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Shared.Common.Models;
+using ShopService.Application.DTOs.Membership;
 using ShopService.Application.Interfaces;
 using ShopService.Domain.Entities;
 using ShopService.Domain.Enums;
@@ -82,11 +87,20 @@ namespace ShopService.Application.Services
             var now = DateTime.UtcNow;
             DateTime startDate  = DateTime.UtcNow;
             DateTime endDate = DateTime.UtcNow;
-
+            string status = "";
             if (existingMembership.Type == "New")
             {
-                startDate = existingShopMembership == null ? now : existingShopMembership.EndDate;
-                endDate = startDate.AddMonths(existingMembership.Duration);
+                if(existingMembership == null)
+                {
+                    startDate = now;
+                    status = "Ongoing";
+                }
+                else
+                {
+                    startDate = existingShopMembership.EndDate;
+                    status = "Waiting";
+                }
+               
             }
             else if (existingMembership.Type == "Renewal")
             {
@@ -99,6 +113,7 @@ namespace ShopService.Application.Services
 
                 startDate = now;
                 endDate = existingShopMembership.EndDate;
+                status = "Ongoing";
             }
 
             var shopMembership = new ShopMembership
@@ -107,6 +122,10 @@ namespace ShopService.Application.Services
                 ShopID = existingShop.Id,
                 StartDate = startDate,
                 EndDate = endDate,
+                RemainingLivestream = existingMembership.MaxLivestream,
+                Commission = existingMembership.Commission,
+                MaxProduct = existingMembership.MaxProduct,
+                
             };
             shopMembership.SetCreator(userId);
             existingWallet.Balance = existingWallet.Balance - existingMembership.Price;
@@ -119,6 +138,7 @@ namespace ShopService.Application.Services
                 Status = "Success",
                 WalletId = existingWallet.Id,
                 ShopMembershipId = existingMembership.Id,
+
             };
             transaction.SetCreator(userId);
 
@@ -141,6 +161,236 @@ namespace ShopService.Application.Services
                 result.Message = ex.Message;
                 return result;
             
+            }
+        }
+
+        public async Task<ApiResponse<DetailShopMembershipDTO>> DeleteShopMembership(string id, string userId)
+        {
+            var result = new ApiResponse<DetailShopMembershipDTO>
+            {
+                Message = "Xóa gói thành viên thành công",
+                Success = true,
+            };
+            var existingShopMembership = await _shopMembershipRepository.GetByIdAsync(id);
+            if (existingShopMembership == null || existingShopMembership.IsDeleted == true) {
+                result.Success = false;
+                result.Message = "Không tìm thấy gói thành viên";
+                return result;
+            };
+            if(existingShopMembership.Status == "Overdue" || existingShopMembership.Status == "Canceled")
+            {
+                result.Success = false;
+                result.Message = "Không thể xóa gói thành viên đã quá hạn";
+                return result;
+            }
+            if (existingShopMembership.CreatedBy != userId) {
+                result.Success = false;
+                result.Message = "Bạn không có quyền hủy gói thành viên này";
+                return result;
+            }
+            existingShopMembership.Delete(userId);
+            existingShopMembership.Status = "Canceled";
+            try
+            {
+                await _shopMembershipRepository.ReplaceAsync(id, existingShopMembership);
+                 var createdBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.CreatedBy));
+                var modifiedBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.LastModifiedBy));
+                result.Data = new DetailShopMembershipDTO()
+                {
+                    Id = existingShopMembership.Id.ToString(),
+                    ShopID = existingShopMembership.ShopID,
+                    StartDate = existingShopMembership.StartDate,
+                    EndDate = existingShopMembership.EndDate,
+                    RemainingLivestream = existingShopMembership.RemainingLivestream,
+                    Status = existingShopMembership.Status,
+                    CreatedBy = createdBy.Fullname ?? "N/A",
+                    CreatedAt = existingShopMembership.CreatedAt,
+                    ModifiedBy = modifiedBy.Fullname ?? "N/A",
+                    ModifiedAt = existingShopMembership.LastModifiedAt,
+                    IsDeleted = existingShopMembership.IsDeleted,
+                    MaxProduct = existingShopMembership.MaxProduct,
+                    Commission = existingShopMembership.Commission,
+
+                };
+                return result;
+            }catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = ex.Message;
+                return result;
+            }
+
+
+        }
+
+        public async Task<ApiResponse<ListShopMembershipDTO>> FilterShopMembership(FilterShopMembership filter)
+        {
+            var result = new ApiResponse<ListShopMembershipDTO>
+            {
+                Message = "Lọc danh sách gói thành viên thành công",
+                Success = true,
+            };
+
+            try
+            {
+                // Bắt đầu từ toàn bộ danh sách
+                var query = await _shopMembershipRepository.GetAllAsync(); // Giả sử bạn có IQueryable
+                // Áp dụng các bộ lọc nếu có
+                if (!string.IsNullOrWhiteSpace(filter.ShopId))
+                    query = query.Where(x => x.ShopID.ToString() == filter.ShopId);
+
+                if (!string.IsNullOrWhiteSpace(filter.MembershipType))
+                    query = query.Where(x => x.Membership.Type == filter.MembershipType);
+
+                if (!string.IsNullOrWhiteSpace(filter.Status))
+                    query = query.Where(x => x.Status == filter.Status);
+
+                if (filter.StartDate.HasValue)
+                    query = query.Where(x => x.StartDate >= filter.StartDate.Value);
+
+                if (filter.EndDate.HasValue)
+                    query = query.Where(x => x.EndDate <= filter.EndDate.Value);
+
+                // Paging
+                int pageIndex = filter.PageIndex ?? 1;
+                int pageSize = filter.PageSize ?? 10;
+                query = query.OrderByDescending(x => x.CreatedAt)
+                             .Skip((pageIndex - 1) * pageSize)
+                             .Take(pageSize).ToList();
+
+                var totalItems =  query.Count();
+
+                
+
+             
+
+                result.Data = new ListShopMembershipDTO
+                {
+                    TotalItem = totalItems,
+                    DetailShopMembership = query.Select(x => new DetailShopMembershipDTO
+                    {
+                        Id = x.Id.ToString(),
+                        ShopID = x.ShopID,
+                        StartDate = x.StartDate,
+                        EndDate = x.EndDate,
+                        RemainingLivestream = x.RemainingLivestream,
+                        Status = x.Status,
+                        CreatedAt = x.CreatedAt,
+                        ModifiedAt = x.LastModifiedAt,
+                        IsDeleted = x.IsDeleted,
+                        MaxProduct = x.MaxProduct,
+                        Commission = x.Commission,
+                    }).ToList()
+                };
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = ex.Message;
+                return result;
+            }
+        }
+
+        public async Task<ApiResponse<DetailShopMembershipDTO>> GetShopMembershipById(string id)
+        {
+            var result = new ApiResponse<DetailShopMembershipDTO>()
+            {
+                Message = "Tìm gói thành viên thành công",
+                Success = true,
+            };
+            try
+            {
+                var existingShopMembership = await _shopMembershipRepository.GetByIdAsync(id);
+                if (existingShopMembership == null)
+                {
+                    result.Success = false;
+                    result.Message = "Không tìm thấy gói thành viên của cửa hàng";
+                    return result;
+
+                }
+                var createdBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.CreatedBy));
+                var modifiedBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.LastModifiedBy));
+                result.Data = new DetailShopMembershipDTO()
+                {
+                    Id = existingShopMembership.Id.ToString(),
+                    ShopID = existingShopMembership.ShopID,
+                    StartDate = existingShopMembership.StartDate,
+                    EndDate = existingShopMembership.EndDate,
+                    RemainingLivestream = existingShopMembership.RemainingLivestream,
+                    Status = existingShopMembership.Status,
+                    CreatedBy = createdBy.Fullname ?? "N/A",
+                    CreatedAt = existingShopMembership.CreatedAt,
+                    ModifiedBy = modifiedBy.Fullname ?? "N/A",
+                    ModifiedAt = existingShopMembership.LastModifiedAt,
+                    IsDeleted = existingShopMembership.IsDeleted,
+                    MaxProduct = existingShopMembership.MaxProduct,
+                    Commission = existingShopMembership.Commission,
+                };
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = ex.Message;
+                return result;
+
+            }
+        }
+
+        public async Task<ApiResponse<DetailShopMembershipDTO>> UpdateShopMembership(string shopId, int remaingLivstream)
+        {
+            var result = new ApiResponse<DetailShopMembershipDTO>
+            {
+                Message = "Cập nhật gói thành viên thành công",
+                Success = true,
+            };
+            var existingShopMembership = await _shopMembershipRepository.GetByIdAsync(shopId);
+            if (existingShopMembership == null || existingShopMembership.IsDeleted == true)
+            {
+                result.Success = false;
+                result.Message = "Không tìm thấy gói thành viên";
+                return result;
+            };
+            if (existingShopMembership.Status == "Overdue" || existingShopMembership.Status == "Canceled")
+            {
+                result.Success = false;
+                result.Message = "Không thể cập nhật gói thành viên đã quá hạn";
+                return result;
+            }
+            existingShopMembership.RemainingLivestream = remaingLivstream;
+            existingShopMembership.SetModifier("system");
+
+            try
+            {
+                await _shopMembershipRepository.ReplaceAsync(existingShopMembership.Id.ToString(), existingShopMembership);
+                var createdBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.CreatedBy));
+                var modifiedBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.LastModifiedBy));
+                result.Data = new DetailShopMembershipDTO()
+                {
+                    Id = existingShopMembership.Id.ToString(),
+                    ShopID = existingShopMembership.ShopID,
+                    StartDate = existingShopMembership.StartDate,
+                    EndDate = existingShopMembership.EndDate,
+                    RemainingLivestream = existingShopMembership.RemainingLivestream,
+                    Status = existingShopMembership.Status,
+                    CreatedBy = createdBy.Fullname ?? "N/A",
+                    CreatedAt = existingShopMembership.CreatedAt,
+                    ModifiedBy = modifiedBy.Fullname ?? "N/A",
+                    ModifiedAt = existingShopMembership.LastModifiedAt,
+                    IsDeleted = existingShopMembership.IsDeleted,
+                    MaxProduct = existingShopMembership.MaxProduct,
+                    Commission = existingShopMembership.Commission,
+
+                };
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = ex.Message;
+                return result;
             }
         }
     }

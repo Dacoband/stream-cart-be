@@ -22,7 +22,7 @@ namespace DeliveryService.Application.Extensions
 
             // Register services
             services.AddScoped<IDeliveryAddressInterface, DeliveryAddressService>();
-
+            services.AddScoped<IAddressClientService, AddressClientService>();
             
 
             return services;

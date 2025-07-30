@@ -13,10 +13,10 @@ namespace ShopService.Domain.Entities
         public string Type { get; set; }
         public string? Description { get; set; }
         public decimal Price { get; set; }
-        public int Duration { get; set; }
-        public int MaxProduct { get; set; }
+        public int? Duration { get; set; }
+        public int? MaxProduct { get; set; }
         public int MaxLivestream { get; set; }
-        public decimal Commission { get; set; }
+        public decimal? Commission { get; set; }
         public ICollection<ShopMembership> ShopMemberships { get; set; }
 
     }
