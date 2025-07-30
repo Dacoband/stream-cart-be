@@ -33,6 +33,13 @@ namespace OrderService.Domain.Enums
         /// <summary>
         /// Order has been cancelled
         /// </summary>
-        Cancelled = 5
+        Cancelled = 5,
+
+        Packed = 6,
+        OnDelivere = 7,
+        Returning = 8,
+        Refunded = 9,
+        Completed = 10,
+
     }
 }

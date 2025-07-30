@@ -9,7 +9,6 @@ namespace ShopService.Application.DTOs.Membership
 {
     public class FilterMembershipDTO
     {
-
         public string? Type { get; set; }
         public decimal? FromPrice { get; set; }
         public decimal? ToPrice { get; set; }

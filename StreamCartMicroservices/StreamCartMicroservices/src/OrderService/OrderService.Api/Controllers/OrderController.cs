@@ -461,14 +461,13 @@ namespace OrderService.Api.Controllers
                 {
                     AccountId = userId,
                     PaymentMethod = request.PaymentMethod,
-                    ShippingAddress = request.ShippingAddress,
                     LivestreamId = request.LivestreamId,
                     CreatedFromCommentId = request.CreatedFromCommentId,
                     OrdersByShop = request.OrdersByShop
                 };
 
                 var result = await _mediator.Send(command);
-                return Created($"/api/orders", ApiResponse<List<OrderDto>>.SuccessResult(result, "Multiple orders created successfully"));
+                return Created($"/api/orders", ApiResponse<List<OrderDto>>.SuccessResult(result.Data, "Multiple orders created successfully"));
             }
             catch (Exception ex)
             {

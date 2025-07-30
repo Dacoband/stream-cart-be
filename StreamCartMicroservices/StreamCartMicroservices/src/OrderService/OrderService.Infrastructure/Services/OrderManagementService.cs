@@ -99,6 +99,7 @@ namespace OrderService.Infrastructure.Services
                         UnitPrice = i.UnitPrice,
                         //Notes = i.Notes
                     }).ToList() ?? new List<CreateOrderItemDto>()
+                    
                 };
 
                 return await _mediator.Send(command);

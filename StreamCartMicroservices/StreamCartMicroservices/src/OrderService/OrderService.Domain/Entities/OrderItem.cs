@@ -30,9 +30,10 @@ namespace OrderService.Domain.Entities
             Guid productId, 
             int quantity, 
             decimal unitPrice, 
-            string notes = "", 
-            Guid? variantId = null, 
-            decimal discountAmount = 0)
+            decimal discountAmount,
+            string notes = "",
+            Guid? variantId = null
+            )
         {
             if (quantity <= 0)
                 throw new ArgumentException("Quantity must be greater than zero", nameof(quantity));

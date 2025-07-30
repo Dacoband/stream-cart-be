@@ -13,36 +13,53 @@ using System.Threading.Tasks;
 using Shared.Messaging.Event.OrderEvents;
 using MassTransit;
 using OrderService.Application.Interfaces;
+using Shared.Common.Models;
+using Shared.Common.Services.User;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
 {
-    public class CreateMultiOrderCommandHandler : IRequestHandler<CreateMultiOrderCommand, List<OrderDto>>
+    public class CreateMultiOrderCommandHandler : IRequestHandler<CreateMultiOrderCommand, ApiResponse<List<OrderDto>>>
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IProductServiceClient _productServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ILogger<CreateMultiOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IAdressServiceClient _addressServiceClient;
+        private readonly IMembershipServiceClient _membershipServiceClient;
+        private readonly IShopVoucherClientService _shopVoucherClientService;
+        private readonly IAccountServiceClient _accountServiceClient;
+        private readonly ICurrentUserService _currentUserService;
 
         public CreateMultiOrderCommandHandler(
             IOrderRepository orderRepository,
             IProductServiceClient productServiceClient,
             IShopServiceClient shopServiceClient,
             ILogger<CreateMultiOrderCommandHandler> logger,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint, IAdressServiceClient adressServiceClient, IMembershipServiceClient membershipServiceClient, IShopVoucherClientService shopVoucherClientService, IAccountServiceClient accountServiceClient, ICurrentUserService currentUserService)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
             _shopServiceClient = shopServiceClient ?? throw new ArgumentNullException(nameof(shopServiceClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _publishEndpoint = publishEndpoint;
+            _addressServiceClient = adressServiceClient;
+            _membershipServiceClient = membershipServiceClient;
+            _shopVoucherClientService = shopVoucherClientService;
+            _accountServiceClient = accountServiceClient;
+            _currentUserService = currentUserService;
         }
 
-        public async Task<List<OrderDto>> Handle(CreateMultiOrderCommand request, CancellationToken cancellationToken)
+        public async Task<ApiResponse<List<OrderDto>>> Handle(CreateMultiOrderCommand request, CancellationToken cancellationToken)
         {
+            var result = new ApiResponse<List<OrderDto>>()
+            {
+                Success = true,
+                Message = "Tạo đơn hàng thành công",
+            };
             _logger.LogInformation("Creating multiple orders for account {AccountId}", request.AccountId);
             var createdOrders = new List<OrderDto>();
-
+            var accesstoken = _currentUserService.GetAccessToken();
             foreach (var orderByShop in request.OrdersByShop)
             {
                 try
@@ -51,29 +68,46 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     var shop = await _shopServiceClient.GetShopByIdAsync(orderByShop.ShopId);
                     if (shop == null)
                     {
-                        _logger.LogWarning("Shop with ID {ShopId} not found", orderByShop.ShopId);
-                        continue;
+                        result.Success = false;
+                        result.Message = "Không tìm thấy cửa hàng";
+                        return result;
                     }
 
                     // Get shop address for shipping from
                     var shopAddress = await _shopServiceClient.GetShopAddressAsync(orderByShop.ShopId);
                     if (shopAddress == null)
                     {
-                        _logger.LogWarning("Shop address not found for shop {ShopId}", orderByShop.ShopId);
-                        continue;
+                        result.Success = false;
+                        result.Message = "Không tìm thấy địa chỉ cửa hàng";
+                        return result;
                     }
-
+                    //Get Customer Address
+                    var customerAddress = await _addressServiceClient.GetCustomerAddress(request.AddressId);
+                    if(customerAddress == null)
+                    {
+                        result.Success = false;
+                        result.Message = "Không tìm thấy địa chỉ người nhận";
+                        return result;
+                    }
                     // Create the order
                     var order = new Orders(
                         accountId: request.AccountId,
                         shopId: orderByShop.ShopId,
-                        toName: request.ShippingAddress.FullName,
-                        toPhone: request.ShippingAddress.Phone,
-                        toAddress: request.ShippingAddress.AddressLine1,
-                        toWard:  request.ShippingAddress.Ward,
-                        toDistrict: request.ShippingAddress.District,
-                        toProvince: request.ShippingAddress.City ?? request.ShippingAddress.Province,
-                        toPostalCode: request.ShippingAddress.PostalCode,
+                        toName: customerAddress.RecipientName,
+                        toPhone: customerAddress.PhoneNumber,
+                        toAddress: string.Join(", ",
+                            new[] {
+                                customerAddress.Street,
+                                customerAddress.Ward,
+                                customerAddress.District,
+                                customerAddress.City,
+                                customerAddress.Country
+                            }.Where(x => !string.IsNullOrWhiteSpace(x))
+                        ),
+                        toWard:  customerAddress.Ward,
+                        toDistrict: customerAddress.District,
+                        toProvince: customerAddress.City,
+                        toPostalCode: customerAddress.PostalCode,
                         fromAddress: shopAddress.Address,
                         fromWard: shopAddress.Ward,
                         fromDistrict: shopAddress.District,
@@ -85,19 +119,34 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         customerNotes: orderByShop.CustomerNotes,
                         livestreamId: request.LivestreamId,
                         createdFromCommentId: request.CreatedFromCommentId
+                        
                     );
-
+                    order.ShippingFee = orderByShop.ShippingFee;
+                    order.EstimatedDeliveryDate = orderByShop.ExpectedDeliveryDay;
+                    //GetCommission
+                    var shopMembership =await _membershipServiceClient.GetShopMembershipDTO(orderByShop.ShopId.ToString());
+                    if (shopMembership == null)
+                    {
+                        result.Success = false;
+                        result.Message = "Không tìm thấy gói thành viên của cửa hàng";
+                        return result;
+                    }
                     // Process order items
                     var orderItems = new List<OrderItem>();
                     decimal totalDiscount = 0;
-
+                    decimal totalPrice = 0;
+                    decimal finalAmount = 0;
+                    decimal netAmount = 0;
+                    decimal commision = (decimal)shopMembership.Commission/100;
                     foreach (var item in orderByShop.Items)
                     {
+                        decimal productDiscount = 0;
                         var productDetails = await _productServiceClient.GetProductByIdAsync(item.ProductId);
                         if (productDetails == null)
                         {
-                            _logger.LogWarning("Product with ID {ProductId} not found", item.ProductId);
-                            continue;
+                            result.Success = false;
+                            result.Message = "Không tìm thấy sản phẩm";
+                            return result;
                         }
 
                         decimal unitPrice = 0;
@@ -110,10 +159,13 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                                 continue;
                             }
                             unitPrice = variantDetails.Price;
+                            productDiscount = variantDetails.Price * ((decimal)variantDetails.FlashSalePrice / 100);
+
                         }
                         else
                         {
                             unitPrice = productDetails.BasePrice;
+                            productDiscount = productDetails.BasePrice * ((decimal)productDetails.DiscountPrice / 100);
                         }
 
                         var orderItem = new OrderItem(
@@ -121,27 +173,99 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             productId: item.ProductId,
                             quantity: item.Quantity,
                             unitPrice: unitPrice,
-                            notes: string.Empty,
-                            variantId: item.VariantId
+                            discountAmount : productDiscount * item.Quantity,
+                            variantId : item.VariantId
                         );
 
                         orderItems.Add(orderItem);
+                        totalPrice += orderItem.UnitPrice;
+                        totalDiscount += orderItem.DiscountAmount;
+                        finalAmount += orderItem.TotalPrice;
+                        
                     }
 
                     // Add items to order
                     order.AddItems(orderItems);
-
-                    // Apply voucher discount if available
-                    if (orderByShop.VoucherId.HasValue)
+                    netAmount = (decimal)(finalAmount - (finalAmount * shopMembership.Commission / 100));
+                    // Save the order
+                    try
                     {
-                        // Here you would call a voucher service to get the discount amount
-                        // For now, we'll just use a placeholder
-                        // totalDiscount = await GetVoucherDiscountAmount(orderByShop.VoucherId.Value, order.TotalPrice);
-                        // order.ApplyDiscount(totalDiscount, request.AccountId.ToString());
+                        await _orderRepository.InsertAsync(order);
+
+                    }
+                    catch (Exception ex) { 
+                        result.Success = false;
+                        result.Message = "Xảy ra lỗi trong quá trính tạo đơn hàng";
+                        return result;
+                    }
+                    // Apply voucher discount if available
+                    if (!string.IsNullOrEmpty(orderByShop.VoucherCode))
+                    {
+                        // Gọi hàm validate voucher
+                        var validationResult = await _shopVoucherClientService.ValidateVoucherAsync(
+                            orderByShop.VoucherCode,
+                            finalAmount,
+                            orderByShop.ShopId
+                        );
+                        if (validationResult == null || validationResult.IsValid == false ) {
+                            result.Success = false;
+                            result.Message = "Không thể áp dụng voucher cho đơn hàng";
+                            return result;
+                        }
+
+                        if (validationResult != null && validationResult.IsValid)
+                        {
+                            // Nếu hợp lệ, gọi tiếp hàm apply voucher
+                            var applicationResult = await _shopVoucherClientService.ApplyVoucherAsync(
+                                orderByShop.VoucherCode,
+                                order.Id,
+                                finalAmount,
+                                accesstoken
+                            );
+
+                            if (applicationResult != null && applicationResult.IsApplied)
+                            {
+                                order.DiscountAmount += applicationResult.DiscountAmount;
+                                order.FinalAmount = applicationResult.FinalAmount;
+                            }
+                        }
+                        try
+                        {
+                            await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+
+                        }
+                        catch(Exception ex)
+                        {
+                            result.Success = false;
+                            result.Message = "Xảy ra lỗi trong quá trình áp dụng mã giảm giá";
+                            return result ;
+                        }
+                        // Publish order created event
+                        await _publishEndpoint.Publish(new OrderCreatedOrUpdatedEvent
+                        {
+                            OrderCode = order.OrderCode,
+                            Message = "đã được tạo thành công",
+                            UserId = request.AccountId.ToString()
+                        });
+
+                        _logger.LogInformation("Created order {OrderId} for shop {ShopId}", order.Id, order.ShopId);
+                        if(request.PaymentMethod == "COD") {
+                            var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                            foreach (var acc in shopAccount) {
+                                await _publishEndpoint.Publish(new OrderCreatedOrUpdatedEvent
+                                {
+                                    OrderCode = order.OrderCode,
+                                    Message = "đã được tạo thành công. Vui lòng chuẩn bị đơn hàng",
+                                    UserId = acc.Id.ToString()
+                                });
+
+                            }
+
+
+                        }
                     }
 
-                    // Save the order
-                    await _orderRepository.InsertAsync(order);
+                   
 
                     // Create DTO for response
                     var shippingAddressDto = new ShippingAddressDto
@@ -203,15 +327,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     createdOrders.Add(orderDto);
 
-                    // Publish order created event
-                    await _publishEndpoint.Publish(new OrderCreatedOrUpdatedEvent
-                    {
-                        OrderCode = order.OrderCode,
-                        Message = "đã được tạo thành công",
-                        UserId = request.AccountId.ToString()
-                    });
-
-                    _logger.LogInformation("Created order {OrderId} for shop {ShopId}", order.Id, order.ShopId);
+                    
                 }
                 catch (Exception ex)
                 {
@@ -219,7 +335,8 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 }
             }
 
-            return createdOrders;
+            result.Data = createdOrders;
+            return result;
         }
     }
 }

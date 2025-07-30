@@ -114,8 +114,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         order.Id,
                         itemDto.ProductId,
                         itemDto.Quantity,
-                        itemDto.UnitPrice,
-                        "", // Notes can be set later if needed
+                        itemDto.UnitPrice,   
+                        0,
+                        "", 
                         itemDto.VariantId
                     );
 

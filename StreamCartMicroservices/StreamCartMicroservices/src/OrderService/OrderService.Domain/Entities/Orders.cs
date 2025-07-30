@@ -12,15 +12,15 @@ namespace OrderService.Domain.Entities
         public DateTime OrderDate { get; private set; }
         public OrderStatus OrderStatus { get; private set; }
         public decimal TotalPrice { get; private set; }
-        public decimal ShippingFee { get; private set; }
+        public decimal ShippingFee { get;  set; }
 
-        public decimal DiscountAmount { get; private set; }
-        public decimal FinalAmount { get; private set; }
+        public decimal DiscountAmount { get;  set; }
+        public decimal FinalAmount { get;  set; }
         public decimal CommissionFee { get; private set; }
         public decimal NetAmount { get; private set; }
         public PaymentStatus PaymentStatus { get; private set; }
         public string CustomerNotes { get; private set; }
-        public DateTime? EstimatedDeliveryDate { get; private set; }
+        public DateTime? EstimatedDeliveryDate { get;  set; }
         public DateTime? ActualDeliveryDate { get; private set; }
         public string TrackingCode { get; private set; }
 
@@ -165,7 +165,8 @@ namespace OrderService.Domain.Entities
             Guid shippingProviderId,
             string customerNotes = "",
             Guid? livestreamId = null,
-            Guid? createdFromCommentId = null)
+            Guid? createdFromCommentId = null
+             )
         {
             if (accountId == Guid.Empty)
                 throw new ArgumentException("Account ID cannot be empty", nameof(accountId));
@@ -179,7 +180,7 @@ namespace OrderService.Domain.Entities
             // Generate a unique order code (format: ORD-{year}{month}{day}-{random 6 digits})
             OrderCode = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(100000, 999999)}";
             OrderDate = DateTime.UtcNow;
-            OrderStatus = OrderStatus.Pending;
+            OrderStatus = OrderStatus.Waiting;
             PaymentStatus = PaymentStatus.Pending;
 
             AccountId = accountId;
@@ -213,7 +214,6 @@ namespace OrderService.Domain.Entities
             FinalAmount = 0;
             CommissionFee = 0;
             NetAmount = 0;
-            
             TrackingCode = string.Empty;
         }
 

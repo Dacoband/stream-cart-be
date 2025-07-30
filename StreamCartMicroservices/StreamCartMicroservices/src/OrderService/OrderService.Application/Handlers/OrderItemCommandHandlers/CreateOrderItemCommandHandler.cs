@@ -55,6 +55,7 @@ namespace OrderService.Application.Handlers.OrderItemCommandHandlers
                     request.ProductId,
                     request.Quantity,
                     request.UnitPrice,
+                    0,
                     request.Notes,
                     request.VariantId
                 );
