@@ -46,7 +46,7 @@ namespace DeliveryService.Application.Services
                 _logger.LogInformation($"Raw JSON response: {content}"); // Log raw JSON
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var addressResponse = JsonSerializer.Deserialize<ApiResponse<List<AddressDto>>>(content, options);
+                var addressResponse = JsonSerializer.Deserialize<ApiResponse<IEnumerable<AddressDto>>>(content, options);
                 var addressList = addressResponse?.Data;
                 var address = addressList?.Where(x => x.IsDefaultShipping == true).FirstOrDefault();
                 if (address == null)
