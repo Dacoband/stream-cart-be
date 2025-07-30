@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ShopService.Application.Commands
 {
-    public class PurchaseShopMembershipCommand : IRequest<ApiResponse<ShopMembership>>
+    public class PurchaseShopMembershipCommand : IRequest<ApiResponse<ShopService.Domain.Entities.ShopMembership>>
     {
         public string UserId { get; set; }
         public string MembershipId { get; set; }

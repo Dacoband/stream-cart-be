@@ -13,10 +13,10 @@ namespace ShopService.Application.DTOs.Membership
         public string Type { get; set; }
         public string? Description { get; set; }
         public decimal Price { get; set; }
-        public int Duration { get; set; }
-        public int MaxProduct { get; set; }
+        public int? Duration { get; set; }
+        public int? MaxProduct { get; set; }
         public int MaxLivestream { get; set; }
-        public decimal Commission { get; set; }
+        public decimal? Commission { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? CreatedBy { get; set; }
