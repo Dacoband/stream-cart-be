@@ -309,15 +309,14 @@ namespace DeliveryService.Application.Services
                     var totalHeight = input.Items.Sum(x => x.Height);
 
                     // 6. Lặp từng dịch vụ GHN để tính phí + thời gian giao
-                    foreach (var service in serviceList)
-                    {
+                    
                         var feePayload = new GHNCalculateFeeRequest
                         {
                             FromDistrictId = fromDistrictId,
                             ToDistrictId = toDistrictId,
                             FromWardCode = fromWardCode,
                             ToWardCode = toWardCode,
-                            ServiceTypeId = service.ServiceTypeId,
+                            ServiceTypeId = serviceList[0].ServiceTypeId,
                             Items = ghnItems,
                             Weight = totalWeight,
                             Length = totalLength,
@@ -343,7 +342,7 @@ namespace DeliveryService.Application.Services
 
                         // 7. Lấy thời gian giao dự kiến
                         var expectedDelivery = await GetLeadTimeAsync(
-                            client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, service.ServiceTypeId);
+                            client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, serviceList[0].ServiceTypeId);
 
                         expectedDelivery = expectedDelivery.AddDays(1); // buffer 1 ngày
 
@@ -351,12 +350,12 @@ namespace DeliveryService.Application.Services
                         result.ServiceResponses.Add(new ServiceResponse
                         {
                             ShopId = shopId,
-                            ServiceTypeId = service.ServiceTypeId,
-                            ServiceName = service.ShortName ?? $"Dịch vụ {service.ServiceTypeId}",
+                            ServiceTypeId = serviceList[0].ServiceTypeId,
+                            ServiceName = serviceList[0].ShortName ?? $"Dịch vụ {serviceList[0].ServiceTypeId}",
                             TotalAmount = total,
                             ExpectedDeliveryDate = expectedDelivery
                         });
-                    }
+                    
                 }
                 result.TotalAmount = result.ServiceResponses.Sum(x => x.TotalAmount);
 
