@@ -1,5 +1,6 @@
 ﻿using ChatBoxService.Application.DTOs;
 using ChatBoxService.Application.Interfaces;
+using ChatBoxService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,24 +17,28 @@ namespace ChatBoxService.Api.Controllers
         private readonly IGeminiChatbotService _chatbotService;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<ChatbotController> _logger;
+        private readonly IUniversalChatbotService _universalChatbotService;
 
         public ChatbotController(
             IGeminiChatbotService chatbotService,
             ICurrentUserService currentUserService,
-            ILogger<ChatbotController> logger)
+            ILogger<ChatbotController> logger,
+            IUniversalChatbotService universalChatbotService)
         {
             _chatbotService = chatbotService;
             _currentUserService = currentUserService;
             _logger = logger;
+            _universalChatbotService = universalChatbotService;
         }
 
         /// <summary>
         /// Gửi tin nhắn cho chatbot và nhận phản hồi thân thiện
         /// </summary>
         [HttpPost("chat")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ChatbotResponseDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> ChatWithBot([FromBody] ChatbotRequestDTO request)
+        public async Task<IActionResult> Chat([FromBody] ChatbotRequestDTO request)
         {
             if (!ModelState.IsValid)
             {
@@ -43,38 +48,66 @@ namespace ChatBoxService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-                _logger.LogInformation("User {UserId} is chatting with bot for shop {ShopId}", userId, request.ShopId);
+                _logger.LogInformation("Processing universal chat request for user {UserId}: {Message}",
+                    userId, request.CustomerMessage);
 
-                // Analyze message intent first
-                var intent = await _chatbotService.AnalyzeMessageIntentAsync(request.CustomerMessage);
-
-                // Generate appropriate response
-                var botResponse = await _chatbotService.GenerateResponseAsync(
+                var response = await _universalChatbotService.GenerateUniversalResponseAsync(
                     request.CustomerMessage,
-                    request.ShopId,
-                    userId,
-                    productId: null); 
+                    userId);
 
-                // ✅ Create suggested actions based on intent (KHÔNG cần ProductId)
-                var suggestedActions = GenerateSuggestedActions(intent, request.ShopId, productId: null);
-
-
-                var response = new ChatbotResponseDTO
-                {
-                    BotResponse = botResponse,
-                    Intent = intent.Intent,
-                    RequiresHumanSupport = intent.Confidence < 0.6m || intent.Intent == "complaint",
-                    SuggestedActions = suggestedActions,
-                    GeneratedAt = DateTime.UtcNow,
-                    ConfidenceScore = intent.Confidence
-                };
-
-                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(response, "Chatbot đã phản hồi thành công"));
+                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(
+                    response,
+                    "StreamCart AI đã phản hồi thành công"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in chatbot conversation for shop {ShopId}", request.ShopId);
-                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi xử lý tin nhắn. Vui lòng thử lại sau."));
+                _logger.LogError(ex, "Error processing universal chat request: {Message}", request.CustomerMessage);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi xử lý yêu cầu"));
+            }
+        }
+        /// <summary>
+        /// 🔓 Chat Anonymous - Không cần đăng nhập (features hạn chế)
+        /// </summary>
+        [HttpPost("chat/anonymous")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<ChatbotResponseDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ChatAnonymous([FromBody] ChatbotRequestDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                _logger.LogInformation("🔓 Processing anonymous chat request: {Message}", request.CustomerMessage);
+
+                // Sử dụng anonymous user ID
+                var anonymousUserId = Guid.Empty;
+
+                var response = await _universalChatbotService.GenerateUniversalResponseAsync(
+                    request.CustomerMessage,
+                    anonymousUserId);
+
+                // Giới hạn features cho anonymous users
+                if (response.ShopSuggestions?.Count > 2)
+                {
+                    response.ShopSuggestions = response.ShopSuggestions.Take(2).ToList();
+                }
+                if (response.ProductSuggestions?.Count > 3)
+                {
+                    response.ProductSuggestions = response.ProductSuggestions.Take(3).ToList();
+                }
+
+                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(
+                    response,
+                    "StreamCart AI đã phản hồi thành công (Anonymous mode)"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error processing anonymous chat request: {Message}", request.CustomerMessage);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi xử lý yêu cầu"));
             }
         }
 

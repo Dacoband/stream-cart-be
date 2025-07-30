@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ChatBoxService.Application.DTOs
+﻿namespace ChatBoxService.Application.DTOs
 {
     public class ChatbotResponseDTO
     {
@@ -13,6 +7,10 @@ namespace ChatBoxService.Application.DTOs
         public bool RequiresHumanSupport { get; set; }
         public List<SuggestedAction> SuggestedActions { get; set; } = new();
         public List<ProductSuggestion> ProductSuggestions { get; set; } = new();
+
+        // ✅ THÊM ShopSuggestions property
+        public List<ShopSuggestion> ShopSuggestions { get; set; } = new();
+
         public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
         public decimal ConfidenceScore { get; set; }
     }
