@@ -40,7 +40,7 @@ namespace AccountService.Infrastructure.Interfaces
         /// <param name="addressId"></param>
         /// <param name="accountId"></param>
         /// <returns></returns>
-        Task<bool> SetDefaultShippingAddressAsync(string addressId, Guid accountId);
+        Task<bool> SetDefaultShippingAddressAsync(Guid addressId, Guid accountId);
         /// <summary>
         /// Dùng để hủy đặt tất cả địa chỉ giao hàng mặc định cho tài khoản (AccountId).
         /// </summary>

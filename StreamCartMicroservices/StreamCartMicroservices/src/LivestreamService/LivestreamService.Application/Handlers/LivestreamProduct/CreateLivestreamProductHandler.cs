@@ -77,44 +77,16 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                 {
                     variant = await _productServiceClient.GetProductVariantAsync(request.ProductId, request.VariantId);
                 }
-                if (request.FlashSaleId.HasValue)
-                {
-                    // Cần thêm method này vào IProductServiceClient
-                    var flashSale = await _productServiceClient.GetFlashSaleByIdAsync(request.FlashSaleId.Value);
-                    if (flashSale == null)
-                    {
-                        throw new KeyNotFoundException($"Không tìm thấy FlashSale với ID {request.FlashSaleId}");
-                    }
 
-                    // Kiểm tra FlashSale có áp dụng cho sản phẩm/variant này không
-                    if (flashSale.ProductId.ToString() != request.ProductId)
-                    {
-                        throw new InvalidOperationException("FlashSale không áp dụng cho sản phẩm này");
-                    }
-
-                    if (!string.IsNullOrEmpty(request.VariantId) &&
-                        flashSale.VariantId?.ToString() != request.VariantId)
-                    {
-                        throw new InvalidOperationException("FlashSale không áp dụng cho variant này");
-                    }
-
-                    // Kiểm tra FlashSale còn hiệu lực không
-                    var now = DateTime.UtcNow;
-                    if (flashSale.StartTime > now || flashSale.EndTime < now)
-                    {
-                        throw new InvalidOperationException("FlashSale không còn hiệu lực");
-                    }
-                }
-                // Inside the Handle method
+                // ✅ LOẠI BỎ HOÀN TOÀN logic FlashSale vì field đã bị xóa
+                // Tạo LivestreamProduct entity với constructor đã được cập nhật
                 var livestreamProduct = new LivestreamService.Domain.Entities.LivestreamProduct(
                     request.LivestreamId,
                     request.ProductId,
                     request.VariantId ?? string.Empty,
                     request.Price,
                     request.Stock,
-                    request.FlashSaleId,
                     request.IsPin,
-                    0,
                     request.SellerId.ToString()
                 );
 
@@ -128,7 +100,8 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    FlashSaleId = livestreamProduct.FlashSaleId,
+                    // ✅ LOẠI BỎ FlashSaleId vì đã bị xóa khỏi entity
+                    FlashSaleId = null,
                     IsPin = livestreamProduct.IsPin,
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,

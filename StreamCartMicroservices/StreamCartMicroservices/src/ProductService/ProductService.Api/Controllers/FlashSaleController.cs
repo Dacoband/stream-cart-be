@@ -216,5 +216,47 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách FlashSale hiện tại: {ex.Message}"));
             }
         }
+        [HttpGet("debug")]
+        [AllowAnonymous] // Tạm thời cho phép anonymous để test
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public async Task<IActionResult> DebugFlashSales()
+        {
+            try
+            {
+                // Lấy tất cả FlashSale để debug
+                var allQuery = new GetAllFlashSaleQuery()
+                {
+                    IsActive = null, // Lấy tất cả
+                    PageSize = 100,
+                    PageIndex = 0
+                };
+
+                var allFlashSales = await _mediator.Send(allQuery);
+                var now = DateTime.UtcNow;
+
+                var debugInfo = new
+                {
+                    CurrentTime = now,
+                    TotalFlashSales = allFlashSales.Data?.Count ?? 0,
+                    FlashSales = allFlashSales.Data?.Select(fs => new
+                    {
+                        fs.Id,
+                        fs.ProductId,
+                        fs.StartTime,
+                        fs.EndTime,
+                        fs.IsActive,
+                        IsCurrentlyActive = fs.StartTime <= now && fs.EndTime >= now && fs.IsActive,
+                        TimeStatus = fs.StartTime > now ? "Chưa bắt đầu" :
+                                   fs.EndTime < now ? "Đã kết thúc" : "Đang diễn ra"
+                    }).ToList()
+                };
+
+                return Ok(ApiResponse<object>.SuccessResult(debugInfo, "Debug FlashSale data"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi debug: {ex.Message}"));
+            }
+        }
     }
 }

@@ -1,0 +1,6 @@
+@ChatBoxService.Api_HostAddress = http://localhost:5183
+
+GET {{ChatBoxService.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

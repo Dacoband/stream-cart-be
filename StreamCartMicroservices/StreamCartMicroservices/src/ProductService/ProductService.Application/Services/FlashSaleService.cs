@@ -229,13 +229,28 @@ namespace ProductService.Application.Services
 
             try
             {
-                var allFlashSales = await _flashSaleRepository.GetAllAsync(); // hoặc GetQueryable nếu có
+                var allFlashSales = await _flashSaleRepository.GetAllAsync();
                 var query = allFlashSales.AsQueryable();
 
-                // Nếu filter.IsActive có giá trị, thì lọc theo IsActive và IsDeleted
+                var nowUtc = DateTime.UtcNow;
+
+                // ✅ FIX: Lọc theo IsActive với logic chính xác
                 if (filter.IsActive.HasValue)
                 {
-                    query = query.Where(f => f.IsValid() == filter.IsActive);
+                    if (filter.IsActive.Value)
+                    {
+                        // Lọc FlashSale đang hoạt động: không bị xóa, trong thời gian hiệu lực (UTC)
+                        query = query.Where(f => !f.IsDeleted &&
+                                                f.StartTime <= nowUtc &&
+                                                f.EndTime >= nowUtc);
+                    }
+                    else
+                    {
+                        // Lọc FlashSale không hoạt động: bị xóa hoặc ngoài thời gian hiệu lực (UTC)
+                        query = query.Where(f => f.IsDeleted ||
+                                                f.StartTime > nowUtc ||
+                                                f.EndTime < nowUtc);
+                    }
                 }
 
                 // Lọc theo ProductId
@@ -247,22 +262,31 @@ namespace ProductService.Application.Services
                 // Lọc theo VariantId
                 if (filter.VariantId != null && filter.VariantId.Any())
                 {
-                    query = query.Where(f => filter.VariantId.Contains((Guid)f.VariantId));
+                    query = query.Where(f => f.VariantId.HasValue && filter.VariantId.Contains(f.VariantId.Value));
                 }
 
-                // Lọc theo StartDate
+                // ✅ FIX: Lọc thời gian với UTC
                 if (filter.StartDate.HasValue)
                 {
-                    query = query.Where(f => f.StartTime >= filter.StartDate.Value);
+                    // Convert local time to UTC for comparison
+                    var startUtc = filter.StartDate.Value.Kind == DateTimeKind.Utc
+                        ? filter.StartDate.Value
+                        : TimeZoneInfo.ConvertTimeToUtc(filter.StartDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+                    query = query.Where(f => f.EndTime >= startUtc);
                 }
 
-                // Lọc theo EndDate
                 if (filter.EndDate.HasValue)
                 {
-                    query = query.Where(f => f.EndTime <= filter.EndDate.Value);
+                    // Convert local time to UTC for comparison
+                    var endUtc = filter.EndDate.Value.Kind == DateTimeKind.Utc
+                        ? filter.EndDate.Value
+                        : TimeZoneInfo.ConvertTimeToUtc(filter.EndDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+                    query = query.Where(f => f.StartTime <= endUtc);
                 }
 
-                // Sắp xếp theo OrderBy và Direction
+                // Sắp xếp
                 switch (filter.OrderBy)
                 {
                     case FlashSaleOrderBy.EndDate:
@@ -283,9 +307,10 @@ namespace ProductService.Application.Services
                 var pageIndex = filter.PageIndex ?? 0;
                 var pageSize = filter.PageSize ?? 10;
                 query = query.Skip(pageIndex * pageSize).Take(pageSize);
+
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                // Map DTO
+                // ✅ Map DTO với timezone conversion nhất quán
                 response.Data = query.Select(f => new DetailFlashSaleDTO
                 {
                     Id = f.Id,
@@ -294,7 +319,7 @@ namespace ProductService.Application.Services
                     FlashSalePrice = f.FlashSalePrice,
                     QuantityAvailable = f.QuantityAvailable,
                     QuantitySold = f.QuantitySold,
-                    IsActive = f.IsValid(),
+                    IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
                     StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
                     EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
                 }).ToList();

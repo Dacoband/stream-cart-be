@@ -52,19 +52,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                 // Get shop details
                 var shop = await _shopServiceClient.GetShopByIdAsync(product.ShopId);
 
-                // Get flash sale details if exists
-                decimal? flashSalePrice = null;
-                DateTime? flashSaleStartTime = null;
-                DateTime? flashSaleEndTime = null;
-                bool isFlashSaleActive = false;
-
-                if (livestreamProduct.FlashSaleId.HasValue)
-                {
-                    // Note: You'd need to call FlashSale service here to get details
-                    // For now, we'll use the price from LivestreamProduct
-                    flashSalePrice = livestreamProduct.Price;
-                    isFlashSaleActive = true;
-                }
+                
 
                 var result = new LivestreamProductDetailDTO
                 {
@@ -72,11 +60,9 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    FlashSaleId = livestreamProduct.FlashSaleId,
                     IsPin = livestreamProduct.IsPin,
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,
-                    DisplayOrder = livestreamProduct.DisplayOrder,
                     CreatedAt = livestreamProduct.CreatedAt,
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
 
@@ -90,12 +76,6 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
 
                     // Variant info
                     VariantName = variant?.Name,
-
-                    // Flash sale info
-                    FlashSalePrice = flashSalePrice,
-                    FlashSaleStartTime = flashSaleStartTime,
-                    FlashSaleEndTime = flashSaleEndTime,
-                    IsFlashSaleActive = isFlashSaleActive,
 
                     // Shop info
                     ShopId = product.ShopId,

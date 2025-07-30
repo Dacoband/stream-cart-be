@@ -255,11 +255,17 @@ namespace AccountService.Api.Controllers
         [HttpPut("{id}/set-default-shipping")]
         [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)] 
         public async Task<IActionResult> SetDefaultShippingAddress(Guid id)
         {
             try
             {
                 var accountId = _currentUserService.GetUserId();
+                var existingAddress = await _addressService.GetAddressByIdAsync(id, accountId);
+                if (existingAddress == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Address with ID {id} not found"));
+                }
                 var result = await _addressService.SetDefaultShippingAddressAsync(id, accountId);
 
                 if (!result)
