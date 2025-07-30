@@ -83,7 +83,7 @@ app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account Service API v1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Delivery Service API v1");
     c.RoutePrefix = "swagger";
 });
 
