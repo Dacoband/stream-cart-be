@@ -263,7 +263,7 @@ namespace DeliveryService.Application.Services
                 foreach (var shopId in input.FromShops)
                 {
                     // 1. Lấy địa chỉ shop
-                    var fromAddress = await _addressClientService.GetShopAddress(shopId);
+                    var fromAddress = await _addressClientService.GetShopAddress(shopId.FromShopId);
                     if (fromAddress == null)
                         throw new Exception($"Không tìm thấy địa chỉ mặc định của shop: {shopId}");
 
@@ -293,7 +293,7 @@ namespace DeliveryService.Application.Services
                         throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
 
                     // 5. Tính khối lượng, kích thước đơn hàng
-                    var ghnItems = input.Items.Select(i => new GHNItem
+                    var ghnItems = shopId.Items.Select(i => new GHNItem
                     {
                         Name = i.Name,
                         Quantity = i.Quantity,
@@ -303,10 +303,10 @@ namespace DeliveryService.Application.Services
                         Height = i.Height
                     }).ToList();
 
-                    var totalWeight = input.Items.Sum(x => x.Weight);
-                    var totalLength = input.Items.Sum(x => x.Length);
-                    var totalWidth = input.Items.Sum(x => x.Width);
-                    var totalHeight = input.Items.Sum(x => x.Height);
+                    var totalWeight = shopId.Items.Sum(x => x.Weight);
+                    var totalLength = shopId.Items.Sum(x => x.Length);
+                    var totalWidth = shopId.Items.Sum(x => x.Width);
+                    var totalHeight = shopId.Items.Sum(x => x.Height);
 
                     // 6. Lặp từng dịch vụ GHN để tính phí + thời gian giao
                     
@@ -349,7 +349,7 @@ namespace DeliveryService.Application.Services
                         // 8. Ghi vào danh sách kết quả
                         result.ServiceResponses.Add(new ServiceResponse
                         {
-                            ShopId = shopId,
+                            ShopId = shopId.FromShopId,
                             ServiceTypeId = serviceList[0].ServiceTypeId,
                             ServiceName = serviceList[0].ShortName ?? $"Dịch vụ {serviceList[0].ServiceTypeId}",
                             TotalAmount = total,
