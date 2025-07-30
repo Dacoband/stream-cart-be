@@ -68,7 +68,7 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting variant details for ID: {VariantId}", variantId);
                 
-                var response = await _httpClient.GetAsync($"/api/products/variants/{variantId}");
+                var response = await _httpClient.GetAsync($"/api/product-variants/{variantId}");
                 
                 if (!response.IsSuccessStatusCode)
                 {

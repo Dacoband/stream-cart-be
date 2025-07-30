@@ -1092,7 +1092,33 @@
       ],
       "UpstreamPathTemplate": "/swagger/chatbot/{everything}",
       "UpstreamHttpMethod": [ "GET" ]
-    }
+    },
+    {
+      "DownstreamPathTemplate": "/api/membership/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/membership/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shop"
+    },
+    {
+      "DownstreamPathTemplate": "/api/shopmembership/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/shopmembership/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+      "SwaggerKey": "shop"
+      }
   ],
   "SwaggerEndPoints": [
     {

@@ -106,6 +106,9 @@ namespace OrderService.Infrastructure.Extensions
             });
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+            services.AddScoped<IAdressServiceClient, AddressServiceClient>();
+            services.AddScoped<IMembershipServiceClient, MembershipServiceClient>();
+            services.AddScoped<IShopVoucherClientService,ShopVoucherServiceClient>();
 
             return services;
         }
