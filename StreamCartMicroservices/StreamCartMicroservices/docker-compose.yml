@@ -540,7 +540,7 @@ services:
         - ServiceUrls__AccountService=http://account-service
         - ServiceUrls__PaymentService=http://payment-service
         #Delivery Service
-        - API_TOKEN_GHN=&{API_TOKEN_GHN}
+        - API_TOKEN_GHN=${API_TOKEN_GHN}
         - GHN_SHOPID=${GHN_SHOPID}
       depends_on:
         rabbitmq:
@@ -589,7 +589,7 @@ services:
         - ServiceUrls__AccountService=http://account-service
         - ServiceUrls__PaymentService=http://payment-service
         #Delivery Service
-        - API_TOKEN_GHN=&{API_TOKEN_GHN}
+        - API_TOKEN_GHN=${API_TOKEN_GHN}
         - GHN_SHOPID=${GHN_SHOPID}      
         - MongoDB__ConnectionString=${MONGO_CONNECTION_STRING}
       # hoặc PostgreSQL
