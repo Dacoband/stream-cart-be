@@ -46,6 +46,7 @@ namespace OrderService.Infrastructure.Data
                 entity.ToTable("orders");
 
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.VoucherCode).HasColumnName("voucher_code");
 
                 entity.Property(e => e.Id)
                     .HasColumnName("id");
@@ -61,8 +62,7 @@ namespace OrderService.Infrastructure.Data
 
                 entity.Property(e => e.OrderStatus)
                     .HasColumnName("order_status")
-                    .IsRequired()
-                    .HasConversion<string>();
+                    .IsRequired();
 
                 entity.Property(e => e.TotalPrice)
                     .HasColumnName("total_price")
@@ -89,8 +89,7 @@ namespace OrderService.Infrastructure.Data
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(e => e.PaymentStatus)
-                    .HasColumnName("payment_status")
-                    .HasConversion<string>();
+                    .HasColumnName("payment_status");
 
                 entity.Property(e => e.CustomerNotes)
                     .HasColumnName("customer_notes")
@@ -163,7 +162,6 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.ToPhone)
                     .HasColumnName("to_phone")
                     .HasMaxLength(20);
-
                 // Related IDs
                 entity.Property(e => e.LivestreamId)
                     .HasColumnName("livestream_id");

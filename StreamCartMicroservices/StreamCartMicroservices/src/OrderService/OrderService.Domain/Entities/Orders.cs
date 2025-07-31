@@ -7,17 +7,19 @@ namespace OrderService.Domain.Entities
 {
     public class Orders : BaseEntity
     {
-        #region Properties        
+        #region Properties    
+        public string VoucherCode { get; set; }
+
         public string OrderCode { get; private set; }
         public DateTime OrderDate { get; private set; }
         public OrderStatus OrderStatus { get; private set; }
-        public decimal TotalPrice { get; private set; }
+        public decimal TotalPrice { get;  set; }
         public decimal ShippingFee { get;  set; }
 
         public decimal DiscountAmount { get;  set; }
         public decimal FinalAmount { get;  set; }
-        public decimal CommissionFee { get; private set; }
-        public decimal NetAmount { get; private set; }
+        public decimal CommissionFee { get;  set; }
+        public decimal NetAmount { get;  set; }
         public PaymentStatus PaymentStatus { get; private set; }
         public string CustomerNotes { get; private set; }
         public DateTime? EstimatedDeliveryDate { get;  set; }
@@ -181,7 +183,7 @@ namespace OrderService.Domain.Entities
             OrderCode = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(100000, 999999)}";
             OrderDate = DateTime.UtcNow;
             OrderStatus = OrderStatus.Waiting;
-            PaymentStatus = PaymentStatus.Pending;
+            PaymentStatus = PaymentStatus.pending;
 
             AccountId = accountId;
             ShopId = shopId;
@@ -241,7 +243,7 @@ namespace OrderService.Domain.Entities
         /// </summary>
         public void AddItems(IEnumerable<OrderItem> items)
         {
-            if (OrderStatus != OrderStatus.Pending)
+            if (OrderStatus != OrderStatus.Waiting)
             {
                 throw new InvalidOperationException("Cannot add items to an order that is not pending");
             }
@@ -347,12 +349,12 @@ namespace OrderService.Domain.Entities
         /// </summary>
         public void MarkAsPaid(string modifiedBy)
         {
-            if (PaymentStatus != PaymentStatus.Pending)
+            if (PaymentStatus != PaymentStatus.pending)
             {
                 throw new InvalidOperationException("Can only mark pending payments as paid");
             }
             
-            PaymentStatus = PaymentStatus.Paid;
+            PaymentStatus = PaymentStatus.paid;
             SetModifier(modifiedBy);
         }
 

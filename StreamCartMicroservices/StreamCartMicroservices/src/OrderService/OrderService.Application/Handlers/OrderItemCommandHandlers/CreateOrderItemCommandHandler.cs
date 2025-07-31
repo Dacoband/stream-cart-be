@@ -79,7 +79,7 @@ namespace OrderService.Application.Handlers.OrderItemCommandHandlers
                     Notes = orderItem.Notes,
                     RefundRequestId = orderItem.RefundRequestId,
                     ProductName = productDetails.ProductName,
-                    ProductImageUrl = productDetails.ImageUrl ?? string.Empty
+                    ProductImageUrl = productDetails.PrimaryImageUrl ?? string.Empty
                 };
 
                 _logger.LogInformation("Order item created successfully for order {OrderId}", request.OrderId);

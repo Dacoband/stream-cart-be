@@ -35,7 +35,7 @@ namespace OrderService.Infrastructure.Clients
         {
             var query = HttpUtility.ParseQueryString(string.Empty);
             query["ShopId"] = shopId;
-            query["MembershipType"] = "New";
+            //query["MembershipType"] = "New";
             query["Status"] = "Ongoing";
             try
             {

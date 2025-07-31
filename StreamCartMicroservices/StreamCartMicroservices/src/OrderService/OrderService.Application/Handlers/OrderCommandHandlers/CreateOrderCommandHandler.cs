@@ -84,12 +84,12 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     request.ShippingAddress.PostalCode,    // toPostalCode
 
                     // Shop information - this should come from the shop service
-                    shopDetails?.Address ?? "Shop Address",       // fromAddress
+                    shopDetails?.Street ?? "Shop Address",       // fromAddress
                     shopDetails?.Ward ?? "Shop Ward",             // fromWard
                     shopDetails?.District ?? "Shop District",     // fromDistrict
                     shopDetails?.City ?? "Shop Province",         // fromProvince
                     shopDetails?.PostalCode ?? "Shop PostalCode", // fromPostalCode
-                    shopDetails?.Name ?? "Shop Name",             // fromShop
+                    shopDetails?.RecipientName ?? "Shop Name",             // fromShop
                     shopDetails?.PhoneNumber ?? "Shop Phone",     // fromPhone
 
                     request.ShippingProviderId ?? Guid.Empty,     // shippingProviderId
@@ -144,7 +144,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         TotalPrice = item.TotalPrice,
                         Notes = item.Notes,
                         ProductName = productDetails?.ProductName ?? "Unknown Product",
-                        ProductImageUrl = productDetails?.ImageUrl ?? string.Empty
+                        ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
                     });
                 }
 

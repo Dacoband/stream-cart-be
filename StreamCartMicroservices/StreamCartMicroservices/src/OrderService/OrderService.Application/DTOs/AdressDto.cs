@@ -20,13 +20,6 @@ namespace OrderService.Application.DTOs
         public bool IsDefaultShipping { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public string Type { get; set; }
-        public bool IsActive { get; set; }
-        public Guid AccountId { get; set; }
-        public Guid? ShopId { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime? LastModifiedAt { get; set; }
-        public string LastModifiedBy { get; set; }
+
     }
 }

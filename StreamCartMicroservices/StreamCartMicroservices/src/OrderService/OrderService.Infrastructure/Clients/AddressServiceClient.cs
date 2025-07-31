@@ -30,12 +30,16 @@ namespace OrderService.Infrastructure.Clients
     new MediaTypeWithQualityHeaderValue("application/json"));
             _logger = logger;
         }
-        public async Task<AdressDto> GetCustomerAddress(string id)
+        public async Task<AdressDto> GetCustomerAddress(string id, string token)
         {
             try
             {
                 var url = $"https://brightpa.me/api/addresses/{id}";
-                var response = await _httpClient.GetAsync(url);
+
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                var response = await _httpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -44,24 +48,28 @@ namespace OrderService.Infrastructure.Clients
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation($"Raw JSON response: {content}"); // Log raw JSON
+                _logger.LogInformation($"Raw JSON response: {content}");
 
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var addressResponse = JsonSerializer.Deserialize<ApiResponse<AdressDto>>(content, options);
-                var address = addressResponse?.Data;
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                // Deserialize thành danh sách AdressDto
+                var addressResponse = JsonSerializer.Deserialize<ApiResponse<List<AdressDto>>>(content, options);
+                var address = addressResponse?.Data?.FirstOrDefault();
+
                 if (address == null)
                 {
-                    _logger.LogError("Deserialization returned null");
+                    _logger.LogError("Deserialization returned null or empty list");
                     return null;
                 }
-
 
                 return address;
             }
             catch (Exception ex)
             {
-
-                _logger.LogError(ex.Message);
+                _logger.LogError(ex, "Lỗi khi gọi GetCustomerAddress");
                 return null;
             }
         }

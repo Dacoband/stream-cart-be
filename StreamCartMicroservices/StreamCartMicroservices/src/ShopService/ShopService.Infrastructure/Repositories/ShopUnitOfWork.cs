@@ -21,18 +21,31 @@ namespace ShopService.Infrastructure.Repositories
 
         public async Task BeginTransactionAsync()
         {
-            _transaction = await _context.Database.BeginTransactionAsync();
+            if (_transaction == null)
+            {
+                _transaction = await _context.Database.BeginTransactionAsync();
+            }
         }
 
         public async Task CommitTransactionAsync()
         {
-            await _context.SaveChangesAsync(); // đảm bảo context lưu
-            await _transaction?.CommitAsync();
+            await _context.SaveChangesAsync(); // Lưu trước khi commit
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync(); // Clean up
+                _transaction = null;
+            }
         }
 
         public async Task RollbackTransactionAsync()
         {
-            await _transaction?.RollbackAsync();
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync(); // Clean up
+                _transaction = null;
+            }
         }
     }
 }
