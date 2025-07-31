@@ -288,8 +288,7 @@ namespace CartService.Application.Services
                         Attributes = ci.Attributes,
                         PrimaryImage = ci.PrimaryImage,
                         ProductStatus = ci.ProductStatus,
-
-                        // Gán chiều dài, rộng, cao từ productInfo
+                        Weight = productInfo?.Weight,
                         Length = productInfo?.Length,
                         Width = productInfo?.Width,
                         Height = productInfo?.Height
