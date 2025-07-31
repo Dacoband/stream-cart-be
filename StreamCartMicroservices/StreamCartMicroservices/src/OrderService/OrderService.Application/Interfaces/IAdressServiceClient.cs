@@ -9,6 +9,6 @@ namespace OrderService.Application.Interfaces
 {
     public interface IAdressServiceClient
     {
-        Task<AdressDto> GetCustomerAddress(string id);
+        Task<AdressDto> GetCustomerAddress(string id, string token);
     }
 }

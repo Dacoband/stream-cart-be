@@ -318,7 +318,6 @@ namespace AccountService.Api.Controllers
         }
 
         [HttpGet("by-shop/{shopId}")]
-        [Authorize(Roles = "Seller,ITAdmin,OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ShopAccountDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]

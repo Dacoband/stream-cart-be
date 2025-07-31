@@ -455,19 +455,24 @@ namespace OrderService.Api.Controllers
 
             try
             {
-                var userId = _currentUserService.GetUserId();
+                string userId = User.FindFirst("id")?.Value;
 
                 var command = new CreateMultiOrderCommand
                 {
-                    AccountId = userId,
+                    AccountId = Guid.Parse(userId),
                     PaymentMethod = request.PaymentMethod,
                     LivestreamId = request.LivestreamId,
                     CreatedFromCommentId = request.CreatedFromCommentId,
                     OrdersByShop = request.OrdersByShop
                 };
 
-                var result = await _mediator.Send(command);
-                return Created($"/api/orders", ApiResponse<List<OrderDto>>.SuccessResult(result.Data, "Multiple orders created successfully"));
+               
+                var apiResponse = await _mediator.Send(command);
+                if (apiResponse.Success == true)
+                {
+                    return Created($"/api/orders", ApiResponse<List<OrderDto>>.SuccessResult(apiResponse.Data, "Multiple orders created successfully"));
+                }
+                else return BadRequest(apiResponse);
             }
             catch (Exception ex)
             {

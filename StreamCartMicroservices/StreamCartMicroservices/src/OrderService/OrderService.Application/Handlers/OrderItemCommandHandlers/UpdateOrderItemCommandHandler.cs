@@ -78,7 +78,7 @@ namespace OrderService.Application.Handlers.OrderItemCommandHandlers
                     Notes = orderItem.Notes,
                     RefundRequestId = orderItem.RefundRequestId,
                     ProductName = productDetails?.ProductName ?? "Unknown Product",
-                    ProductImageUrl = productDetails?.ImageUrl ?? string.Empty
+                    ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
                 };
 
                 _logger.LogInformation("Order item with ID {OrderItemId} updated successfully", request.Id);

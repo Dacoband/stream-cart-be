@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using Shared.Common.Models;
 using Shared.Common.Settings;
 using System;
 using System.Net.Http;
@@ -139,58 +140,39 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting address for shop {ShopId}", shopId);
 
-                // Call the correct endpoint from AddressController
                 var response = await _httpClient.GetAsync($"/api/addresses/shops/{shopId}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    var json = JsonDocument.Parse(content);
-
-                    // Extract address from response which contains a collection of addresses
-                    if (json.RootElement.TryGetProperty("data", out var dataElement) &&
-                        dataElement.ValueKind == JsonValueKind.Array &&
-                        dataElement.GetArrayLength() > 0)
+                    var options = new JsonSerializerOptions
                     {
-                        // Get first address (preferably a default one if indicated)
-                        var addressElement = dataElement[0];
+                        PropertyNameCaseInsensitive = true
+                    };
 
-                        // Try to find default shipping address first
-                        for (int i = 0; i < dataElement.GetArrayLength(); i++)
-                        {
-                            if (GetJsonPropertyValue(dataElement[i], "isDefaultShipping", false))
-                            {
-                                addressElement = dataElement[i];
-                                break;
-                            }
-                        }
+                    var wrapper = JsonSerializer.Deserialize<ApiResponse<List<AddressOfShop>>>(content, options);
 
-                        return new AddressOfShop
-                        {
-                            Name = GetJsonPropertyValue(addressElement, "recipientName", string.Empty),
-                            Address = GetJsonPropertyValue(addressElement, "street", string.Empty),
-                            Ward = GetJsonPropertyValue(addressElement, "ward", string.Empty),
-                            District = GetJsonPropertyValue(addressElement, "district", string.Empty),
-                            City = GetJsonPropertyValue(addressElement, "city", string.Empty),
-                            PostalCode = GetJsonPropertyValue(addressElement, "postalCode", string.Empty),
-                            PhoneNumber = GetJsonPropertyValue(addressElement, "phoneNumber", string.Empty)
-                        };
+                    if (wrapper?.Data != null && wrapper.Data.Any())
+                    {
+                        // Ưu tiên địa chỉ mặc định nếu có
+                        var defaultAddress = wrapper.Data.FirstOrDefault(x => x.IsDefaultShipping) ?? wrapper.Data.First();
+
+                        return defaultAddress;
                     }
                 }
 
-                // Fallback to get shop details if no address found
+                // Fallback: lấy thông tin shop nếu không có địa chỉ
                 var shop = await GetShopByIdAsync(shopId);
                 if (shop == null)
                 {
                     _logger.LogWarning("Shop {ShopId} not found", shopId);
-                    return new AddressOfShop();
+                    return null;
                 }
 
-                // Return default shop information if no address found
                 return new AddressOfShop
                 {
-                    Name = shop.ShopName,
-                    Address = "Shop Address", // Default placeholder
+                    RecipientName = shop.ShopName,
+                    Street = "Shop Address",
                     Ward = "Shop Ward",
                     District = "Shop District",
                     City = "Shop City",
@@ -201,7 +183,7 @@ namespace OrderService.Infrastructure.Clients
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting address for shop {ShopId}", shopId);
-                return new AddressOfShop();
+                return null;
             }
         }
         private T GetJsonPropertyValue<T>(JsonElement element, string propertyName, T defaultValue)

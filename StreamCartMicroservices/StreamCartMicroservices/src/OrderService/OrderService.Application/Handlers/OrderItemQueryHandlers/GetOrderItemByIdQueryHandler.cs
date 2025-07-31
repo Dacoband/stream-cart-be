@@ -54,7 +54,7 @@ namespace OrderService.Application.Handlers.OrderItemQueryHandlers
                     Notes = orderItem.Notes,
                     RefundRequestId = orderItem.RefundRequestId,
                     ProductName = productDetails?.ProductName ?? "Unknown Product",
-                    ProductImageUrl = productDetails?.ImageUrl ?? string.Empty
+                    ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
                 };
 
                 return orderItemDto;

@@ -8,39 +8,24 @@ namespace OrderService.Application.DTOs
 {
     public class AddressOfShop
     {
-        /// <summary>
-        /// Name of the shop
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Street address of the shop
-        /// </summary>
-        public string Address { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Ward/neighborhood of the shop
-        /// </summary>
+        public Guid Id { get; set; }
+        public required string RecipientName { get; set; }
+        public required string Street { get; set; }
         public string Ward { get; set; } = string.Empty;
-
-        /// <summary>
-        /// District of the shop
-        /// </summary>
         public string District { get; set; } = string.Empty;
-
-        /// <summary>
-        /// City of the shop (maps to Province in Orders)
-        /// </summary>
         public string City { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Postal code of the shop
-        /// </summary>
+        public string Country { get; set; } = string.Empty;
         public string PostalCode { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Contact phone number for the shop
-        /// </summary>
         public string PhoneNumber { get; set; } = string.Empty;
+        public bool IsDefaultShipping { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+        public bool IsActive { get; set; }
+        public Guid AccountId { get; set; }
+        public Guid? ShopId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime? LastModifiedAt { get; set; }
+        public string LastModifiedBy { get; set; }
     }
 }

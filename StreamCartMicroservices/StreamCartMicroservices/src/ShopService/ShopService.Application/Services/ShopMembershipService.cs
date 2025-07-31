@@ -38,130 +38,132 @@ namespace ShopService.Application.Services
         }
         public async Task<ApiResponse<ShopMembership>> CreateShopMembership(string membershipId, string userId)
         {
-            var result = new ApiResponse<ShopMembership>()
+            var result = new ApiResponse<ShopMembership>
             {
-                Message = "Mua gói thành viên thành công",
                 Success = true,
+                Message = "Mua gói thành viên thành công"
             };
-            //check seller
-            var user = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(userId));
-            var existingShop =await _shopRepository.GetByIdAsync(user.ShopId);
-            //check validated shop
-            if (existingShop == null) { 
-            result.Success = false;
-                result.Message = "Không tìm thấy thông tin cửa hàng";
-                return result;
-            
-            }
 
-            if(existingShop.IsDeleted == true || existingShop.Status !=  Domain.Enums.ShopStatus.Active ||existingShop.ApprovalStatus != ApprovalStatus.Approved)
+            try
             {
-                result.Success = false;
-                result.Message = "Cửa hàng không đủ điều kiện để hoạt động";
-                return result;
-            }
-            //check validated wallet
-            var existingWallet = await _walletRepository.GetByShopIdAsync(existingShop.Id);
-            if (existingWallet == null || existingWallet.IsDeleted == true) { 
-                result.Success= false;
-                result.Message = "Không tìm thấy thông tin ví của cửa hàng";
-                return result;
-            }
-            //check existing membership
-            var existingMembership = await _membershipRepository.GetByIdAsync(membershipId);
-            if (existingMembership == null || existingMembership.IsDeleted == true) {
-                result.Success = false;
-                result.Message = "Không tìm thấy thông tin gói thành viên";
-                return result;
-            }
-            //check wallet ballance
-            if(existingWallet.Balance <= existingMembership.Price)
-            {
-                result.Success = false;
-                result.Message = "Số tiền trong ví không đủ để mua gói thành viên";
-                return result;
-            }
-            //check existing shopmembership
-            var existingShopMembership = await _shopMembershipRepository.GetActiveMembership(existingShop.Id.ToString());
+                var now = DateTime.UtcNow;
 
-            var now = DateTime.UtcNow;
-            DateTime startDate  = DateTime.UtcNow;
-            DateTime endDate = DateTime.UtcNow;
-            string status = "";
-            if (existingMembership.Type == "New")
-            {
-                if(existingMembership == null)
+                // Lấy thông tin người dùng và cửa hàng
+                var user = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(userId));
+                var shop = await _shopRepository.GetByIdAsync(user.ShopId);
+                if (shop == null)
+                    return Fail("Không tìm thấy thông tin cửa hàng");
+                if (shop.IsDeleted || shop.Status != Domain.Enums.ShopStatus.Active || shop.ApprovalStatus != ApprovalStatus.Approved)
+                    return Fail("Cửa hàng không đủ điều kiện để hoạt động");
+
+                // Lấy thông tin ví
+                var wallet = await _walletRepository.GetByShopIdAsync(shop.Id);
+                if (wallet == null || wallet.IsDeleted)
+                    return Fail("Không tìm thấy thông tin ví của cửa hàng");
+
+                // Lấy thông tin gói thành viên
+                var membership = await _membershipRepository.GetByIdAsync(membershipId);
+                if (membership == null || membership.IsDeleted)
+                    return Fail("Không tìm thấy thông tin gói thành viên");
+
+                // Kiểm tra số dư
+                if (wallet.Balance < membership.Price)
+                    return Fail("Số tiền trong ví không đủ để mua gói thành viên");
+
+                // Xử lý thời gian & trạng thái gói
+                var existingShopMembership = await _shopMembershipRepository.GetActiveMembership(shop.Id.ToString());
+
+                DateTime startDate, endDate;
+                string status;
+
+                // Thay thế toàn bộ phần xử lý thời gian bằng đoạn đã sửa dưới đây:
+                if (membership.Type == "New")
                 {
-                    startDate = now;
+                    if (existingShopMembership == null)
+                    {
+                        startDate = DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
+                        status = "Ongoing";
+                    }
+                    else
+                    {
+                        startDate = DateTime.SpecifyKind(existingShopMembership.EndDate, DateTimeKind.Unspecified);
+                        status = "Waiting";
+                    }
+                    endDate = DateTime.SpecifyKind(startDate.AddMonths((int)membership.Duration), DateTimeKind.Unspecified);
+                }
+                else if (membership.Type == "Renewal")
+                {
+                    if (existingShopMembership == null)
+                        return Fail("Không thể gia hạn vì cửa hàng chưa có gói thành viên hiện tại");
+
+                    startDate = DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
+                    endDate = DateTime.SpecifyKind(startDate.AddMonths((int)membership.Duration), DateTimeKind.Unspecified);
                     status = "Ongoing";
                 }
                 else
                 {
-                    startDate = existingShopMembership.EndDate;
-                    status = "Waiting";
+                    return Fail("Loại gói thành viên không hợp lệ");
                 }
-               
-            }
-            else if (existingMembership.Type == "Renewal")
-            {
-                if (existingShopMembership == null)
+
+                // Tạo bản ghi gói thành viên cửa hàng
+                var shopMembership = new ShopMembership
                 {
-                    result.Success = false;
-                    result.Message = "Không thể gia hạn vì cửa hàng chưa có gói thành viên hiện tại";
-                    return result;
-                }
+                    MembershipID = Guid.Parse(membershipId),
+                    ShopID = shop.Id,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    Status = status,
+                    RemainingLivestream = membership.MaxLivestream,
+                    Commission = membership.Commission,
+                    MaxProduct = membership.MaxProduct
+                };
+                shopMembership.SetCreator(userId);
 
-                startDate = now;
-                endDate = existingShopMembership.EndDate;
-                status = "Ongoing";
-            }
+                // Trừ tiền ví
+                wallet.Balance -= membership.Price;
+                wallet.SetModifier(userId);
 
-            var shopMembership = new ShopMembership
-            {
-                MembershipID = Guid.Parse(membershipId),
-                ShopID = existingShop.Id,
-                StartDate = startDate,
-                EndDate = endDate,
-                RemainingLivestream = existingMembership.MaxLivestream,
-                Commission = existingMembership.Commission,
-                MaxProduct = existingMembership.MaxProduct,
-                
-            };
-            shopMembership.SetCreator(userId);
-            existingWallet.Balance = existingWallet.Balance - existingMembership.Price;
-            existingWallet.SetModifier(userId);
-            var transaction = new WalletTransaction()
-            {
-                Type = "Membership_Purchase",
-                Amount = existingMembership.Price,
-                Target = "System",
-                Status = "Success",
-                WalletId = existingWallet.Id,
-                ShopMembershipId = existingMembership.Id,
+                // Ghi nhận giao dịch
+                var transaction = new WalletTransaction
+                {
+                    Type = "Membership_Purchase",
+                    Amount = membership.Price,
+                    Target = "System",
+                    Status = "Success",
+                    WalletId = wallet.Id,
+                    ShopMembershipId = membership.Id
+                };
+                transaction.SetCreator(userId);
 
-            };
-            transaction.SetCreator(userId);
-
-            try
-            {
+                // Bắt đầu transaction
                 await _shopUnitOfWork.BeginTransactionAsync();
 
                 await _shopMembershipRepository.InsertAsync(shopMembership);
-                await _walletRepository.ReplaceAsync(existingWallet.Id.ToString(), existingWallet);
+                await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
                 await _walletTransactionRepository.InsertAsync(transaction);
-                result.Data = shopMembership;
+
                 await _shopUnitOfWork.CommitTransactionAsync();
 
+                result.Data = shopMembership;
                 return result;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 await _shopUnitOfWork.RollbackTransactionAsync();
 
-                result.Success = false;
-                result.Message = ex.Message;
-                return result;
-            
+                return new ApiResponse<ShopMembership>
+                {
+                    Success = false,
+                    Message = "Lỗi khi mua gói thành viên: " + ex.Message
+                };
             }
+
+            // Helper
+            ApiResponse<ShopMembership> Fail(string message) => new()
+            {
+                Success = false,
+                Message = message
+            };
         }
 
         public async Task<ApiResponse<DetailShopMembershipDTO>> DeleteShopMembership(string id, string userId)

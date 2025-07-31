@@ -23,7 +23,7 @@ namespace ShopService.Application.Services
             _logger = logger;
         }
 
-        public async Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDTO, string createdBy)
+        public async Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDTO, string createdBy, string ShopId)
         {
             try
             {
@@ -33,7 +33,7 @@ namespace ShopService.Application.Services
                     Balance = 0,
                     BankName = createWalletDTO.BankName ?? string.Empty,
                     BankAccountNumber = createWalletDTO.BankAccountNumber ?? string.Empty,
-                    ShopId = createWalletDTO.OwnerId,
+                    ShopId = Guid.Parse(ShopId),
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -41,14 +41,13 @@ namespace ShopService.Application.Services
 
                 await _walletRepository.InsertAsync(wallet);
 
-                _logger.LogInformation("Đã tạo ví mới cho {OwnerType} với ID {OwnerId}", createWalletDTO.OwnerType, createWalletDTO.OwnerId);
+              
 
                 return MapToDto(wallet);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi tạo ví mới cho {OwnerType} với ID {OwnerId}",
-                    createWalletDTO.OwnerType, createWalletDTO.OwnerId);
+                
                 throw;
             }
         }
