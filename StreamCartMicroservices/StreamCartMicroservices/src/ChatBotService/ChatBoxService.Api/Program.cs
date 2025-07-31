@@ -67,7 +67,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 builder.Services.AddScoped<IGeminiChatbotService, GeminiChatbotService>();
 builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
 builder.Services.AddScoped<IUniversalChatbotService, UniversalChatbotService>();
-
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICachingService, CachingService>();
 builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
