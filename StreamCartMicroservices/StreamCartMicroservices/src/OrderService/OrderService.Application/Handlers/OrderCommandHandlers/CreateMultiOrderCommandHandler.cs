@@ -31,25 +31,27 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             private readonly IShopVoucherClientService _shopVoucherClientService;
             private readonly IAccountServiceClient _accountServiceClient;
             private readonly ICurrentUserService _currentUserService;
+            private readonly IOrderNotificationQueue _orderNotificationQueue;
 
-            public CreateMultiOrderCommandHandler(
+        public CreateMultiOrderCommandHandler(
                 IOrderRepository orderRepository,
                 IProductServiceClient productServiceClient,
                 IShopServiceClient shopServiceClient,
                 ILogger<CreateMultiOrderCommandHandler> logger,
-                IPublishEndpoint publishEndpoint, IAdressServiceClient adressServiceClient, IMembershipServiceClient membershipServiceClient, IShopVoucherClientService shopVoucherClientService, IAccountServiceClient accountServiceClient, ICurrentUserService currentUserService)
-            {
-                _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
-                _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
-                _shopServiceClient = shopServiceClient ?? throw new ArgumentNullException(nameof(shopServiceClient));
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _publishEndpoint = publishEndpoint;
-                _addressServiceClient = adressServiceClient;
-                _membershipServiceClient = membershipServiceClient;
-                _shopVoucherClientService = shopVoucherClientService;
-                _accountServiceClient = accountServiceClient;
-                _currentUserService = currentUserService;
-            }
+                IPublishEndpoint publishEndpoint, IAdressServiceClient adressServiceClient, IMembershipServiceClient membershipServiceClient, IShopVoucherClientService shopVoucherClientService, IAccountServiceClient accountServiceClient, ICurrentUserService currentUserService, IOrderNotificationQueue notificationQueue)
+        {
+            _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
+            _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
+            _shopServiceClient = shopServiceClient ?? throw new ArgumentNullException(nameof(shopServiceClient));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _publishEndpoint = publishEndpoint;
+            _addressServiceClient = adressServiceClient;
+            _membershipServiceClient = membershipServiceClient;
+            _shopVoucherClientService = shopVoucherClientService;
+            _accountServiceClient = accountServiceClient;
+            _currentUserService = currentUserService;
+            _orderNotificationQueue = notificationQueue;
+        }
 
         public async Task<ApiResponse<List<OrderDto>>> Handle(CreateMultiOrderCommand request, CancellationToken cancellationToken)
         {
@@ -207,6 +209,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     discountAmount: discount * item.Quantity,
                     variantId: item.VariantId
                 ));
+                
             }
 
             return Success(orderItems);
@@ -234,31 +237,30 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         }
         private async Task PublishOrderEventsAsync(Orders order, string paymentMethod, Guid userId)
         {
-            await _publishEndpoint.Publish(new OrderCreatedOrUpdatedEvent
+            _orderNotificationQueue.Enqueue(new OrderCreatedOrUpdatedEvent
             {
                 OrderCode = order.OrderCode,
                 Message = "đã được tạo thành công",
-                UserId = userId.ToString()
+                UserId = userId.ToString(),
             });
 
             if (paymentMethod == "COD")
             {
                 var shopAccounts = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                if
-                    (shopAccounts != null)
+                if (shopAccounts != null)
                 {
                     foreach (var acc in shopAccounts)
                     {
-                        await _publishEndpoint.Publish(new OrderCreatedOrUpdatedEvent
+                        _orderNotificationQueue.Enqueue(new OrderCreatedOrUpdatedEvent
                         {
                             OrderCode = order.OrderCode,
                             Message = "đã được tạo thành công. Vui lòng chuẩn bị đơn hàng",
-                            UserId = acc.Id.ToString()
+                            UserId = acc.Id.ToString(),
                         });
                     }
-
                 }
             }
+
         }
         private async Task<OrderDto> BuildOrderDtoAsync(Orders order)
         {

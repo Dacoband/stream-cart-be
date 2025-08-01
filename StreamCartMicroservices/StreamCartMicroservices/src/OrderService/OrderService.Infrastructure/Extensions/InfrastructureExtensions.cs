@@ -109,7 +109,8 @@ namespace OrderService.Infrastructure.Extensions
             services.AddScoped<IAdressServiceClient, AddressServiceClient>();
             services.AddScoped<IMembershipServiceClient, MembershipServiceClient>();
             services.AddScoped<IShopVoucherClientService,ShopVoucherServiceClient>();
-
+            services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
+            services.AddHostedService<OrderNotificationWorker>();
             return services;
         }
     }
