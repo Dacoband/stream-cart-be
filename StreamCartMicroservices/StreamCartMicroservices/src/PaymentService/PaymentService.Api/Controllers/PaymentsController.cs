@@ -324,6 +324,9 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Xử lý callback từ SePay với chuyển hướng về frontend
         /// </summary>
+        /// <summary>
+        /// Xử lý callback từ SePay với chuyển hướng về frontend
+        /// </summary>
         [HttpPost("callback/sepay")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -344,8 +347,30 @@ namespace PaymentService.Api.Controllers
                     return BadRequest("Order code is null or empty");
                 }
 
-                var orderId = Guid.Parse(orderCode.Replace("ORDER_", ""));
-                var payments = await _paymentService.GetPaymentsByOrderIdAsync(orderId);
+                // Handle both single and bulk orders
+                List<Guid> orderIds = new List<Guid>();
+
+                if (orderCode.StartsWith("ORDERS_"))
+                {
+                    // Multiple orders format: ORDERS_id1,id2,id3
+                    var orderIdsString = orderCode.Replace("ORDERS_", "");
+                    orderIds = orderIdsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(id => Guid.Parse(id.Trim()))
+                        .ToList();
+                }
+                else if (orderCode.StartsWith("ORDER_"))
+                {
+                    // Single order format: ORDER_id
+                    var orderId = Guid.Parse(orderCode.Replace("ORDER_", ""));
+                    orderIds.Add(orderId);
+                }
+                else
+                {
+                    return BadRequest("Invalid order code format");
+                }
+
+                // Find payment by first order ID (primary order)
+                var payments = await _paymentService.GetPaymentsByOrderIdAsync(orderIds.First());
 
                 if (payments == null || !payments.Any())
                 {
@@ -377,7 +402,7 @@ namespace PaymentService.Api.Controllers
 
                 if (shouldRedirect)
                 {
-                    // Lấy URL từ cấu hình
+                    // Lấy URL base từ cấu hình
                     string baseRedirectUrl = status == "success"
                         ? _configuration["PaymentRedirects:SuccessUrl"]
                         : _configuration["PaymentRedirects:FailureUrl"];
@@ -386,24 +411,31 @@ namespace PaymentService.Api.Controllers
                     {
                         // Fallback URL nếu không cấu hình
                         baseRedirectUrl = status == "success"
-                            ? "https://streamcart.com/payment/success"
-                            : "https://streamcart.com/payment/failure";
+                            ? "http://localhost:3000/payment/order/results-success/"
+                            : "http://localhost:3000/payment/order/results-failed/";
                     }
 
-                    // Thêm query params
-                    var uriBuilder = new UriBuilder(baseRedirectUrl);
+                    // Build redirect URL with order IDs
+                    string redirectUrl;
+                    if (orderIds.Count == 1)
+                    {
+                        // Single order: append order ID directly to URL
+                        redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIds.First()}";
+                    }
+                    else
+                    {
+                        // Multiple orders: use comma-separated list as path parameter
+                        var orderIdsString = string.Join(",", orderIds);
+                        redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIdsString}";
+                    }
+
+                    // Add query parameters for additional info
+                    var uriBuilder = new UriBuilder(redirectUrl);
                     var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
 
-                    // Thêm các tham số vào URL redirect
                     query["paymentId"] = payment.Id.ToString();
                     query["status"] = status;
-                    query["orderCode"] = orderCode;
-
-                    //// Nếu có nhiều đơn hàng (từ OrderReference)
-                    //if (!string.IsNullOrEmpty(payment.OrderReference))
-                    //{
-                    //    query["orderIds"] = payment.OrderReference;
-                    //}
+                    query["amount"] = amount.ToString();
 
                     uriBuilder.Query = query.ToString();
 
@@ -417,7 +449,8 @@ namespace PaymentService.Api.Controllers
                     success = true,
                     message = "Callback processed successfully",
                     paymentId = payment.Id,
-                    status = status
+                    status = status,
+                    orderIds = orderIds
                 });
             }
             catch (Exception ex)
