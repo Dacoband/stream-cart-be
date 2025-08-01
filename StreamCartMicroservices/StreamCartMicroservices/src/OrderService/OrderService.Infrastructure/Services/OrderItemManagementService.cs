@@ -72,7 +72,7 @@ namespace OrderService.Infrastructure.Services
                     ProductId = createOrderItemDto.ProductId,
                     VariantId = createOrderItemDto.VariantId,
                     Quantity = createOrderItemDto.Quantity,
-                    UnitPrice = createOrderItemDto.UnitPrice,
+                    UnitPrice = 0,
                     //Notes = createOrderItemDto.Notes
                 };
                 return await _mediator.Send(command);
@@ -247,7 +247,7 @@ namespace OrderService.Infrastructure.Services
                     return (false, "Quantity must be greater than zero");
                 }
 
-                if (createOrderItemDto.UnitPrice < 0)
+                if (10 < 0)
                 {
                     return (false, "Unit price cannot be negative");
                 }

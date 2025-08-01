@@ -82,6 +82,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     // Tạo đơn hàng và item
                     var order = CreateOrder(request, shopOrder, shopAddress, customerAddress);
+                    order.SetCreator(request.AccountId.ToString());
                     var itemResult = await BuildOrderItemsAsync(order, shopOrder.Items, shopMembership);
                     if (!itemResult.Success) return Fail(itemResult.Message);
 
@@ -266,9 +267,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 FullName = order.ToName,
                 Phone = order.ToPhone,
                 AddressLine1 = order.ToAddress,
+                Province = order.ToProvince,
                 Ward = order.ToWard,
-                City = order.ToProvince,
-                State = order.ToDistrict,
+                District = order.ToDistrict,
                 PostalCode = order.ToPostalCode,
                 Country = "Vietnam"
             };

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Appwrite;
+using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using Shared.Common.Models;
@@ -139,8 +140,11 @@ namespace OrderService.Infrastructure.Clients
             try
             {
                 _logger.LogInformation("Getting address for shop {ShopId}", shopId);
+                var url = $"https://brightpa.me/api/addresses/shops/{shopId}";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                var response = await _httpClient.GetAsync($"/api/addresses/shops/{shopId}");
+                var response = await _httpClient.SendAsync(request);
+
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -150,7 +154,7 @@ namespace OrderService.Infrastructure.Clients
                         PropertyNameCaseInsensitive = true
                     };
 
-                    var wrapper = JsonSerializer.Deserialize<ApiResponse<List<AddressOfShop>>>(content, options);
+                    var wrapper = JsonSerializer.Deserialize<ApiResponse< IEnumerable<AddressOfShop>>>(content, options);
 
                     if (wrapper?.Data != null && wrapper.Data.Any())
                     {
@@ -161,24 +165,7 @@ namespace OrderService.Infrastructure.Clients
                     }
                 }
 
-                // Fallback: lấy thông tin shop nếu không có địa chỉ
-                var shop = await GetShopByIdAsync(shopId);
-                if (shop == null)
-                {
-                    _logger.LogWarning("Shop {ShopId} not found", shopId);
-                    return null;
-                }
-
-                return new AddressOfShop
-                {
-                    RecipientName = shop.ShopName,
-                    Street = "Shop Address",
-                    Ward = "Shop Ward",
-                    District = "Shop District",
-                    City = "Shop City",
-                    PostalCode = "000000",
-                    PhoneNumber = "0000000000"
-                };
+                return null;
             }
             catch (Exception ex)
             {

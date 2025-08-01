@@ -51,10 +51,10 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 string orderCode = GenerateOrderCode();
 
                 decimal totalPrice = 0;
-                foreach (var item in request.OrderItems)
-                {
-                    totalPrice += item.UnitPrice * item.Quantity;
-                }
+                //foreach (var item in request.OrderItems)
+                //{
+                //    totalPrice += item.UnitPrice * item.Quantity;
+                //}
 
                 decimal finalAmount = totalPrice - request.DiscountAmount + request.ShippingFee;
 
@@ -114,7 +114,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         order.Id,
                         itemDto.ProductId,
                         itemDto.Quantity,
-                        itemDto.UnitPrice,   
+                        0,   
                         0,
                         "", 
                         itemDto.VariantId
