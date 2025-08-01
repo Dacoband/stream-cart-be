@@ -18,7 +18,7 @@ namespace CartService.Application.DTOs
         public decimal FinalPrice { get; set; }
         public int StockQuantity { get; set; }
         public int QuantitySold { get; set; }
-        public string? Weight { get; set; }
+        public decimal? Weight { get; set; }
         //public string? Dimension { get; set; }
         public decimal? Length { get; set; }
         public decimal? Width { get; set; }
