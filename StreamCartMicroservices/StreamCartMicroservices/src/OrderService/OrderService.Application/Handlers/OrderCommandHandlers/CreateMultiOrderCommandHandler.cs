@@ -82,6 +82,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     // Tạo đơn hàng và item
                     var order = CreateOrder(request, shopOrder, shopAddress, customerAddress);
+                    order.SetCreator(request.AccountId.ToString());
                     var itemResult = await BuildOrderItemsAsync(order, shopOrder.Items, shopMembership);
                     if (!itemResult.Success) return Fail(itemResult.Message);
 
