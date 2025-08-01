@@ -11,7 +11,7 @@ namespace ShopService.Application.Interfaces
     {
         Task<WalletDTO> GetWalletByIdAsync(Guid id);
         Task<WalletDTO> GetWalletByShopIdAsync(Guid shopId);
-        Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDTO, string createdBy);
+        Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDTO, string createdBy, string shopId);
         Task<WalletDTO> UpdateWalletAsync(Guid id, UpdateWalletDTO updateWalletDTO, string updatedBy);
         Task<bool> ProcessShopPaymentAsync(ShopPaymentDTO paymentRequest);
     }

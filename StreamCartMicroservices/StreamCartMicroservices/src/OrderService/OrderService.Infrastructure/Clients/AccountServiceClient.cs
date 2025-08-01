@@ -71,7 +71,7 @@ namespace OrderService.Infrastructure.Clients
             }
         }
 
-        public async Task<List<AccountDto?>> GetAccountByShopIdAsync(Guid shopId)
+        public async Task<IEnumerable<ShopAccountDto?>> GetAccountByShopIdAsync(Guid shopId)
         {
             try
             {
@@ -80,9 +80,9 @@ namespace OrderService.Infrastructure.Clients
                 var response = await _httpClient.GetAsync($"/api/accounts/by-shop/{shopId}");
                 response.EnsureSuccessStatusCode();
 
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<AccountDto>>>();
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<ShopAccountDto>>>();
 
-                if (result?.Success == true && result.Data is { Count: > 0 })
+                if (result?.Success == true && result.Data.Count() > 0 )
                 {
                     return result.Data;
                 }

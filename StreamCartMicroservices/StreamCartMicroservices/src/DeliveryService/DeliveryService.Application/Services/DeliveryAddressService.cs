@@ -8,6 +8,7 @@ using Shared.Common.Models;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DeliveryService.Application.Services
@@ -162,7 +163,14 @@ namespace DeliveryService.Application.Services
         private async Task<int?> FindDistrictIdAsync(HttpClient client, string name, int provinceId)
         {
             var districts = await GetAsync<List<DistrictItem>>(client, $"{BaseUrl}/master-data/district?province_id={provinceId}");
-            return districts?.FirstOrDefault(d => d.DistrictName == name)?.DistrictId;
+
+            // Normalize input name
+            string normalizedInput = NormalizeString(name);
+
+            var matchedDistrict = districts?.FirstOrDefault(x =>
+                NormalizeString(x.DistrictName).Equals(normalizedInput, StringComparison.OrdinalIgnoreCase));
+
+            return matchedDistrict?.DistrictId;
         }
 
         private async Task<string?> FindWardCodeAsync(HttpClient client, string name, int districtId)
@@ -263,7 +271,7 @@ namespace DeliveryService.Application.Services
                 foreach (var shopId in input.FromShops)
                 {
                     // 1. Lấy địa chỉ shop
-                    var fromAddress = await _addressClientService.GetShopAddress(shopId);
+                    var fromAddress = await _addressClientService.GetShopAddress(shopId.FromShopId);
                     if (fromAddress == null)
                         throw new Exception($"Không tìm thấy địa chỉ mặc định của shop: {shopId}");
 
@@ -273,8 +281,9 @@ namespace DeliveryService.Application.Services
 
                     var fromDistrictId = await FindDistrictIdAsync(client, fromAddress.District, fromProvinceId)
                         ?? throw new Exception($"Không tìm thấy quận/huyện người gửi: {fromAddress.District}");
+                    string normalizedFromWard = NormalizeWard(fromAddress.Ward);
 
-                    var fromWardCode = await FindWardCodeAsync(client, fromAddress.Ward, fromDistrictId)
+                    var fromWardCode = await FindWardCodeAsync(client, normalizedFromWard, fromDistrictId)
                         ?? throw new Exception($"Không tìm thấy phường/xã người gửi: {fromAddress.Ward}");
 
                     // 3. Lấy thông tin hành chính người nhận
@@ -283,8 +292,9 @@ namespace DeliveryService.Application.Services
 
                     var toDistrictId = await FindDistrictIdAsync(client, input.ToDistrict, toProvinceId)
                         ?? throw new Exception($"Không tìm thấy quận/huyện người nhận: {input.ToDistrict}");
+                    string normalizedToWard = NormalizeWard(input.ToWard);
 
-                    var toWardCode = await FindWardCodeAsync(client, input.ToWard, toDistrictId)
+                    var toWardCode = await FindWardCodeAsync(client, normalizedToWard, toDistrictId)
                         ?? throw new Exception($"Không tìm thấy phường/xã người nhận: {input.ToWard}");
 
                     // 4. Lấy danh sách dịch vụ vận chuyển
@@ -293,7 +303,7 @@ namespace DeliveryService.Application.Services
                         throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
 
                     // 5. Tính khối lượng, kích thước đơn hàng
-                    var ghnItems = input.Items.Select(i => new GHNItem
+                    var ghnItems = shopId.Items.Select(i => new GHNItem
                     {
                         Name = i.Name,
                         Quantity = i.Quantity,
@@ -303,21 +313,20 @@ namespace DeliveryService.Application.Services
                         Height = i.Height
                     }).ToList();
 
-                    var totalWeight = input.Items.Sum(x => x.Weight);
-                    var totalLength = input.Items.Sum(x => x.Length);
-                    var totalWidth = input.Items.Sum(x => x.Width);
-                    var totalHeight = input.Items.Sum(x => x.Height);
+                    var totalWeight = shopId.Items.Sum(x => x.Weight);
+                    var totalLength = shopId.Items.Sum(x => x.Length);
+                    var totalWidth = shopId.Items.Sum(x => x.Width);
+                    var totalHeight = shopId.Items.Sum(x => x.Height);
 
                     // 6. Lặp từng dịch vụ GHN để tính phí + thời gian giao
-                    foreach (var service in serviceList)
-                    {
+                    
                         var feePayload = new GHNCalculateFeeRequest
                         {
                             FromDistrictId = fromDistrictId,
                             ToDistrictId = toDistrictId,
                             FromWardCode = fromWardCode,
                             ToWardCode = toWardCode,
-                            ServiceTypeId = service.ServiceTypeId,
+                            ServiceTypeId = serviceList[0].ServiceTypeId,
                             Items = ghnItems,
                             Weight = totalWeight,
                             Length = totalLength,
@@ -343,20 +352,20 @@ namespace DeliveryService.Application.Services
 
                         // 7. Lấy thời gian giao dự kiến
                         var expectedDelivery = await GetLeadTimeAsync(
-                            client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, service.ServiceTypeId);
+                            client, fromDistrictId, fromWardCode!, toDistrictId, toWardCode!, serviceList[0].ServiceTypeId);
 
                         expectedDelivery = expectedDelivery.AddDays(1); // buffer 1 ngày
 
                         // 8. Ghi vào danh sách kết quả
                         result.ServiceResponses.Add(new ServiceResponse
                         {
-                            ShopId = shopId,
-                            ServiceTypeId = service.ServiceTypeId,
-                            ServiceName = service.ShortName ?? $"Dịch vụ {service.ServiceTypeId}",
+                            ShopId = shopId.FromShopId,
+                            ServiceTypeId = serviceList[0].ServiceTypeId,
+                            ServiceName = serviceList[0].ShortName ?? $"Dịch vụ {serviceList[0].ServiceTypeId}",
                             TotalAmount = total,
                             ExpectedDeliveryDate = expectedDelivery
                         });
-                    }
+                    
                 }
                 result.TotalAmount = result.ServiceResponses.Sum(x => x.TotalAmount);
 
@@ -435,6 +444,32 @@ namespace DeliveryService.Application.Services
             var json = await apiResponse.Content.ReadAsStringAsync();
 
             return json;
+        }
+        private string NormalizeWard(string ward)
+        {
+            if (string.IsNullOrWhiteSpace(ward))
+                return ward;
+
+            if (Regex.IsMatch(ward, @"phường\s*[a-zA-ZÀ-Ỵà-ỹ]+"))
+                return ward.Trim();
+
+            // Loại bỏ số 0 ở đầu số (vd: "phường 01" => "phường 1")
+            string normalized = Regex.Replace(ward, @"\b0*(\d+)", " $1");
+
+            // Xóa khoảng trắng dư thừa
+            normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+
+            return normalized;
+        }
+        private string NormalizeString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            return input
+                .Trim()
+                .Normalize(NormalizationForm.FormC) // chuẩn hóa Unicode
+                .Replace("  ", " ") // loại bỏ khoảng trắng thừa nếu có
+                .ToLowerInvariant(); // đưa về chữ thường để so sánh ignore case
         }
     }
     }

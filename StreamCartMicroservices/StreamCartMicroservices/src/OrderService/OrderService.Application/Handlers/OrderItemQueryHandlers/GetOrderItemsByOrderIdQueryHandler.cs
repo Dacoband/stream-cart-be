@@ -59,7 +59,7 @@ namespace OrderService.Application.Handlers.OrderItemQueryHandlers
                         Notes = item.Notes,
                         RefundRequestId = item.RefundRequestId,
                         ProductName = productDetails?.ProductName ?? "Unknown Product",
-                        ProductImageUrl = productDetails?.ImageUrl ?? string.Empty
+                        ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
                     });
                 }
 

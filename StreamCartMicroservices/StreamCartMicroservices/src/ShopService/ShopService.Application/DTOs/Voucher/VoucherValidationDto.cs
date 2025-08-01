@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShopService.Domain.Enums;
+using System;
 
 namespace ShopService.Application.DTOs.Voucher
 {

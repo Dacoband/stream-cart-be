@@ -14,6 +14,7 @@ namespace Shared.Common.Services.User
         bool IsAuthenticated();
         string GetUserEmail();
         string GetShopId();
+        string GetAccessToken();
     }
 
     public class CurrentUserService : ICurrentUserService
@@ -120,6 +121,19 @@ namespace Shared.Common.Services.User
         {
             return _httpContextAccessor.HttpContext?.User.FindFirst("ShopId")?.Value
                    ?? string.Empty;
+        }
+        public string GetAccessToken()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+                throw new UnauthorizedAccessException("HttpContext is null");
+
+            var authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Authorization header missing or invalid");
+
+            return authHeader.Substring("Bearer ".Length).Trim();
         }
     }
 }

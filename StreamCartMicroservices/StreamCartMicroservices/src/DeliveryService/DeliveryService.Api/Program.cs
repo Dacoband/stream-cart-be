@@ -20,6 +20,16 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 
 // Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins("*")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.Configure<GHNSettings>(builder.Configuration.GetSection("GHN"));
 
 
@@ -79,13 +89,13 @@ app.UseHttpsRedirection();
 app.UseConfiguredCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account Service API v1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Delivery Service API v1");
     c.RoutePrefix = "swagger";
 });
+app.MapControllers();
 
 
 app.Run();

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces.IServices;
+using Shared.Common.Models;
 
 namespace OrderService.Infrastructure.Clients
 {
@@ -47,8 +48,8 @@ namespace OrderService.Infrastructure.Clients
                     return null;
                 }
                 
-                var product = await response.Content.ReadFromJsonAsync<ProductDto>();
-                return product;
+                var product = await response.Content.ReadFromJsonAsync<ApiResponse<ProductDto>>();
+                return product.Data;
             }
             catch (Exception ex)
             {
@@ -68,7 +69,7 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting variant details for ID: {VariantId}", variantId);
                 
-                var response = await _httpClient.GetAsync($"/api/products/variants/{variantId}");
+                var response = await _httpClient.GetAsync($"/api/product-variants/{variantId}");
                 
                 if (!response.IsSuccessStatusCode)
                 {

@@ -29,7 +29,7 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<decimal>("Commission")
+                    b.Property<decimal?>("Commission")
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("commission");
 
@@ -48,7 +48,7 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("description");
 
-                    b.Property<int>("Duration")
+                    b.Property<int?>("Duration")
                         .HasColumnType("integer")
                         .HasColumnName("duration");
 
@@ -69,7 +69,7 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("max_livestream");
 
-                    b.Property<int>("MaxProduct")
+                    b.Property<int?>("MaxProduct")
                         .HasColumnType("integer")
                         .HasColumnName("max_product");
 
@@ -224,6 +224,9 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<decimal?>("Commission")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -235,7 +238,7 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnName("created_by");
 
                     b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("end_date");
 
                     b.Property<bool>("IsDeleted")
@@ -251,17 +254,27 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("last_modified_by");
 
+                    b.Property<int?>("MaxProduct")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("MembershipID")
                         .HasColumnType("uuid")
                         .HasColumnName("membership_id");
+
+                    b.Property<int>("RemainingLivestream")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ShopID")
                         .HasColumnType("uuid")
                         .HasColumnName("shop_id");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

@@ -96,7 +96,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                                 TotalPrice = item.TotalPrice,
                                 Notes = item.Notes,
                                 ProductName = productDetails?.ProductName ?? "Unknown Product",
-                                ProductImageUrl = productDetails?.ImageUrl ?? string.Empty
+                                ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
                             });
                         }
                     }

@@ -20,7 +20,6 @@ namespace DeliveryService.Application.DTOs.AccountDTO
         public bool IsDefaultShipping { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public string Type { get; set; }
         public bool IsActive { get; set; }
         public Guid AccountId { get; set; }
         public Guid? ShopId { get; set; }

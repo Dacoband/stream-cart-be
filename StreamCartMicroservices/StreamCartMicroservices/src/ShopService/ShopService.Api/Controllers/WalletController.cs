@@ -50,15 +50,17 @@ namespace ShopService.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,System")]
+        [Authorize(Roles = "Admin,System,Seller")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<WalletDTO>> CreateWallet([FromBody] CreateWalletDTO createWalletDTO)
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var wallet = await _walletService.CreateWalletAsync(createWalletDTO, userId);
+                string userId = User.FindFirst("id")?.Value;
+                string shopId = User.FindFirst("ShopId")?.Value;
+
+                var wallet = await _walletService.CreateWalletAsync(createWalletDTO, userId,shopId);
                 return CreatedAtAction(nameof(GetWallet), new { id = wallet.Id }, wallet);
             }
             catch (Exception ex)
