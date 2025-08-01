@@ -39,6 +39,12 @@ namespace AccountService.Api.Controllers
                 PhoneNumber = updateAccountDto.PhoneNumber,
                 Fullname = updateAccountDto.Fullname,
                 AvatarURL = updateAccountDto.AvatarURL,
+                IsActive = updateAccountDto.IsActive,
+                IsVerified = updateAccountDto.IsVerified,
+                CompleteRate = updateAccountDto.CompleteRate,
+                Role = updateAccountDto.Role,
+                ShopId = updateAccountDto.ShopId,
+                UpdatedBy = _currentUserService.GetUserId().ToString() 
             };
 
             var updatedAccount = await _accountService.UpdateAccountAsync(command);
@@ -349,6 +355,174 @@ namespace AccountService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.ErrorResult($"Error retrieving accounts: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Xóa moderator khỏi shop (vô hiệu hóa tài khoản moderator)
+        /// </summary>
+        /// <param name="shopId">ID của shop</param>
+        /// <param name="moderatorId">ID của moderator cần xóa</param>
+        /// <returns>Kết quả thực hiện</returns>
+        [HttpDelete("moderators/{moderatorId}/shops/{shopId}")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> RemoveModeratorFromShop(Guid shopId, Guid moderatorId)
+        {
+            var userIdClaim = _currentUserService.GetUserId();
+
+            try
+            {
+                // Kiểm tra người thực hiện có phải seller của shop này không
+                var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
+                if (sellerAccount == null || sellerAccount.Role != RoleType.Seller || sellerAccount.ShopId != shopId)
+                {
+                    return Forbid(ApiResponse<object>.ErrorResult("Bạn không có quyền xóa moderator khỏi shop này").ToString());
+                }
+
+                // Kiểm tra moderator có tồn tại không
+                var moderatorAccount = await _accountService.GetAccountByIdAsync(moderatorId);
+                if (moderatorAccount == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy moderator"));
+                }
+
+                // Kiểm tra moderator có thuộc shop này không
+                if (moderatorAccount.Role != RoleType.Moderator || moderatorAccount.ShopId != shopId)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Moderator không thuộc shop này"));
+                }
+
+                // Vô hiệu hóa tài khoản moderator và gỡ khỏi shop
+                var result = await _accountService.RemoveModeratorFromShopAsync(moderatorId, shopId, userIdClaim);
+
+                if (!result)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không thể xóa moderator khỏi shop"));
+
+                return Ok(ApiResponse<bool>.SuccessResult(true, "Đã xóa moderator khỏi shop thành công"));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ApiResponse<object>.ErrorResult(ex.Message).ToString());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Lỗi khi xóa moderator: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Vô hiệu hóa tài khoản moderator (soft delete)
+        /// </summary>
+        /// <param name="moderatorId">ID của moderator cần vô hiệu hóa</param>
+        /// <param name="request">Thông tin vô hiệu hóa</param>
+        /// <returns>Kết quả thực hiện</returns>
+        [HttpPost("moderators/{moderatorId}/deactivate")]
+        [Authorize(Roles = "Seller,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> DeactivateModerator(Guid moderatorId, [FromBody] DeactivateModeratorDto request)
+        {
+            var userIdClaim = _currentUserService.GetUserId();
+
+            try
+            {
+                // Kiểm tra moderator có tồn tại không
+                var moderatorAccount = await _accountService.GetAccountByIdAsync(moderatorId);
+                if (moderatorAccount == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy moderator"));
+                }
+
+                if (moderatorAccount.Role != RoleType.Moderator)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Tài khoản này không phải là moderator"));
+                }
+
+                // Kiểm tra quyền: Seller chỉ có thể vô hiệu hóa moderator của shop mình
+                if (User.IsInRole("Seller"))
+                {
+                    var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
+                    if (sellerAccount?.ShopId != moderatorAccount.ShopId)
+                    {
+                        return Forbid(ApiResponse<object>.ErrorResult("Bạn không có quyền vô hiệu hóa moderator này").ToString());
+                    }
+                }
+
+                // Vô hiệu hóa moderator
+                var updatedAccount = await _accountService.UpdateAccountStatusAsync(moderatorId, false, userIdClaim);
+
+                return Ok(ApiResponse<AccountDto>.SuccessResult(updatedAccount,
+                    $"Đã vô hiệu hóa moderator thành công. Lý do: {request.Reason}"));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ApiResponse<object>.ErrorResult(ex.Message).ToString());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Lỗi khi vô hiệu hóa moderator: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Kích hoạt lại tài khoản moderator
+        /// </summary>
+        /// <param name="moderatorId">ID của moderator cần kích hoạt</param>
+        /// <returns>Kết quả thực hiện</returns>
+        [HttpPost("moderators/{moderatorId}/reactivate")]
+        [Authorize(Roles = "Seller,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<AccountDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> ReactivateModerator(Guid moderatorId)
+        {
+            var userIdClaim = _currentUserService.GetUserId();
+
+            try
+            {
+                // Kiểm tra moderator có tồn tại không
+                var moderatorAccount = await _accountService.GetAccountByIdAsync(moderatorId);
+                if (moderatorAccount == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy moderator"));
+                }
+
+                if (moderatorAccount.Role != RoleType.Moderator)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Tài khoản này không phải là moderator"));
+                }
+
+                // Kiểm tra quyền: Seller chỉ có thể kích hoạt moderator của shop mình
+                if (User.IsInRole("Seller"))
+                {
+                    var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
+                    if (sellerAccount?.ShopId != moderatorAccount.ShopId)
+                    {
+                        return Forbid(ApiResponse<object>.ErrorResult("Bạn không có quyền kích hoạt moderator này").ToString());
+                    }
+                }
+
+                // Kích hoạt lại moderator
+                var updatedAccount = await _accountService.UpdateAccountStatusAsync(moderatorId, true, userIdClaim);
+
+                return Ok(ApiResponse<AccountDto>.SuccessResult(updatedAccount, "Đã kích hoạt lại moderator thành công"));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ApiResponse<object>.ErrorResult(ex.Message).ToString());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult($"Lỗi khi kích hoạt moderator: {ex.Message}"));
             }
         }
     }

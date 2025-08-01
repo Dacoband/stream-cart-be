@@ -6,6 +6,7 @@ using AccountService.Domain.Entities;
 using AccountService.Domain.Enums;
 using AccountService.Infrastructure.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Settings;
@@ -20,15 +21,18 @@ namespace AccountService.Application.Services
     {
         private readonly IMediator _mediator;
         private readonly IAccountRepository _accountRepository;
+        private readonly ILogger<AccountManagementService> _logger;
         private readonly JwtSettings _jwtSettings;
 
         public AccountManagementService(
-            IMediator mediator, 
+            IMediator mediator,
             IAccountRepository accountRepository,
+            ILogger<AccountManagementService> logger,
             IOptions<JwtSettings> jwtSettings)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _jwtSettings = jwtSettings.Value ?? throw new ArgumentNullException(nameof(jwtSettings));
         }
 
@@ -111,6 +115,7 @@ namespace AccountService.Application.Services
         {
             return await _accountRepository.IsEmailUniqueAsync(email);
         }
+
         public async Task<AccountDto> CreateModeratorAccountAsync(CreateAccountCommand command, Guid shopId, Guid createdBySellerAccountId)
         {
             var creatorAccount = await _accountRepository.GetByIdAsync(createdBySellerAccountId.ToString());
@@ -126,7 +131,7 @@ namespace AccountService.Application.Services
 
             command.Role = RoleType.Moderator;
             command.IsActive = true;
-            command.IsVerified = false; 
+            command.IsVerified = false;
 
             var accountDto = await _mediator.Send(command);
 
@@ -150,10 +155,11 @@ namespace AccountService.Application.Services
 
             command.Role = RoleType.OperationManager;
             command.IsActive = true;
-            command.IsVerified = false; 
+            command.IsVerified = false;
 
             return await _mediator.Send(command);
         }
+
         public async Task<AccountDto> UpdateAccountStatusAsync(Guid accountId, bool isActive, Guid updatedByAccountId)
         {
             if (!await CanManageAccountStatusAsync(updatedByAccountId, accountId))
@@ -183,21 +189,23 @@ namespace AccountService.Application.Services
             if (manager.Role == RoleType.ITAdmin)
                 return true;
 
-            if (manager.Role == RoleType.Seller && 
-                targetAccount.Role == RoleType.Moderator && 
-                manager.ShopId.HasValue && 
-                targetAccount.ShopId.HasValue && 
+            if (manager.Role == RoleType.Seller &&
+                targetAccount.Role == RoleType.Moderator &&
+                manager.ShopId.HasValue &&
+                targetAccount.ShopId.HasValue &&
                 manager.ShopId == targetAccount.ShopId)
                 return true;
 
             return false;
         }
+
         public async Task<IEnumerable<AccountDto>> GetAccountsByShopIdAsync(Guid shopId)
         {
             var query = new GetAccountsByShopIdQuery { ShopId = shopId };
             var result = await _mediator.Send(query);
             return result;
         }
+
         public async Task<(bool CanDelete, string Reason)> CanDeleteAccountAsync(Guid accountId)
         {
             var account = await GetAccountByIdAsync(accountId);
@@ -236,6 +244,101 @@ namespace AccountService.Application.Services
             var operationManagers = await GetAccountsByRoleAsync(RoleType.OperationManager);
             return operationManagers.Count(om => om.IsActive);
         }
+
+        public async Task<bool> RemoveModeratorFromShopAsync(Guid moderatorId, Guid shopId, Guid removedByAccountId)
+        {
+            try
+            {
+                // Lấy thông tin moderator
+                var moderator = await _accountRepository.GetByIdAsync(moderatorId.ToString());
+                if (moderator == null)
+                {
+                    _logger.LogWarning("Moderator {ModeratorId} không tồn tại", moderatorId);
+                    return false;
+                }
+
+                // Kiểm tra có phải moderator không
+                if (moderator.Role != RoleType.Moderator)
+                {
+                    _logger.LogWarning("Account {AccountId} không phải là moderator", moderatorId);
+                    return false;
+                }
+
+                // Kiểm tra moderator có thuộc shop này không
+                if (moderator.ShopId != shopId)
+                {
+                    _logger.LogWarning("Moderator {ModeratorId} không thuộc shop {ShopId}", moderatorId, shopId);
+                    return false;
+                }
+
+                // Vô hiệu hóa tài khoản - sử dụng method có sẵn
+                moderator.Deactivate();
+                moderator.SetUpdatedBy(removedByAccountId.ToString());
+
+                // Cập nhật vào database
+                await _accountRepository.ReplaceAsync(moderator.Id.ToString(), moderator);
+
+                // Gỡ khỏi shop
+                var updateCommand = new UpdateAccountCommand
+                {
+                    Id = moderatorId,
+                    ShopId = null, // Remove from shop
+                    UpdatedBy = removedByAccountId.ToString()
+                };
+
+                await UpdateAccountAsync(updateCommand);
+
+                _logger.LogInformation("Đã xóa moderator {ModeratorId} khỏi shop {ShopId} bởi {RemovedBy}",
+                    moderatorId, shopId, removedByAccountId);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xóa moderator {ModeratorId} khỏi shop {ShopId}", moderatorId, shopId);
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<AccountDto>> GetInactiveModeratorsByShopAsync(Guid shopId)
+        {
+            try
+            {
+                var accounts = await _accountRepository.GetAllAsync();
+                var inactiveModerators = accounts
+                    .Where(a => a.Role == RoleType.Moderator &&
+                               a.ShopId == shopId &&
+                               !a.IsActive)
+                    .Select(a => new AccountDto
+                    {
+                        Id = a.Id,
+                        Username = a.Username,
+                        Email = a.Email,
+                        PhoneNumber = a.PhoneNumber,
+                        Fullname = a.Fullname,
+                        Role = a.Role, // Use Domain enum directly
+                        IsActive = a.IsActive,
+                        IsVerified = a.IsVerified,
+                        ShopId = a.ShopId,
+                        RegistrationDate = a.RegistrationDate,
+                        LastLoginDate = a.LastLoginDate,
+                        AvatarURL = a.AvatarURL,
+                        CompleteRate = a.CompleteRate,
+                        CreatedAt = a.CreatedAt,
+                        CreatedBy = a.CreatedBy,
+                        LastModifiedAt = a.LastModifiedAt,
+                        LastModifiedBy = a.LastModifiedBy
+                    });
+
+                return inactiveModerators;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy danh sách moderator không hoạt động của shop {ShopId}", shopId);
+                return Enumerable.Empty<AccountDto>();
+            }
+        }
+
         #endregion
 
         private AccountDto? MapToDto(Account? account)
