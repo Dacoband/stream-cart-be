@@ -19,6 +19,7 @@ namespace CartService.Application.DTOs
         public string PrimaryImage { get; set; } = string.Empty;
         public Dictionary<string, string>? Attributes { get; set; } 
         public int Stock { get; set; }
+        public decimal Weight { get; set; }
         public decimal? Length { get; set; }
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
