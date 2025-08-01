@@ -84,14 +84,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     // Tạo đơn hàng và item
                     var order = CreateOrder(request, shopOrder, shopAddress, customerAddress);
+                   
                     order.SetCreator(request.AccountId.ToString());
                     var itemResult = await BuildOrderItemsAsync(order, shopOrder.Items, shopMembership);
                     if (!itemResult.Success) return Fail(itemResult.Message);
 
                     order.AddItems(itemResult.Data);
                     order.ShippingFee = shopOrder.ShippingFee;
-                    order.EstimatedDeliveryDate = shopOrder.ExpectedDeliveryDay;
-
+                    if (shopOrder.ExpectedDeliveryDay != null)
+                    {
+                        order.EstimatedDeliveryDate = DateTime.SpecifyKind(shopOrder.ExpectedDeliveryDay, DateTimeKind.Utc);
+                    }
                     // Tính giá trị đơn hàng
                     decimal voucherDiscount = 0;
                     decimal commissionRate = shopMembership.Commission ?? 0;
