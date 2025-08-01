@@ -11,6 +11,8 @@ namespace PaymentService.Application.DTOs
         public PaymentMethod PaymentMethod { get; set; }
         public string? CreatedBy { get; set; }
         public string? QrCode { get; set; } // Add this property
+        public string? OrderReference { get; set; }
+
 
     }
 }

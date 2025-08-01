@@ -19,6 +19,17 @@ namespace PaymentService.Application.Interfaces
         /// <returns>Chuỗi mã QR code</returns>
         Task<string> GenerateQrCodeAsync(Guid orderId, decimal amount, Guid userId, PaymentMethod paymentMethod);
 
+
+        /// <summary>
+        /// Tạo mã QR code cho thanh toán nhiều đơn hàng
+        /// </summary>
+        /// <param name="orderIds">Danh sách ID đơn hàng</param>
+        /// <param name="amount">Tổng số tiền thanh toán</param>
+        /// <param name="userId">ID người dùng</param>
+        /// <param name="paymentMethod">Phương thức thanh toán</param>
+        /// <returns>Chuỗi mã QR code</returns>
+        Task<string> GenerateBulkQrCodeAsync(List<Guid> orderIds, decimal amount, Guid userId, PaymentMethod paymentMethod);
+
         /// <summary>
         /// Xác thực mã QR code đã tạo
         /// </summary>

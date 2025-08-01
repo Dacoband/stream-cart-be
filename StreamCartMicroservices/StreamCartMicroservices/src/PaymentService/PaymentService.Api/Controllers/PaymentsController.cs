@@ -22,12 +22,16 @@ namespace PaymentService.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IQrCodeService _qrCodeService;
         private readonly IOrderServiceClient _orderServiceClient;
+        private readonly ILogger<PaymentsController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public PaymentsController(IPaymentService paymentService, IQrCodeService qrCodeService, IOrderServiceClient orderServiceClient)
+        public PaymentsController(IPaymentService paymentService, IQrCodeService qrCodeService, IOrderServiceClient orderServiceClient, ILogger<PaymentsController> logger, IConfiguration configuration)
         {
             _paymentService = paymentService;
             _qrCodeService = qrCodeService;
             _orderServiceClient = orderServiceClient;
+            _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -218,62 +222,112 @@ namespace PaymentService.Api.Controllers
         [HttpPost("generate-qr-code")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<string>> GenerateQrCode([FromBody] QrCodeRequestDto requestDto)
+        public async Task<ActionResult<string>> GenerateBulkQrCode([FromBody] QrCodeRequestDto requestDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Fix: Pass the required parameters to the GenerateQrCodeAsync method
-            var orderDetails = await _orderServiceClient.GetOrderByIdAsync(requestDto.OrderId);
-            if (orderDetails == null)
-                return NotFound($"Order with ID {requestDto.OrderId} not found");
-            var qrCode = await _qrCodeService.GenerateQrCodeAsync(
-                orderDetails.Id,
-                orderDetails.TotalAmount,
-                orderDetails.UserId,
-                PaymentMethod.BankTransfer
-            );
-            var createPaymentDto = new CreatePaymentDto
+            // Validate request data
+            if (requestDto.OrderIds == null || requestDto.OrderIds.Count == 0)
             {
-                OrderId = orderDetails.Id,
-                //UserId = orderDetails.UserId,
-                Amount = orderDetails.TotalAmount,
-                PaymentMethod = PaymentMethod.BankTransfer,
-                CreatedBy = User.Identity?.Name ?? "System",
-                QrCode = qrCode
-            };
+                return BadRequest("At least one order ID must be provided");
+            }
 
-            var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
-
-            // cập nhật trạng thái đơn hàng 
-            await _orderServiceClient.UpdateOrderPaymentStatusAsync(
-                orderDetails.Id, PaymentStatus.Pending);
-
-
-
-
-            // 4. Cập nhật QR code cho Payment nếu cần
-            var updateStatusDto = new Application.DTOs.UpdatePaymentStatusDto
+            try
             {
-                NewStatus = PaymentStatus.Pending,
-                QrCode = qrCode,
-                UpdatedBy = User.Identity?.Name ?? "System"
-            };
-            await _paymentService.UpdatePaymentStatusAsync(payment.Id, updateStatusDto);
+                // Get all orders
+                decimal totalAmount = 0;
+                Guid? primaryUserId = null;
+                var orderDetails = new List<OrderDto>();
 
-            return Ok(new
+                foreach (var orderId in requestDto.OrderIds)
+                {
+                    var order = await _orderServiceClient.GetOrderByIdAsync(orderId);
+                    if (order == null)
+                        continue;
+
+                    // Add to total amount
+                    totalAmount += order.TotalAmount;
+                    orderDetails.Add(order);
+
+                    // Use first order's user ID
+                    if (!primaryUserId.HasValue)
+                        primaryUserId = order.UserId;
+                }
+
+                if (orderDetails.Count == 0)
+                    return NotFound("No valid orders found");
+
+                // Generate QR code for combined amount with ALL order IDs
+                string qrCode;
+                if (requestDto.OrderIds.Count == 1)
+                {
+                    // Single order - use original method
+                    qrCode = await _qrCodeService.GenerateQrCodeAsync(
+                        requestDto.OrderIds[0],
+                        totalAmount,
+                        primaryUserId.Value,
+                        PaymentMethod.BankTransfer
+                    );
+                }
+                else
+                {
+                    // Multiple orders - use bulk method with ALL order IDs
+                    qrCode = await _qrCodeService.GenerateBulkQrCodeAsync(
+                        requestDto.OrderIds,
+                        totalAmount,
+                        primaryUserId.Value,
+                        PaymentMethod.BankTransfer
+                    );
+                }
+
+                // Create combined payment record
+                var createPaymentDto = new CreatePaymentDto
+                {
+                    OrderId = orderDetails[0].Id, // Primary order ID
+                    Amount = totalAmount,
+                    PaymentMethod = PaymentMethod.BankTransfer,
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    QrCode = qrCode,
+                    OrderReference = string.Join(",", requestDto.OrderIds) 
+                };
+
+                var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
+
+                // Update all orders' payment status to pending
+                foreach (var order in orderDetails)
+                {
+                    await _orderServiceClient.UpdateOrderPaymentStatusAsync(
+                        order.Id, PaymentStatus.Pending);
+                }
+
+                // Return QR code and payment information
+                return Ok(new
+                {
+                    qrCode = qrCode,
+                    paymentId = payment.Id,
+                    totalAmount = totalAmount,
+                    orderCount = orderDetails.Count,
+                    orderIds = requestDto.OrderIds,
+                    description = $"ORDERS_{string.Join(",", requestDto.OrderIds.Select(id => id.ToString("N")))}"
+                });
+            }
+            catch (Exception ex)
             {
-                qrCode = qrCode,
-                paymentId = payment.Id,
-                amount = orderDetails.TotalAmount
-            });
+                _logger.LogError(ex, "Error generating bulk QR code for orders");
+                return StatusCode(500, new { error = $"Error generating QR code: {ex.Message}" });
+            }
         }
         /// <summary>
         /// Xử lý callback từ SePay
         /// </summary>
+        /// <summary>
+        /// Xử lý callback từ SePay với chuyển hướng về frontend
+        /// </summary>
         [HttpPost("callback/sepay")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status302Found)]
         public async Task<IActionResult> ProcessSePayCallback([FromBody] SePayCallbackRequest request)
         {
             try
@@ -317,10 +371,58 @@ namespace PaymentService.Api.Controllers
                 // Xử lý callback
                 var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
 
-                return Ok(new { success = true, message = "Callback processed successfully" });
+                // Kiểm tra yêu cầu redirect từ header
+                string requestedRedirect = Request.Headers["X-Request-Redirect"].FirstOrDefault() ?? string.Empty;
+                bool shouldRedirect = !string.IsNullOrEmpty(requestedRedirect) && requestedRedirect.ToLower() == "true";
+
+                if (shouldRedirect)
+                {
+                    // Lấy URL từ cấu hình
+                    string baseRedirectUrl = status == "success"
+                        ? _configuration["PaymentRedirects:SuccessUrl"]
+                        : _configuration["PaymentRedirects:FailureUrl"];
+
+                    if (string.IsNullOrEmpty(baseRedirectUrl))
+                    {
+                        // Fallback URL nếu không cấu hình
+                        baseRedirectUrl = status == "success"
+                            ? "https://streamcart.com/payment/success"
+                            : "https://streamcart.com/payment/failure";
+                    }
+
+                    // Thêm query params
+                    var uriBuilder = new UriBuilder(baseRedirectUrl);
+                    var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+
+                    // Thêm các tham số vào URL redirect
+                    query["paymentId"] = payment.Id.ToString();
+                    query["status"] = status;
+                    query["orderCode"] = orderCode;
+
+                    //// Nếu có nhiều đơn hàng (từ OrderReference)
+                    //if (!string.IsNullOrEmpty(payment.OrderReference))
+                    //{
+                    //    query["orderIds"] = payment.OrderReference;
+                    //}
+
+                    uriBuilder.Query = query.ToString();
+
+                    // Chuyển hướng về frontend
+                    return Redirect(uriBuilder.ToString());
+                }
+
+                // Nếu không yêu cầu redirect, trả về API response
+                return Ok(new
+                {
+                    success = true,
+                    message = "Callback processed successfully",
+                    paymentId = payment.Id,
+                    status = status
+                });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error processing SePay callback");
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
