@@ -266,9 +266,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 FullName = order.ToName,
                 Phone = order.ToPhone,
                 AddressLine1 = order.ToAddress,
+                Province = order.ToProvince,
                 Ward = order.ToWard,
-                City = order.ToProvince,
-                State = order.ToDistrict,
+                District = order.ToDistrict,
                 PostalCode = order.ToPostalCode,
                 Country = "Vietnam"
             };

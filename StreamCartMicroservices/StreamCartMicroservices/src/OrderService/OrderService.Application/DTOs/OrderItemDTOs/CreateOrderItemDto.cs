@@ -7,7 +7,7 @@ namespace OrderService.Application.DTOs.OrderItemDTOs
         public Guid ProductId { get; set; }
         public Guid? VariantId { get; set; }
         public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
+        //public decimal UnitPrice { get; set; }
         //public string Notes { get; set; } = string.Empty;
     }
 }

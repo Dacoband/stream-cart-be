@@ -96,7 +96,6 @@ namespace OrderService.Infrastructure.Services
                         ProductId = i.ProductId,
                         VariantId = i.VariantId,
                         Quantity = i.Quantity,
-                        UnitPrice = i.UnitPrice,
                         //Notes = i.Notes
                     }).ToList() ?? new List<CreateOrderItemDto>()
                     
@@ -390,7 +389,7 @@ namespace OrderService.Infrastructure.Services
                         return (false, "Quantity must be greater than zero for all items");
                     }
 
-                    if (item.UnitPrice <= 0)
+                    if (0 <= 0)
                     {
                         return (false, "Unit price must be greater than zero for all items");
                     }
