@@ -8,7 +8,7 @@ namespace OrderService.Domain.Entities
     public class Orders : BaseEntity
     {
         #region Properties    
-        public string VoucherCode { get; set; }
+        public string? VoucherCode { get; set; } = string.Empty;
 
         public string OrderCode { get; private set; }
         public DateTime OrderDate { get; private set; }
