@@ -110,14 +110,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     Items = orderItemDtos
                 };
                 //pubish OrderChangeEvent to NotificationSevice
-                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
-                {
-                    OrderCode = order.OrderCode,
-                    Message ="đã được thanh toán thành công",
-                    UserId = request.ModifiedBy,
-                };
-                await _publishEndpoint.Publish(orderChangEvent);
-                _logger.LogInformation("Payment status updated successfully for order {OrderId}", request.OrderId);
+                //var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                //{
+                //    OrderCode = order.OrderCode,
+                //    Message ="đã được thanh toán thành công",
+                //    UserId = request.ModifiedBy,
+                //};
+                //await _publishEndpoint.Publish(orderChangEvent);
+                //_logger.LogInformation("Payment status updated successfully for order {OrderId}", request.OrderId);
                 return orderDto;
             }
             catch (Exception ex)

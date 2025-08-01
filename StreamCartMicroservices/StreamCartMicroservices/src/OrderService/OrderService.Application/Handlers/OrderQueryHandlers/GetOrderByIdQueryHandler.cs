@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -50,7 +50,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     City = order.ToProvince,
                     State = order.ToDistrict,
                     PostalCode = order.ToPostalCode,
-                    Country = "Vietnam", 
+                    Country = "Vietnam",
                     IsDefault = false
                 };
 
@@ -59,7 +59,25 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                 {
                     foreach (var item in order.Items)
                     {
-                        var productDetails = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                        // ✅ FIX: Thêm try-catch để tránh crash khi ProductService fail
+                        string productName = "Unknown Product";
+                        string productImageUrl = string.Empty;
+
+                        try
+                        {
+                            var productDetails = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                            if (productDetails != null)
+                            {
+                                productName = productDetails.ProductName ?? "Unknown Product";
+                                productImageUrl = productDetails.PrimaryImageUrl ?? string.Empty;
+                            }
+                        }
+                        catch (Exception productEx)
+                        {
+                            _logger.LogWarning(productEx, "Failed to get product details for ProductId {ProductId} in order {OrderId}",
+                                item.ProductId, request.OrderId);
+                            // Tiếp tục với default values đã set ở trên
+                        }
 
                         orderItemDtos.Add(new OrderItemDto
                         {
@@ -72,8 +90,8 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                             DiscountAmount = item.DiscountAmount,
                             TotalPrice = item.TotalPrice,
                             Notes = item.Notes,
-                            ProductName = productDetails?.ProductName ?? "Unknown Product",
-                            ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
+                            ProductName = productName,
+                            ProductImageUrl = productImageUrl
                         });
                     }
                 }
@@ -101,11 +119,14 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     Items = orderItemDtos
                 };
 
+                _logger.LogInformation("Successfully retrieved order {OrderId} with {ItemCount} items",
+                    request.OrderId, orderItemDtos.Count);
+
                 return orderDto;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting order by ID: {ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "Error getting order by ID {OrderId}: {ErrorMessage}", request.OrderId, ex.Message);
                 throw;
             }
         }

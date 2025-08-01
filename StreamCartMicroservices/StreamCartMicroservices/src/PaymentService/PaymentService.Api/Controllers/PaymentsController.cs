@@ -227,7 +227,7 @@ namespace PaymentService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Validate request data
+            
             if (requestDto.OrderIds == null || requestDto.OrderIds.Count == 0)
             {
                 return BadRequest("At least one order ID must be provided");
@@ -235,7 +235,7 @@ namespace PaymentService.Api.Controllers
 
             try
             {
-                // Get all orders
+               
                 decimal totalAmount = 0;
                 Guid? primaryUserId = null;
                 var orderDetails = new List<OrderDto>();
@@ -281,27 +281,24 @@ namespace PaymentService.Api.Controllers
                     );
                 }
 
-                // Create combined payment record
                 var createPaymentDto = new CreatePaymentDto
                 {
-                    OrderId = orderDetails[0].Id, // Primary order ID
+                    OrderId = orderDetails[0].Id, 
                     Amount = totalAmount,
                     PaymentMethod = PaymentMethod.BankTransfer,
                     CreatedBy = User.Identity?.Name ?? "System",
                     QrCode = qrCode,
-                    OrderReference = string.Join(",", requestDto.OrderIds) 
+                    //OrderReference = string.Join(",", requestDto.OrderIds) 
                 };
 
                 var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
 
-                // Update all orders' payment status to pending
                 foreach (var order in orderDetails)
                 {
                     await _orderServiceClient.UpdateOrderPaymentStatusAsync(
                         order.Id, PaymentStatus.Pending);
                 }
 
-                // Return QR code and payment information
                 return Ok(new
                 {
                     qrCode = qrCode,
@@ -318,18 +315,7 @@ namespace PaymentService.Api.Controllers
                 return StatusCode(500, new { error = $"Error generating QR code: {ex.Message}" });
             }
         }
-        /// <summary>
-        /// Xử lý callback từ SePay
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
+       
         [HttpPost("callback/sepay")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]

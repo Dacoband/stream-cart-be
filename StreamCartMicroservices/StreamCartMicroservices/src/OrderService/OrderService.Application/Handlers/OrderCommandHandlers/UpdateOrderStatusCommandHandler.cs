@@ -133,24 +133,24 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                 _logger.LogInformation("Order status updated successfully for order {OrderId}", request.OrderId);
                 //pubish OrderChangeEvent to NotificationSevice
-                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
-                {
-                    OrderCode = order.OrderCode,
-                    Message = message,
-                    UserId = request.ModifiedBy,
-                };
-                await _publishEndpoint.Publish(orderChangEvent);
-                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                foreach (var acc in shopAccount)
-                {
-                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
-                    {
-                        OrderCode = order.OrderCode,
-                        Message = message,
-                        UserId = acc.Id.ToString(),
-                    };
-                    await _publishEndpoint.Publish(ordChangeEvent);
-                }
+                //var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                //{
+                //    OrderCode = order.OrderCode,
+                //    Message = message,
+                //    UserId = request.ModifiedBy,
+                //};
+                //await _publishEndpoint.Publish(orderChangEvent);
+                //var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                //foreach (var acc in shopAccount)
+                //{
+                //    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
+                //    {
+                //        OrderCode = order.OrderCode,
+                //        Message = message,
+                //        UserId = acc.Id.ToString(),
+                //    };
+                //    await _publishEndpoint.Publish(ordChangeEvent);
+                //}
                 return orderDto;
             }
             catch (Exception ex)
