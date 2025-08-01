@@ -69,7 +69,8 @@ namespace CartService.Application.Services
                     PrimaryImage = product.PrimaryImage?.FirstOrDefault() ?? "",
                     Length = product.Length,
                     Width = product.Width,
-                    Height = product.Height
+                    Height = product.Height ,
+                    Weight = product.Weight
 ,
                 };
                 if(product.Variants.Count > 0 && variantId.IsNullOrEmpty() && variantId.IsNullOrWhiteSpace())
@@ -91,7 +92,7 @@ namespace CartService.Application.Services
                     productSnapshot.Length = variant.Length ?? product.Length;
                     productSnapshot.Width = variant.Width ?? product.Width;
                     productSnapshot.Height = variant.Height ?? product.Height;  
-                   
+                  
 
                 }
                 return productSnapshot;
