@@ -208,7 +208,7 @@ namespace CartService.Application.Services
                {
                    CurrentPrice = ci.PriceCurrent,
                    OriginalPrice = ci.PriceSnapShot,
-                   Discount =(int) Math.Floor(ci.PriceSnapShot/(ci.PriceSnapShot - ci.PriceCurrent))
+                   Discount = (ci.PriceSnapShot - ci.PriceCurrent) / ci.PriceSnapShot * 100
                },
                Quantity = ci.Quantity,
                StockQuantity = ci.Stock,
@@ -277,7 +277,8 @@ namespace CartService.Application.Services
                         {
                             CurrentPrice = ci.PriceCurrent,
                             OriginalPrice = ci.PriceSnapShot,
-                            Discount = (int)Math.Floor(ci.PriceSnapShot / (ci.PriceSnapShot - ci.PriceCurrent))
+                            Discount = (ci.PriceSnapShot - ci.PriceCurrent) / ci.PriceSnapShot * 100
+
                         },
                         Quantity = ci.Quantity,
                         StockQuantity = ci.Stock,
