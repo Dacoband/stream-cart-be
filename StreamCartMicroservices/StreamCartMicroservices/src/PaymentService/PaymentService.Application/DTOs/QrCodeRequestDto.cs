@@ -12,6 +12,6 @@ namespace PaymentService.Application.DTOs
         /// <summary>
         /// The unique identifier for the order.
         /// </summary>
-        public Guid OrderId { get; set; } 
+        public List<Guid>? OrderIds { get; set; }
     }
 }

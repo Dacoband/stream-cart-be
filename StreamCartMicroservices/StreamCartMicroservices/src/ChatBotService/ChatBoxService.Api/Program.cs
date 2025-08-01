@@ -67,7 +67,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 builder.Services.AddScoped<IGeminiChatbotService, GeminiChatbotService>();
 builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
 builder.Services.AddScoped<IUniversalChatbotService, UniversalChatbotService>();
-
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICachingService, CachingService>();
 builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
@@ -78,7 +79,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-
+builder.Services.AddScoped<IAIChatService, AIChatService>();
 builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);

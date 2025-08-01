@@ -1,6 +1,7 @@
 ﻿using ChatBoxService.Application.DTOs;
 using ChatBoxService.Application.DTOs.ShopDto;
 using ChatBoxService.Application.Interfaces;
+using ChatBoxService.Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ChatBoxService.Infrastructure.Services
@@ -30,7 +32,7 @@ namespace ChatBoxService.Infrastructure.Services
         private const int CIRCUIT_BREAKER_TIMEOUT_MINUTES = 5;
 
 
-
+        private readonly ICachingService _cachingService;
 
         public UniversalChatbotService(
             IHttpClientFactory httpClientFactory,
@@ -38,12 +40,13 @@ namespace ChatBoxService.Infrastructure.Services
             IShopServiceClient shopServiceClient,
             IConfiguration configuration,
             ILogger<UniversalChatbotService> logger,
-            IChatHistoryService chatHistoryService)
+            IChatHistoryService chatHistoryService,ICachingService cachingService)
         {
             _httpClientFactory = httpClientFactory;
             _productServiceClient = productServiceClient;
             _shopServiceClient = shopServiceClient;
             _logger = logger;
+            _cachingService = cachingService;
             _geminiApiKey = configuration["GEMINI_API_KEY"] ?? configuration["Gemini:ApiKey"] ??
                 throw new InvalidOperationException("Gemini API Key is not configured");
             _geminiApiUrl = configuration["GEMINI_API_URL"] ?? configuration["Gemini:ApiUrl"] ??
@@ -56,6 +59,63 @@ namespace ChatBoxService.Infrastructure.Services
         {
             try
             {
+                var lowerMessage = customerMessage.ToLower().Trim();
+                if ((lowerMessage.Contains("có shop nào bán") || lowerMessage.Contains("shop nào bán"))
+                    && lowerMessage.Contains("iphone"))
+                {
+                    _logger.LogInformation("🎯 DETECTED EXACT PATTERN: có shop nào bán iPhone");
+
+                    // Tìm shops bán iPhone
+                    var shops = await SearchShopsUniversalAsync(new List<string> { "iphone" });
+
+                    string response;
+                    if (shops?.Any() == true)
+                    {
+                        response = "🏪 **Các shop bán iPhone trên StreamCart:**\n\n";
+                        foreach (var shop in shops.Take(5))
+                        {
+                            response += $"• **{shop.ShopName}** - {shop.TotalProducts} sản phẩm\n";
+                        }
+                        response += "\n⭐ Đây là những shop uy tín trên StreamCart có bán iPhone. Anh/chị có thể truy cập vào shop để xem các mẫu iPhone và so sánh giá!";
+                    }
+                    else
+                    {
+                        response = "Hiện tại StreamCart có một số shop bán iPhone, nhưng tôi không thể tìm thấy thông tin cụ thể. Anh/chị có thể vào mục danh mục Điện thoại để tìm kiếm các sản phẩm iPhone nhé!";
+                    }
+
+                    var directResponse = new ChatbotResponseDTO
+                    {
+                        BotResponse = response,
+                        Intent = "shop_search",
+                        ConfidenceScore = 0.99m,
+                        RequiresHumanSupport = false,
+                        GeneratedAt = DateTime.UtcNow,
+                        SuggestedActions = GenerateUniversalSuggestedActions(new ChatbotIntent { Intent = "shop_search" })
+                    };
+                    // Thêm shop suggestions nếu có
+                    if (shops?.Any() == true)
+                    {
+                        directResponse.ShopSuggestions = shops.Take(5).Select(s => new ShopSuggestion
+                        {
+                            ShopId = s.Id,
+                            ShopName = s.ShopName,
+                            ProductCount = s.TotalProducts,
+                            Rating = 4.5m,
+                            Location = s.Address ?? "Việt Nam",
+                            LogoUrl = s.LogoUrl,
+                            Description = s.Description,
+                            ReasonForSuggestion = "Cửa hàng bán iPhone"
+                        }).ToList();
+                    }
+
+                    // Lưu conversation
+                    if (userId != Guid.Empty)
+                    {
+                        await SaveUniversalConversationAsync(userId, customerMessage, directResponse);
+                    }
+
+                    return directResponse;
+                }
                 _logger.LogInformation("🤖 Processing universal chatbot request for user {UserId}: {Message}",
                     userId, customerMessage);
 
@@ -64,22 +124,119 @@ namespace ChatBoxService.Infrastructure.Services
                 _logger.LogInformation("🎯 Analyzed universal intent: {Intent} with confidence {Confidence}",
                     intent.Intent, intent.Confidence);
 
+                // ✅ KIỂM TRA INTENT SHOP_SEARCH TRƯỚC TIÊN
+                if (intent.Intent == "shop_search" && intent.Confidence >= 0.8m)
+                {
+                    _logger.LogInformation("🏪 Processing high-confidence shop search intent: {Message}", customerMessage);
+
+                    // Xây dựng context dựa trên intent shop_search
+                    var shopSearchContext = await BuildUniversalContextAsync(customerMessage, intent, userId);
+
+                    // Xử lý fallback hoặc AI response cho shop_search
+                    string aiResponse;
+                    if (ShouldUseFallbackResponse(intent, shopSearchContext))
+                    {
+                        _logger.LogInformation("💡 Using smart fallback for shop search");
+                        aiResponse = GetFallbackResponse(intent, shopSearchContext);
+                    }
+                    else if (IsCircuitBreakerOpen())
+                    {
+                        _logger.LogWarning("⚠️ Circuit breaker is OPEN - using fallback for shop search");
+                        aiResponse = GetFallbackResponse(intent, shopSearchContext);
+                    }
+                    else
+                    {
+                        var systemPrompt = GenerateUniversalSystemPrompt(shopSearchContext, intent);
+                        aiResponse = await CallGeminiAPIAsync(systemPrompt, customerMessage);
+                    }
+
+                    // Xây dựng response với suggestions từ database thật
+                    var shopSearchResponse = await BuildChatbotResponseAsync(aiResponse, intent, shopSearchContext);
+
+                    // Lưu lịch sử chat
+                    if (userId != Guid.Empty)
+                    {
+                        await SaveUniversalConversationAsync(userId, customerMessage, shopSearchResponse);
+                    }
+
+                    _logger.LogInformation("✅ Generated shop search response with {ShopCount} shops",
+                        shopSearchResponse.ShopSuggestions?.Count ?? 0);
+
+                    return shopSearchResponse;
+                }
+
+                // ✓ FAST PATH cho các intent đơn giản
+                if (intent.Intent == "greeting" || intent.Intent == "thanks")
+                {
+                    // Tạo fast response không cần context
+                    string responseText = intent.Intent == "greeting"
+                        ? ResponseTemplates.GetRandomResponse("greeting")
+                        : ResponseTemplates.GetRandomResponse("thanks");
+
+                    var fastResponse = new ChatbotResponseDTO
+                    {
+                        BotResponse = responseText,
+                        Intent = intent.Intent,
+                        ConfidenceScore = intent.Confidence,
+                        RequiresHumanSupport = false,
+                        SuggestedActions = GenerateUniversalSuggestedActions(intent),
+                        GeneratedAt = DateTime.UtcNow
+                    };
+
+                    // Lưu conversation nếu cần
+                    if (userId != Guid.Empty)
+                    {
+                        await SaveUniversalConversationAsync(userId, customerMessage, fastResponse);
+                    }
+
+                    return fastResponse;
+                }
+
+                // ✓ Kiểm tra FAQ matches - CHỈ KHI KHÔNG PHẢI INTENT CẦN XỬ LÝ ĐẶC BIỆT
+                if (intent.Intent != "product_search" && intent.Confidence < 0.8m)
+                {
+                    bool isGoodFaqMatch;
+                    var faqResponse = LocalTrainingData.FindBestMatchingFAQ(customerMessage, out isGoodFaqMatch);
+
+                    if (isGoodFaqMatch)
+                    {
+                        _logger.LogInformation("📚 Found good FAQ match for message");
+
+                        var faqFastResponse = new ChatbotResponseDTO
+                        {
+                            BotResponse = faqResponse + "\n\n" + LocalTrainingData.GetRandomShoppingTip(),
+                            Intent = "general_question",
+                            ConfidenceScore = 0.95m,
+                            RequiresHumanSupport = false,
+                            SuggestedActions = GenerateUniversalSuggestedActions(new ChatbotIntent { Intent = "general_question" }),
+                            GeneratedAt = DateTime.UtcNow
+                        };
+
+                        if (userId != Guid.Empty)
+                        {
+                            await SaveUniversalConversationAsync(userId, customerMessage, faqFastResponse);
+                        }
+
+                        return faqFastResponse;
+                    }
+                }
+
                 // 2. Xây dựng context dựa trên intent - THỰC SỰ GỌI API
                 var context = await BuildUniversalContextAsync(customerMessage, intent, userId);
 
                 // 3. **KIỂM TRA CÓ THỂ DÙNG FALLBACK KHÔNG?**
-                string aiResponse;
+                string aiResponseText;
 
                 // ✅ ƯU TIÊN FALLBACK cho các intent đơn giản
                 if (ShouldUseFallbackResponse(intent, context))
                 {
                     _logger.LogInformation("💡 Using smart fallback response for intent: {Intent}", intent.Intent);
-                    aiResponse = GetFallbackResponse(intent, context);
+                    aiResponseText = GetFallbackResponse(intent, context);
                 }
                 else if (IsCircuitBreakerOpen())
                 {
                     _logger.LogWarning("⚠️ Circuit breaker is OPEN - using fallback response");
-                    aiResponse = GetFallbackResponse(intent, context);
+                    aiResponseText = GetFallbackResponse(intent, context);
                 }
                 else
                 {
@@ -87,28 +244,28 @@ namespace ChatBoxService.Infrastructure.Services
                     try
                     {
                         var systemPrompt = GenerateUniversalSystemPrompt(context, intent);
-                        aiResponse = await CallGeminiAPIAsync(systemPrompt, customerMessage);
+                        aiResponseText = await CallGeminiAPIAsync(systemPrompt, customerMessage);
                     }
                     catch (HttpRequestException ex) when (ex.Message.Contains("ServiceUnavailable") || ex.Message.Contains("overloaded"))
                     {
                         _logger.LogWarning("⚠️ Gemini API overloaded - using fallback response for intent: {Intent}", intent.Intent);
-                        aiResponse = GetFallbackResponse(intent, context);
+                        aiResponseText = GetFallbackResponse(intent, context);
                     }
                 }
 
                 // 5. Xây dựng response với suggestions THẬT từ database
-                var response = await BuildChatbotResponseAsync(aiResponse, intent, context);
+                var chatbotResponse = await BuildChatbotResponseAsync(aiResponseText, intent, context);
 
                 // 6. Lưu lịch sử chat
                 if (userId != Guid.Empty)
                 {
-                    await SaveUniversalConversationAsync(userId, customerMessage, response);
+                    await SaveUniversalConversationAsync(userId, customerMessage, chatbotResponse);
                 }
 
                 _logger.LogInformation("✅ Generated universal response with {ShopCount} shops and {ProductCount} products",
-                    response.ShopSuggestions?.Count ?? 0, response.ProductSuggestions?.Count ?? 0);
+                    chatbotResponse.ShopSuggestions?.Count ?? 0, chatbotResponse.ProductSuggestions?.Count ?? 0);
 
-                return response;
+                return chatbotResponse;
             }
             catch (Exception ex)
             {
@@ -159,6 +316,75 @@ namespace ChatBoxService.Infrastructure.Services
             }
 
             return false;
+        }
+        // ✅ NEW: Method tìm kiếm shop theo tên
+        private async Task<List<ShopDto>> SearchShopsByNameExactAsync(string shopName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(shopName))
+                    return new List<ShopDto>();
+
+                var cacheKey = $"shop_exact_name_{shopName.ToLower()}";
+
+                return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+                {
+                    _logger.LogInformation("🔍 Searching shops by exact name: {ShopName}", shopName);
+
+                    // Gọi API tìm kiếm shop theo tên
+                    var shops = await _shopServiceClient.SearchShopsByNameAsync(shopName);
+
+                    // Tìm shop có tên chính xác nhất
+                    var exactMatch = shops.FirstOrDefault(s =>
+                        s.ShopName.Equals(shopName, StringComparison.OrdinalIgnoreCase));
+
+                    // Nếu không có match chính xác, lấy shop có tên gần đúng nhất
+                    if (exactMatch == null)
+                    {
+                        exactMatch = shops.FirstOrDefault(s =>
+                            s.ShopName.Contains(shopName, StringComparison.OrdinalIgnoreCase) ||
+                            shopName.Contains(s.ShopName, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    // Trả về danh sách chỉ có shop match hoặc empty list
+                    return exactMatch != null ? new List<ShopDto> { exactMatch } : new List<ShopDto>();
+                }, TimeSpan.FromMinutes(30));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error searching shop by exact name: {ShopName}", shopName);
+                return new List<ShopDto>();
+            }
+        }
+        // ✅ NEW: Method trích xuất tên shop từ tin nhắn
+        private string ExtractShopNameFromMessage(string message)
+        {
+            var lowerMessage = message.ToLower();
+
+            // Các pattern phổ biến khi hỏi về sản phẩm của shop
+            var shopNamePatterns = new[]
+            {
+        @"(sản\s*phẩm|hàng\s*hóa|đồ|mặt\s*hàng)\s*(của|ở|tại)\s*(shop|cửa\s*hàng)\s*([^?.,]+)",
+        @"(shop|cửa\s*hàng)\s*([^?.,]+?)\s*(có|bán|cung\s*cấp|gì|hàng\s*gì)"
+    };
+
+            foreach (var pattern in shopNamePatterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(lowerMessage, pattern);
+                if (match.Success)
+                {
+                    // Lấy group chứa tên shop (group 4 hoặc 2 tùy pattern)
+                    string shopName = match.Groups.Count > 4 ? match.Groups[4].Value.Trim() : match.Groups[2].Value.Trim();
+
+                    if (!string.IsNullOrEmpty(shopName))
+                    {
+                        _logger.LogInformation("🏪 Extracted shop name: {ShopName}", shopName);
+                        return shopName;
+                    }
+                }
+            }
+
+            return string.Empty;
         }
 
         public async Task<ChatbotIntent> AnalyzeUniversalIntentAsync(string customerMessage)
@@ -264,149 +490,91 @@ Tin nhắn: """ + customerMessage + @"""";
             _logger.LogInformation("🔍 Using enhanced offline intent analysis for: {Message}",
                 customerMessage.Substring(0, Math.Min(30, customerMessage.Length)));
 
-            // ✅ Enhanced pattern matching
-
-            // Greeting patterns - NHIỀU PATTERN HỠN
-            var greetingPatterns = new[] {
-        "xin chào", "hello", "hi", "chào", "hey", "hỏi", "xin lỗi",
-        "cho hỏi", "em muốn", "anh ơi", "chị ơi", "shop ơi"
-    };
-            if (greetingPatterns.Any(p => message.Contains(p)))
-            {
-                return new ChatbotIntent
-                {
-                    Intent = "greeting",
-                    Category = "customer_service",
-                    Confidence = 0.95m,
-                    Keywords = new List<string> { "chào hỏi" }
-                };
-            }
-
-            // Thanks patterns
-            var thanksPatterns = new[] { "cảm ơn", "thanks", "cám ơn", "thank you", "cảm ơn shop" };
-            if (thanksPatterns.Any(p => message.Contains(p)))
-            {
-                return new ChatbotIntent
-                {
-                    Intent = "thanks",
-                    Category = "customer_service",
-                    Confidence = 0.95m,
-                    Keywords = new List<string> { "cảm ơn" }
-                };
-            }
-
-            // ✅ SHOP SEARCH PATTERNS - ƯU TIÊN TRƯỚC PRODUCT SEARCH
+            // ✅ KIỂM TRA PATTERN SHOP SEARCH ĐẦU TIÊN (ƯU TIÊN CAO NHẤT)
             var shopSearchPatterns = new[] {
-        "tìm shop", "shop bán", "cửa hàng bán", "store bán",
-        "shop có bán", "cửa hàng có", "tìm cửa hàng",
-        "shop nào bán", "cửa hàng nào", "shop ở đâu"
+        "có shop nào bán",
+        "shop nào bán",
+        "shop bán",
+        "cửa hàng bán",
+        "có cửa hàng nào bán"
     };
 
-            // Kiểm tra shop search patterns trước
             if (shopSearchPatterns.Any(p => message.Contains(p)))
             {
-                var keywords = ExtractProductKeywordsFromShopSearch(message);
+                _logger.LogInformation("🎯 Detected shop search pattern in message: {Message}", message);
+
+                // Trích xuất từ khóa sản phẩm từ shop search pattern
+                var productKeywords = ExtractProductKeywordsFromShopSearch(message);
+
+                _logger.LogInformation("🔑 Extracted product keywords from shop search: {Keywords}",
+                    string.Join(", ", productKeywords));
+
                 return new ChatbotIntent
                 {
                     Intent = "shop_search",
                     Category = "shopping",
-                    Confidence = 0.95m,
-                    Keywords = keywords.Any() ? keywords : new List<string> { "shop", "cửa hàng" }
+                    Confidence = 0.95m,  // Confidence cao vì pattern rõ ràng
+                    Keywords = productKeywords.Any()
+                        ? productKeywords
+                        : new List<string> { "sản phẩm" }
                 };
             }
 
-            // ✅ Enhanced shop search patterns - GENERAL
-            var generalShopPatterns = new[] { "shop", "cửa hàng", "store", "gian hàng", "của hàng" };
-            if (generalShopPatterns.Any(p => message.Contains(p)))
+            // ✅ SAU ĐÓ MỚI KIỂM TRA CÁC INTENT PATTERNS KHÁC
+            var intent = IntentPatterns.DetectIntent(message, out decimal confidence);
+
+            // ✅ KIỂM TRA FAQ MATCHES SAU KHI ĐÃ THỬ SHOP SEARCH VÀ INTENT PATTERNS
+            if (intent != "product_search" && intent != "shop_search")
             {
-                // Kiểm tra xem có từ "bán" hoặc sản phẩm cụ thể không
-                var productKeywords = ExtractProductKeywordsFromShopSearch(message);
-                if (productKeywords.Any())
+                bool isFaqMatch;
+                var faqMatchResponse = LocalTrainingData.FindBestMatchingFAQ(message, out isFaqMatch);
+
+                if (isFaqMatch)
                 {
                     return new ChatbotIntent
                     {
-                        Intent = "shop_search",
-                        Category = "shopping",
-                        Confidence = 0.9m,
-                        Keywords = productKeywords
+                        Intent = "general_question",
+                        Category = "customer_service",
+                        Confidence = 0.95m,
+                        Keywords = message.Split(' ').Where(w => w.Length > 3).Take(3).ToList()
                     };
                 }
-
-                return new ChatbotIntent
-                {
-                    Intent = "shop_search",
-                    Category = "shopping",
-                    Confidence = 0.9m,
-                    Keywords = new List<string> { "shop", "cửa hàng" }
-                };
             }
 
-            // ✅ Enhanced product search patterns - CHỈ KHI KHÔNG PHẢI SHOP SEARCH
-            var productSearchPatterns = new[] {
-        "mua", "sản phẩm", "hàng", "cần", "muốn",
-        "có bán", "bán gì", "hàng gì"
-    };
+            // Tạo keywords dựa trên intent
+            var keywords = new List<string>();
 
-            var specificProductPatterns = new[] {
-        "điện thoại", "laptop", "giày", "áo", "quần", "túi",
-        "đồng hồ", "kính", "máy tính", "tablet", "earphone"
-    };
-
-            // Chỉ khi có pattern tìm sản phẩm NHƯNG KHÔNG CÓ "shop" hoặc "cửa hàng"
-            if ((productSearchPatterns.Any(p => message.Contains(p)) ||
-                 specificProductPatterns.Any(p => message.Contains(p))) &&
-                !message.Contains("shop") && !message.Contains("cửa hàng") && !message.Contains("store"))
+            switch (intent)
             {
-                var keywords = ExtractKeywords(message, specificProductPatterns);
+                case "product_search":
+                    keywords = ExtractKeywords(message, new[] {
+                "điện thoại", "laptop", "máy tính", "tablet", "ipad", "samsung", "iphone",
+                "giày", "quần áo", "thời trang", "áo", "quần", "váy", "đầm",
+                "mỹ phẩm", "son", "kem", "sữa rửa mặt", "serum",
+                "đồng hồ", "túi xách", "balo", "kính"
+            });
+                    break;
 
-                return new ChatbotIntent
-                {
-                    Intent = "product_search",
-                    Category = "shopping",
-                    Confidence = 0.9m,
-                    Keywords = keywords.Any() ? keywords : new List<string> { "sản phẩm" }
-                };
+                case "price_inquiry":
+                    keywords = ExtractKeywords(message, new[] {
+                "điện thoại", "laptop", "máy tính", "quần áo", "giày"
+            });
+                    break;
+
+                default:
+                    keywords = message.Split(' ')
+                        .Where(w => w.Length > 3 && !new[] { "tìm", "mua", "cần", "muốn", "bao nhiêu", "giá" }.Contains(w))
+                        .Take(3)
+                        .ToList();
+                    break;
             }
 
-            // ✅ Enhanced price patterns
-            var pricePatterns = new[] {
-        "giá", "bao nhiêu", "tiền", "chi phí", "giá cả",
-        "rẻ", "đắt", "cost", "price", "bao nhiều tiền"
-    };
-            if (pricePatterns.Any(p => message.Contains(p)))
-            {
-                return new ChatbotIntent
-                {
-                    Intent = "price_inquiry",
-                    Category = "shopping",
-                    Confidence = 0.9m,
-                    Keywords = new List<string> { "giá", "tiền" }
-                };
-            }
-
-            // ✅ Enhanced recommendation patterns
-            var recommendationPatterns = new[] {
-        "gợi ý", "tư vấn", "nên mua", "đề xuất", "recommend",
-        "suggest", "chọn gì", "mua gì", "nên chọn", "tốt nhất"
-    };
-            if (recommendationPatterns.Any(p => message.Contains(p)))
-            {
-                return new ChatbotIntent
-                {
-                    Intent = "recommendation",
-                    Category = "shopping",
-                    Confidence = 0.85m,
-                    Keywords = new List<string> { "gợi ý", "tư vấn" }
-                };
-            }
-
-            // ✅ Default fallback với confidence thấp hơn
             return new ChatbotIntent
             {
-                Intent = "general_question",
-                Category = "support",
-                Confidence = 0.6m,
-                Keywords = message.Split(' ').Where(w => w.Length > 2).Take(2).ToList()
+                Intent = intent,
+                Category = intent == "greeting" || intent == "thanks" ? "customer_service" : "shopping",
+                Confidence = confidence,
+                Keywords = keywords.Any() ? keywords : new List<string> { "sản phẩm" }
             };
         }
 
@@ -415,15 +583,44 @@ Tin nhắn: """ + customerMessage + @"""";
         {
             var productKeywords = new[] {
         "điện thoại", "laptop", "giày", "áo", "quần", "túi", "kính",
-        "đồng hồ", "máy tính", "tablet", "earphone", "airpod", "phone",
-        "thời trang", "mỹ phẩm", "sách", "đồ chơi", "đồ gia dụng"
+        "đồng hồ", "máy tính", "tablet", "earphone", "airpod", "phone", "iphone",
+        "thời trang", "mỹ phẩm", "sách", "đồ chơi", "đồ gia dụng", "samsung"
     };
 
             var foundKeywords = new List<string>();
 
+            // Cải thiện pattern để bắt cả "có shop nào bán [product] không"
+            var shopProductPatterns = new[] {
+        @"(shop|cửa\s*hàng).*?(bán|có)\s*(.+?)(\s|$|\?)",
+        @"(có)\s*(shop|cửa\s*hàng)\s*(nào)?\s*(bán|có)\s*(.+?)(\s|không|\?|$)",
+        @"(shop|cửa\s*hàng)\s*(nào)\s*(bán|có)\s*(.+?)(\s|không|\?|$)"
+    };
+
+            foreach (var pattern in shopProductPatterns)
+            {
+                var match = Regex.Match(message, pattern);
+                if (match.Success)
+                {
+                    var productGroup = match.Groups.Count > 5 ? match.Groups[5] : match.Groups[3];
+                    var productName = productGroup.Value.Trim();
+                    if (!string.IsNullOrEmpty(productName))
+                    {
+                        _logger.LogInformation("🔍 Extracted product keyword from shop search: {Keyword}", productName);
+                        foundKeywords.Add(productName);
+
+                        // Nếu tìm thấy một từ khóa cụ thể, không cần tìm thêm
+                        if (productName.Contains("iphone") || productName.Contains("điện thoại"))
+                        {
+                            return foundKeywords;
+                        }
+                    }
+                }
+            }
+
+            // Tìm thêm các từ khóa phổ biến trong message
             foreach (var keyword in productKeywords)
             {
-                if (message.Contains(keyword))
+                if (message.Contains(keyword) && !foundKeywords.Contains(keyword))
                 {
                     foundKeywords.Add(keyword);
                 }
@@ -459,16 +656,60 @@ Tin nhắn: """ + customerMessage + @"""";
         // ✅ Fallback Response Generator
         private string GetFallbackResponse(ChatbotIntent intent, UniversalContext context)
         {
-            return intent.Intent switch
+            // Sử dụng template response với dữ liệu thật
+            switch (intent.Intent)
             {
-                "greeting" => GenerateGreetingFallback(context),
-                "product_search" => GenerateProductSearchFallback(context),
-                "shop_search" => GenerateShopSearchFallback(context),
-                "price_inquiry" => GeneratePriceInquiryFallback(context),
-                "recommendation" => GenerateRecommendationFallback(context),
-                "thanks" => "Dạ không có gì ạ! Rất vui được hỗ trợ anh/chị mua sắm trên StreamCart! 😊 Còn gì khác tôi có thể giúp không ạ? 🛍️",
-                _ => "Xin chào anh/chị! Tôi là StreamCart AI. Hiện tại hệ thống đang hơi bận, nhưng tôi vẫn có thể hỗ trợ anh/chị tìm kiếm sản phẩm và cửa hàng trên nền tảng. Anh/chị cần tìm gì hôm nay? 😊"
-            };
+                case "greeting":
+                    var timeOfDay = DateTime.Now.Hour < 12 ? "morning" : (DateTime.Now.Hour < 18 ? "default" : "evening");
+                    return ResponseTemplates.GetRandomResponse("greeting", timeOfDay);
+
+                case "product_search":
+                    if (context.SuggestedProducts?.Any() == true)
+                    {
+                        var template = ResponseTemplates.GetRandomResponse("product_search", "success");
+
+                        // Format product list from real data
+                        var productsText = string.Join("\n", context.SuggestedProducts.Take(6).Select(p =>
+                            $"• **{p.ProductName}** - {p.FinalPrice:N0}đ (Tồn kho: {p.StockQuantity})"));
+
+                        return template.Replace("{PRODUCTS}", productsText);
+                    }
+                    return ResponseTemplates.GetRandomResponse("product_search", "empty");
+
+                case "shop_search":
+                    if (context.SuggestedShops?.Any() == true)
+                    {
+                        var template = ResponseTemplates.GetRandomResponse("shop_search", "success");
+
+                        // Format shop list from real data
+                        var shopsText = string.Join("\n", context.SuggestedShops.Take(5).Select(s =>
+                            $"• **{s.ShopName}** - {s.TotalProducts} sản phẩm"));
+
+                        return template.Replace("{SHOPS}", shopsText);
+                    }
+                    return ResponseTemplates.GetRandomResponse("shop_search", "empty");
+
+                case "thanks":
+                    return ResponseTemplates.GetRandomResponse("thanks");
+
+                default:
+                    // Tạo fallback thông minh với nội dung real từ context
+                    if (context.SuggestedProducts?.Any() == true)
+                    {
+                        return $"Xin chào anh/chị! Tôi có một số sản phẩm có thể anh/chị quan tâm:\n\n" +
+                               string.Join("\n", context.SuggestedProducts.Take(3).Select(p =>
+                                   $"• {p.ProductName} - {p.FinalPrice:N0}đ"));
+                    }
+
+                    if (context.SuggestedShops?.Any() == true)
+                    {
+                        return $"Xin chào anh/chị! Đây là một số shop nổi bật trên StreamCart:\n\n" +
+                               string.Join("\n", context.SuggestedShops.Take(3).Select(s =>
+                                   $"• {s.ShopName} - {s.TotalProducts} sản phẩm"));
+                    }
+
+                    return ResponseTemplates.GetRandomResponse("fallback");
+            }
         }
         private string GenerateGreetingFallback(UniversalContext context)
         {
@@ -523,22 +764,44 @@ Tin nhắn: """ + customerMessage + @"""";
         {
             if (context.SuggestedShops?.Any() == true)
             {
-                var response = "🏪 **Cửa hàng có bán sản phẩm bạn tìm trên StreamCart:**\n\n";
+                var shop = context.SuggestedShops.First();
 
-                foreach (var shop in context.SuggestedShops.Take(5))
+                // Kiểm tra nếu có cả shop và sản phẩm - trường hợp hỏi về sản phẩm của shop cụ thể
+                if (context.SuggestedProducts?.Any() == true && context.SuggestedShops.Count == 1)
                 {
-                    response += $"• **{shop.ShopName}** - {shop.TotalProducts} sản phẩm\n";
+                    var response = $"🏪 **Sản phẩm của shop {shop.ShopName} trên StreamCart:**\n\n";
+
+                    foreach (var product in context.SuggestedProducts.Take(8))
+                    {
+                        var stockStatus = product.StockQuantity > 0 ? $"Còn {product.StockQuantity}" : "Hết hàng";
+                        response += $"• **{product.ProductName}** - {product.FinalPrice:N0}đ ({stockStatus})\n";
+                    }
+
+                    if (context.SuggestedProducts.Count > 8)
+                    {
+                        response += $"\n... và {context.SuggestedProducts.Count - 8} sản phẩm khác\n";
+                    }
+
+                    response += $"\n📊 Shop {shop.ShopName} có tổng cộng {shop.TotalProducts} sản phẩm trên StreamCart.";
+                    return response;
                 }
 
-                response += "\n⭐ Đây là những cửa hàng được xác thực có bán sản phẩm bạn quan tâm!";
+                // Mã hiện tại cho trường hợp chỉ có shop không có sản phẩm
+                var shopResponse = "🏪 **Cửa hàng có bán sản phẩm bạn tìm trên StreamCart:**\n\n";
 
-                // ✅ Thêm thông tin hữu ích
+                foreach (var s in context.SuggestedShops.Take(5))
+                {
+                    shopResponse += $"• **{s.ShopName}** - {s.TotalProducts} sản phẩm\n";
+                }
+
+                shopResponse += "\n⭐ Đây là những cửa hàng được xác thực có bán sản phẩm bạn quan tâm!";
+
                 if (context.Intent.Keywords?.Any() == true)
                 {
-                    response += $"\n\n🔍 Từ khóa tìm kiếm: {string.Join(", ", context.Intent.Keywords)}";
+                    shopResponse += $"\n\n🔍 Từ khóa tìm kiếm: {string.Join(", ", context.Intent.Keywords)}";
                 }
 
-                return response;
+                return shopResponse;
             }
 
             return "🏪 Hiện tại chưa tìm thấy cửa hàng nào có bán sản phẩm bạn quan tâm.\n\n" +
@@ -621,7 +884,36 @@ Tin nhắn: """ + customerMessage + @"""";
             try
             {
                 _logger.LogInformation("🔄 Building universal context for intent: {Intent}", intent.Intent);
+                string shopName = ExtractShopNameFromMessage(customerMessage);
+                if (!string.IsNullOrEmpty(shopName))
+                {
+                    _logger.LogInformation("🔍 Detected shop name in query: {ShopName}", shopName);
 
+                    // Tìm shop theo tên
+                    var shops = await SearchShopsByNameExactAsync(shopName);
+                    if (shops.Any())
+                    {
+                        var shop = shops.First();
+                        _logger.LogInformation("✅ Found shop: {ShopName} (ID: {ShopId})", shop.ShopName, shop.Id);
+
+                        // Lấy sản phẩm của shop này
+                        var shopProducts = await _productServiceClient.GetProductsByShopIdAsync(shop.Id, activeOnly: true);
+
+                        // Thiết lập context với dữ liệu thực
+                        context.SuggestedShops = shops;
+                        context.SuggestedProducts = shopProducts;
+
+                        // Điều chỉnh intent nếu cần
+                        if (intent.Intent == "general_question")
+                        {
+                            // Điều chỉnh intent thành shop_search hoặc product_search
+                            intent.Intent = "shop_search";
+                            intent.Confidence = 0.9m;
+                            intent.Keywords = new List<string> { shopName };
+                            context.Intent = intent;
+                        }
+                    }
+                }
                 // Dựa vào intent để lấy thông tin phù hợp TỪ DATABASE THẬT
                 switch (intent.Intent)
                 {
@@ -702,71 +994,82 @@ Tin nhắn: """ + customerMessage + @"""";
                     return await GetTrendingProductsAsync();
                 }
 
-                _logger.LogInformation("🔍 Searching products universally with keywords: {Keywords}",
-                    string.Join(", ", keywords));
+                var cacheKey = $"product_search_{string.Join("_", keywords)}";
 
-                var allProducts = new List<ProductDto>();
-
-                // Step 1: Lấy danh sách shops hoạt động
-                var activeShops = await GetPopularShopsAsync();
-
-                if (!activeShops.Any())
+                // Try to get from cache first
+                return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
                 {
-                    _logger.LogWarning("⚠️ No active shops found to search products");
-                    return allProducts;
-                }
+                    _logger.LogInformation("🔍 Searching products universally with keywords: {Keywords}",
+                        string.Join(", ", keywords));
 
-                // Step 2: Search products từ từng shop - PARALLEL để nhanh hơn
-                var searchTasks = activeShops.Select(async shop =>
-                {
-                    try
+                    var allProducts = new List<ProductDto>();
+
+                    // Step 1: Lấy danh sách shops hoạt động (giảm xuống 5 shop đầu tiên)
+                    var activeShops = await GetPopularShopsAsync();
+                    var topShops = activeShops.Take(5).ToList();
+
+                    if (!topShops.Any())
                     {
-                        var shopProducts = await _productServiceClient.GetProductsByShopIdAsync(shop.Id, activeOnly: true);
+                        _logger.LogWarning("⚠️ No active shops found to search products");
+                        return allProducts;
+                    }
 
-                        if (shopProducts?.Any() == true)
+                    // Step 2: Search products từ từng shop - PARALLEL để nhanh hơn
+                    var searchTasks = topShops.Select(async shop =>
+                    {
+                        try
                         {
-                            // Filter sản phẩm theo keywords
-                            var matchingProducts = shopProducts.Where(p =>
-                                keywords.Any(keyword =>
-                                    p.ProductName?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true ||
-                                    p.Description?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true
-                                )
-                            ).ToList();
+                            var shopProductsCacheKey = $"shop_products_{shop.Id}";
 
-                            _logger.LogInformation("🏪 Shop {ShopName}: Found {Count} matching products",
-                                shop.ShopName, matchingProducts.Count);
+                            var shopProducts = await _cachingService.GetOrCreateAsync(
+                                  shopProductsCacheKey,
+                                  () => _productServiceClient.GetProductsByShopIdAsync(shop.Id, activeOnly: true),
+                                  TimeSpan.FromHours(1));
 
-                            return matchingProducts;
+                            if (shopProducts?.Any() == true)
+                            {
+                                // Filter sản phẩm theo keywords - chỉ lấy tối đa 5 sản phẩm mỗi shop
+                                var matchingProducts = shopProducts
+                                    .Where(p => keywords.Any(k =>
+                                        p.ProductName?.Contains(k, StringComparison.OrdinalIgnoreCase) == true ||
+                                        p.Description?.Contains(k, StringComparison.OrdinalIgnoreCase) == true))
+                                    .Take(5)
+                                    .ToList();
+
+                                _logger.LogInformation("🏪 Shop {ShopName}: Found {Count} matching products",
+                                    shop.ShopName, matchingProducts.Count);
+
+                                return matchingProducts;
+                            }
                         }
-                    }
-                    catch (Exception ex)
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "⚠️ Error searching products from shop {ShopId}", shop.Id);
+                        }
+
+                        return new List<ProductDto>();
+                    }).ToArray();
+
+                    var searchResults = await Task.WhenAll(searchTasks);
+
+                    // Combine và sort results
+                    foreach (var result in searchResults)
                     {
-                        _logger.LogWarning(ex, "⚠️ Error searching products from shop {ShopId}", shop.Id);
+                        allProducts.AddRange(result);
                     }
 
-                    return new List<ProductDto>();
-                }).ToArray();
+                    // Sort theo mức độ khớp keywords và giá - chỉ lấy 15 sản phẩm tốt nhất
+                    var sortedProducts = allProducts
+                        .OrderByDescending(p => keywords.Count(k =>
+                            p.ProductName?.Contains(k, StringComparison.OrdinalIgnoreCase) == true))
+                        .ThenBy(p => p.FinalPrice)
+                        .Take(15)
+                        .ToList();
+                    _logger.LogInformation("✅ Universal product search completed: {Count} products found",
+               sortedProducts.Count);
 
-                var searchResults = await Task.WhenAll(searchTasks);
-
-                // Combine và sort results
-                foreach (var result in searchResults)
-                {
-                    allProducts.AddRange(result);
-                }
-
-                // Sort theo mức độ khớp keywords và giá
-                var sortedProducts = allProducts
-                    .OrderByDescending(p => keywords.Count(k =>
-                        p.ProductName?.Contains(k, StringComparison.OrdinalIgnoreCase) == true))
-                    .ThenBy(p => p.FinalPrice)
-                    .Take(20) // Limit 20 sản phẩm tốt nhất
-                    .ToList();
-
-                _logger.LogInformation("✅ Universal product search completed: {Count} products found",
-                    sortedProducts.Count);
-
-                return sortedProducts;
+                    return sortedProducts;
+                }, TimeSpan.FromMinutes(15)); // Cache for 15 minutes
             }
             catch (Exception ex)
             {
@@ -775,7 +1078,6 @@ Tin nhắn: """ + customerMessage + @"""";
             }
         }
 
-        // ✅ THỰC SỰ TÌM KIẾM SHOP THEO TÊN
         // ✅ THỰC SỰ TÌM KIẾM SHOP THEO SẢN PHẨM MÀ SHOP BÁN
         private async Task<List<ShopDto>> SearchShopsUniversalAsync(List<string> keywords)
         {
@@ -915,11 +1217,8 @@ Tin nhắn: """ + customerMessage + @"""";
                 if (activeShops?.Any() == true)
                 {
                     // Sort theo số lượng sản phẩm (shops có nhiều sản phẩm = phổ biến)
-                    var popularShops = activeShops
-                        .Where(s => s.TotalProducts > 0)
-                        .OrderByDescending(s => s.TotalProducts)
-                        .Take(15) // Top 15 shops
-                        .ToList();
+                    var popularShops = activeShops.OrderByDescending(s => s.TotalProducts).Take(5).ToList();
+
 
                     _logger.LogInformation("✅ Found {Count} popular shops", popularShops.Count);
                     return popularShops;
@@ -1474,10 +1773,14 @@ Còn gì khác tôi có thể giúp không ạ? 🛍️""");
         private async Task<string> CallGeminiAPIAsync(string systemPrompt, string userMessage)
         {
             var client = _httpClientFactory.CreateClient();
+            const int maxRetries = 1; // Giảm xuống 1 retry thôi
+            const int baseDelayMs = 2000;
 
-            // ✅ GIẢM MẠNH retry configuration
-            const int maxRetries = 2; // Giảm từ 5 xuống 2
-            const int baseDelayMs = 3000; // Tăng delay để tránh spam API
+            // ✓ PERFORMANCE: Cắt ngắn prompt nếu quá dài
+            if (systemPrompt.Length > 2000)
+            {
+                systemPrompt = systemPrompt.Substring(0, 2000) + "...";
+            }
 
             var requestBody = new
             {
@@ -1493,10 +1796,11 @@ Còn gì khác tôi có thể giúp không ạ? 🛍️""");
         },
                 generationConfig = new
                 {
-                    temperature = 0.1, // ✅ Giảm xuống 0.1 để response ngắn gọn hơn
-                    topK = 5,           // ✅ Giảm xuống 5
-                    topP = 0.3,         // ✅ Giảm xuống 0.3  
-                    maxOutputTokens = 128 // ✅ Giảm xuống 128 tokens (rất ngắn)
+                    temperature = 0.1, // ✓ Giảm temperature để có kết quả ổn định hơn
+                    topK = 1, // ✓ Giảm topK để ưu tiên kết quả xác suất cao nhất
+                    topP = 0.2, // ✓ Giảm topP để ưu tiên kết quả xác suất cao nhất
+                    maxOutputTokens = 100, // ✓ Giảm còn 100 tokens để phản hồi nhanh hơn
+                    stopSequences = new string[] { "Khách:", "User:" }
                 }
             };
 
@@ -1504,44 +1808,36 @@ Còn gì khác tôi có thể giúp không ạ? 🛍️""");
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
             var url = $"{_geminiApiUrl}?key={_geminiApiKey}";
 
-            // ✅ Giảm số lần retry
             for (int attempt = 0; attempt <= maxRetries; attempt++)
             {
                 try
                 {
-                    // ✅ Thêm timeout ngắn để tránh hang
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); // Timeout sau 5 giây
                     var response = await client.PostAsync(url, content, cts.Token);
 
                     if (response.IsSuccessStatusCode)
                     {
                         RecordApiSuccess();
-
                         var responseContent = await response.Content.ReadAsStringAsync();
                         var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseContent);
 
-                        return geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text ??
-                               "Tôi hiểu câu hỏi của anh/chị! 😊";
+                        var result = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+                        if (!string.IsNullOrEmpty(result))
+                        {
+                            // ✓ Post-process response - loại bỏ thông tin thừa
+                            result = result.Replace("Tôi là trợ lý AI của StreamCart.", "")
+                                          .Replace("Tôi là StreamCart AI.", "");
+                            return result;
+                        }
+
+                        return "Tôi hiểu câu hỏi của anh/chị! 😊";
                     }
 
-                    var errorContent = await response.Content.ReadAsStringAsync();
-
-                    // ✅ Xử lý lỗi 503/429 - NGAY LẬP TỨC throw để dùng fallback
-                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                        response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                    {
-                        _logger.LogWarning("⚠️ Gemini API overloaded immediately - switching to fallback");
-                        RecordApiFailure();
-                        throw new HttpRequestException("Gemini API overloaded - using fallback");
-                    }
-
-                    _logger.LogError("❌ Gemini API error: {StatusCode}", response.StatusCode);
+                    // Xử lý lỗi và fallback
                     throw new HttpRequestException($"Gemini API error: {response.StatusCode}");
                 }
-                catch (OperationCanceledException)
+                catch (Exception)
                 {
-                    _logger.LogWarning("⏰ Gemini API timeout (attempt {Attempt}/{MaxRetries})", attempt + 1, maxRetries + 1);
-
                     if (attempt < maxRetries)
                     {
                         await Task.Delay(baseDelayMs);
@@ -1549,19 +1845,10 @@ Còn gì khác tôi có thể giúp không ạ? 🛍️""");
                     }
 
                     RecordApiFailure();
-                    throw new HttpRequestException("Gemini API timeout - using fallback");
-                }
-                catch (HttpRequestException) when (attempt < maxRetries)
-                {
-                    var delay = baseDelayMs * (attempt + 1); // Linear backoff thay vì exponential
-                    _logger.LogWarning("🔄 Network error (attempt {Attempt}/{MaxRetries}). Waiting {Delay}ms...",
-                        attempt + 1, maxRetries + 1, delay);
-
-                    await Task.Delay(delay);
+                    throw;
                 }
             }
 
-            // ✅ Record failure and throw
             RecordApiFailure();
             throw new HttpRequestException("Gemini API unavailable after retries");
         }
