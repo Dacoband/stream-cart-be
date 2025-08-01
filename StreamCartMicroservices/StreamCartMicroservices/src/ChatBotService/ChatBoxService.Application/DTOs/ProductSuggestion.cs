@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ChatBoxService.Application.DTOs
+﻿namespace ChatBoxService.Application.DTOs
 {
     public class ProductSuggestion
     {
@@ -14,5 +8,10 @@ namespace ChatBoxService.Application.DTOs
         public decimal Price { get; set; }
         public string? Description { get; set; }
         public decimal RelevanceScore { get; set; }
+        public string ShopName { get; set; } = string.Empty;
+
+        // ✅ THÊM các properties cần thiết
+        public Guid ShopId { get; set; }
+        public string ReasonForSuggestion { get; set; } = string.Empty;
     }
 }

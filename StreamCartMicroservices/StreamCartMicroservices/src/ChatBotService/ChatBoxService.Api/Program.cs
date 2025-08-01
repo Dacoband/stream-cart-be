@@ -48,6 +48,11 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     }
 
     var configuration = ConfigurationOptions.Parse(redisConnection);
+    configuration.AbortOnConnectFail = false;
+    configuration.ConnectTimeout = 10000; // 10 seconds
+    configuration.SyncTimeout = 10000;    // 10 seconds
+    configuration.ConnectRetry = 3;
+    configuration.ReconnectRetryPolicy = new LinearRetry(5000);
     return ConnectionMultiplexer.Connect(configuration);
 });
 
@@ -61,6 +66,9 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 builder.Services.AddScoped<IGeminiChatbotService, GeminiChatbotService>();
 builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
+builder.Services.AddScoped<IUniversalChatbotService, UniversalChatbotService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICachingService, CachingService>();
 builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
@@ -71,7 +79,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-
+builder.Services.AddScoped<IAIChatService, AIChatService>();
 builder.Services.AddAppSettings(builder.Configuration);
 builder.Services.AddConfiguredCors(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);

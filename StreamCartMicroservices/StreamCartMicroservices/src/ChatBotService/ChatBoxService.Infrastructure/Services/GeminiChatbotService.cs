@@ -36,7 +36,8 @@ namespace ChatBoxService.Infrastructure.Services
             _shopServiceClient = shopServiceClient;
             _logger = logger;
             _geminiApiKey = configuration["GEMINI_API_KEY"] ?? configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Gemini API Key is not configured");
-            _geminiApiUrl = configuration["GEMINI_API_URL"] ?? "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+            _geminiApiUrl = configuration["GEMINI_API_URL"] ?? configuration["Gemini:ApiUrl"] ??
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
             _chatHistoryService = chatHistoryService;
         }
 
@@ -438,6 +439,14 @@ Phân tích tin nhắn: """ + customerMessage + @"""";
         private static bool IsProductInquiry(string intent, string message)
         {
             var productIntents = new[] { "product_inquiry", "price_question", "availability", "search_product", "quality_question" };
+            var shopPatterns = new[] { "có shop nào", "shop nào", "shop bán", "cửa hàng bán" };
+
+            // Kiểm tra các pattern về shop bán sản phẩm
+            if (shopPatterns.Any(p => message.ToLower().Contains(p)))
+            {
+                return true;
+            }
+
             return productIntents.Contains(intent) ||
                    message.ToLower().Contains("sản phẩm") ||
                    message.ToLower().Contains("hàng") ||
@@ -472,14 +481,17 @@ Phân tích tin nhắn: """ + customerMessage + @"""";
             // Tìm pattern: "có [tên sản phẩm] không", "[tên sản phẩm] giá bao nhiêu", etc.
             var patterns = new[]
             {
-                @"có (.+?) không",
-                @"(.+?) giá bao nhiêu",
-                @"(.+?) còn hàng",
-                @"tìm (.+)",
-                @"(.+?) chất lượng",
-                @"(.+?) có tốt",
-                @"shop có (.+)"
-            };
+        @"có (.+?) không",
+        @"(.+?) giá bao nhiêu",
+        @"(.+?) còn hàng",
+        @"tìm (.+)",
+        @"(.+?) chất lượng",
+        @"(.+?) có tốt",
+        @"shop có (.+)",
+        // Thêm pattern mới để bắt mẫu câu "có shop nào bán iphone"
+        @"shop nào bán (.+)",
+        @"có shop nào bán (.+)"
+    };
 
             foreach (var pattern in patterns)
             {

@@ -37,5 +37,7 @@ namespace AccountService.Application.Interfaces
         /// </summary>
         /// <returns>Số lượng OperationManager active</returns>
         Task<int> CountActiveOperationManagersAsync();
+        Task<bool> RemoveModeratorFromShopAsync(Guid moderatorId, Guid shopId, Guid removedByAccountId);
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ChatBoxService.Application.DTOs;
 using ChatBoxService.Application.Interfaces;
+using ChatBoxService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,24 +17,28 @@ namespace ChatBoxService.Api.Controllers
         private readonly IGeminiChatbotService _chatbotService;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<ChatbotController> _logger;
+        private readonly IUniversalChatbotService _universalChatbotService;
 
         public ChatbotController(
             IGeminiChatbotService chatbotService,
             ICurrentUserService currentUserService,
-            ILogger<ChatbotController> logger)
+            ILogger<ChatbotController> logger,
+            IUniversalChatbotService universalChatbotService)
         {
             _chatbotService = chatbotService;
             _currentUserService = currentUserService;
             _logger = logger;
+            _universalChatbotService = universalChatbotService;
         }
 
         /// <summary>
         /// Gửi tin nhắn cho chatbot và nhận phản hồi thân thiện
         /// </summary>
         [HttpPost("chat")]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResponse<ChatbotResponseDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> ChatWithBot([FromBody] ChatbotRequestDTO request)
+        public async Task<IActionResult> Chat([FromBody] ChatbotRequestDTO request)
         {
             if (!ModelState.IsValid)
             {
@@ -43,38 +48,66 @@ namespace ChatBoxService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-                _logger.LogInformation("User {UserId} is chatting with bot for shop {ShopId}", userId, request.ShopId);
+                _logger.LogInformation("Processing universal chat request for user {UserId}: {Message}",
+                    userId, request.CustomerMessage);
 
-                // Analyze message intent first
-                var intent = await _chatbotService.AnalyzeMessageIntentAsync(request.CustomerMessage);
-
-                // Generate appropriate response
-                var botResponse = await _chatbotService.GenerateResponseAsync(
+                var response = await _universalChatbotService.GenerateUniversalResponseAsync(
                     request.CustomerMessage,
-                    request.ShopId,
-                    userId,
-                    productId: null); 
+                    userId);
 
-                // ✅ Create suggested actions based on intent (KHÔNG cần ProductId)
-                var suggestedActions = GenerateSuggestedActions(intent, request.ShopId, productId: null);
-
-
-                var response = new ChatbotResponseDTO
-                {
-                    BotResponse = botResponse,
-                    Intent = intent.Intent,
-                    RequiresHumanSupport = intent.Confidence < 0.6m || intent.Intent == "complaint",
-                    SuggestedActions = suggestedActions,
-                    GeneratedAt = DateTime.UtcNow,
-                    ConfidenceScore = intent.Confidence
-                };
-
-                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(response, "Chatbot đã phản hồi thành công"));
+                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(
+                    response,
+                    "StreamCart AI đã phản hồi thành công"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in chatbot conversation for shop {ShopId}", request.ShopId);
-                return BadRequest(ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi xử lý tin nhắn. Vui lòng thử lại sau."));
+                _logger.LogError(ex, "Error processing universal chat request: {Message}", request.CustomerMessage);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi xử lý yêu cầu"));
+            }
+        }
+        /// <summary>
+        /// 🔓 Chat Anonymous - Không cần đăng nhập (features hạn chế)
+        /// </summary>
+        [HttpPost("chat/anonymous")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<ChatbotResponseDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ChatAnonymous([FromBody] ChatbotRequestDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                _logger.LogInformation("🔓 Processing anonymous chat request: {Message}", request.CustomerMessage);
+
+                // Sử dụng anonymous user ID
+                var anonymousUserId = Guid.Empty;
+
+                var response = await _universalChatbotService.GenerateUniversalResponseAsync(
+                    request.CustomerMessage,
+                    anonymousUserId);
+
+                // Giới hạn features cho anonymous users
+                if (response.ShopSuggestions?.Count > 2)
+                {
+                    response.ShopSuggestions = response.ShopSuggestions.Take(2).ToList();
+                }
+                if (response.ProductSuggestions?.Count > 3)
+                {
+                    response.ProductSuggestions = response.ProductSuggestions.Take(3).ToList();
+                }
+
+                return Ok(ApiResponse<ChatbotResponseDTO>.SuccessResult(
+                    response,
+                    "StreamCart AI đã phản hồi thành công (Anonymous mode)"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error processing anonymous chat request: {Message}", request.CustomerMessage);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi xử lý yêu cầu"));
             }
         }
 
@@ -166,215 +199,72 @@ namespace ChatBoxService.Api.Controllers
                 });
             }
         }
+        /// <summary>
+        /// Gửi tin nhắn tới dịch vụ AI bên ngoài và nhận phản hồi
+        /// </summary>
+        [HttpPost("chatAI")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<AIChatResponse>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ChatWithAI([FromBody] AIChatRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
 
+            try
+            {
+                var userId = _currentUserService.GetUserId().ToString();
+                _logger.LogInformation("Processing AI chat request for user {UserId}: {Message}",
+                    userId, request.Message);
+
+                var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
+                var response = await aiChatService.SendMessageAsync(request.Message, userId);
+
+                return Ok(ApiResponse<AIChatResponse>.SuccessResult(
+                    response,
+                    "AI đã phản hồi thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing AI chat request: {Message}", request.Message);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi xử lý yêu cầu"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy lịch sử chat từ dịch vụ AI
+        /// </summary>
+        [HttpGet("chat/history")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<AIChatHistoryResponse>), 200)]
+        public async Task<IActionResult> GetAIChatHistory()
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId().ToString();
+                _logger.LogInformation("Getting AI chat history for user {UserId}", userId);
+
+                var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
+                var history = await aiChatService.GetChatHistoryAsync(userId);
+
+                return Ok(ApiResponse<AIChatHistoryResponse>.SuccessResult(
+                    history,
+                    "Lấy lịch sử chat AI thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting AI chat history");
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi lấy lịch sử chat AI"));
+            }
+        }
         // ✅ THÊM DTO cho test
         public class TestChatbotRequest
         {
             public string? Message { get; set; }
             public Guid? ShopId { get; set; }
         }
-        private List<SuggestedAction> GenerateSuggestedActions(ChatbotIntent intent, Guid shopId, Guid? productId = null)
-        {
-            var actions = new List<SuggestedAction>();
-
-            switch (intent.Intent)
-            {
-                case "greeting":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🛍️ Xem sản phẩm của shop",
-                        Action = "view_shop_products",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["activeOnly"] = true
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🔥 Sản phẩm trending",
-                        Action = "view_trending_products",
-                        Url = $"/api/products/shop/{shopId}/trending",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["limit"] = 10
-                        }
-                    });
-                    break;
-
-                case "product_inquiry":
-                case "search_product":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "📦 Xem tất cả sản phẩm",
-                        Action = "view_all_products",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["activeOnly"] = true
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🔍 Tìm kiếm sản phẩm",
-                        Action = "search_products",
-                        Url = $"/api/products/shop/{shopId}/search",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["pageSize"] = 20
-                        }
-                    });
-                    break;
-
-                case "price_question":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "💰 Xem bảng giá sản phẩm",
-                        Action = "view_price_list",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["sortBy"] = "price"
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🔥 Sản phẩm Flash Sale",
-                        Action = "view_flash_sales",
-                        Url = $"/api/products/shop/{shopId}/flash-sales",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    break;
-
-                case "availability":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "📦 Sản phẩm có sẵn",
-                        Action = "view_available_products",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["inStock"] = true
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🔄 Sản phẩm sắp về hàng",
-                        Action = "view_coming_soon",
-                        Url = $"/api/products/shop/{shopId}/coming-soon",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    break;
-
-                case "quality_question":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "⭐ Sản phẩm đánh giá cao",
-                        Action = "view_top_rated",
-                        Url = $"/api/products/shop/{shopId}/top-rated",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🔥 Sản phẩm bán chạy",
-                        Action = "view_bestsellers",
-                        Url = $"/api/products/shop/{shopId}/trending",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["limit"] = 10
-                        }
-                    });
-                    break;
-
-                case "thanks":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🛍️ Tiếp tục mua sắm",
-                        Action = "continue_shopping",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🎁 Xem voucher khuyến mãi",
-                        Action = "view_vouchers",
-                        Url = $"/api/vouchers/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    break;
-
-                case "complaint":
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🎧 Chat với nhân viên",
-                        Action = "contact_support",
-                        Url = $"/api/chat/rooms",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["action"] = "create_support_chat"
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "📋 Xem chính sách đổi trả",
-                        Action = "view_return_policy",
-                        Url = $"/api/shops/{shopId}/policies",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    break;
-
-                default:
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "🏠 Xem sản phẩm shop",
-                        Action = "view_shop_products",
-                        Url = $"/api/products/shop/{shopId}",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId
-                        }
-                    });
-                    actions.Add(new SuggestedAction
-                    {
-                        Title = "💬 Chat với nhân viên",
-                        Action = "chat_with_staff",
-                        Url = $"/api/chat/rooms",
-                        Parameters = new Dictionary<string, object>
-                        {
-                            ["shopId"] = shopId,
-                            ["action"] = "create_chat"
-                        }
-                    });
-                    break;
-            }
-
-            return actions;
-        }
+        
     }
 }
