@@ -327,6 +327,9 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// Xử lý callback từ SePay với chuyển hướng về frontend
         /// </summary>
+        /// <summary>
+        /// Xử lý callback từ SePay với chuyển hướng về frontend
+        /// </summary>
         [HttpPost("callback/sepay")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -396,67 +399,48 @@ namespace PaymentService.Api.Controllers
                 // Xử lý callback
                 var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
 
-                // Kiểm tra yêu cầu redirect từ header
-                string requestedRedirect = Request.Headers["X-Request-Redirect"].FirstOrDefault() ?? string.Empty;
-                bool shouldRedirect = !string.IsNullOrEmpty(requestedRedirect) && requestedRedirect.ToLower() == "true";
+                // LUÔN REDIRECT về frontend (bỏ check header)
+                // Lấy URL base từ cấu hình
+                string baseRedirectUrl = status == "success"
+                    ? _configuration["PaymentRedirects:SuccessUrl"]
+                    : _configuration["PaymentRedirects:FailureUrl"];
 
-                if (shouldRedirect)
+                if (string.IsNullOrEmpty(baseRedirectUrl))
                 {
-                    // Lấy URL base từ cấu hình
-                    string baseRedirectUrl = status == "success"
-                        ? _configuration["PaymentRedirects:SuccessUrl"]
-                        : _configuration["PaymentRedirects:FailureUrl"];
-
-                    if (string.IsNullOrEmpty(baseRedirectUrl))
-                    {
-                        // Fallback URL nếu không cấu hình
-                        baseRedirectUrl = status == "success"
-                            ? "http://localhost:3000/payment/order/results-success/"
-                            : "http://localhost:3000/payment/order/results-failed/";
-                    }
-
-                    // Build redirect URL with order IDs
-                    string redirectUrl;
-                    if (orderIds.Count == 1)
-                    {
-                        // Single order: append order ID directly to URL
-                        redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIds.First()}";
-                    }
-                    else
-                    {
-                        // Multiple orders: use comma-separated list as path parameter
-                        var orderIdsString = string.Join(",", orderIds);
-                        redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIdsString}";
-                    }
-
-                    // Add query parameters for additional info
-                    var uriBuilder = new UriBuilder(redirectUrl);
-                    var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
-
-                    query["paymentId"] = payment.Id.ToString();
-                    query["status"] = status;
-                    query["amount"] = amount.ToString();
-
-                    uriBuilder.Query = query.ToString();
-
-                    // Chuyển hướng về frontend
-                    return Redirect(uriBuilder.ToString());
+                    // Fallback URL nếu không cấu hình
+                    baseRedirectUrl = status == "success"
+                        ? "http://localhost:3000/payment/order/results-success/"
+                        : "http://localhost:3000/payment/order/results-failed/";
                 }
 
-                // Nếu không yêu cầu redirect, trả về API response
-                return Ok(new
+                // Build redirect URL với order IDs
+                string redirectUrl;
+                if (orderIds.Count == 1)
                 {
-                    success = true,
-                    message = "Callback processed successfully",
-                    paymentId = payment.Id,
-                    status = status,
-                    orderIds = orderIds
-                });
+                    // Single order: append order ID directly to URL
+                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIds.First()}";
+                }
+                else
+                {
+                    // Multiple orders: use comma-separated list as path parameter
+                    var orderIdsString = string.Join(",", orderIds);
+                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIdsString}";
+                }
+
+                _logger.LogInformation("Redirecting to: {RedirectUrl}", redirectUrl);
+
+                // Chuyển hướng về frontend (KHÔNG có query parameters)
+                return Redirect(redirectUrl);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing SePay callback");
-                return StatusCode(500, new { success = false, message = ex.Message });
+
+                // Trong trường hợp lỗi, redirect về trang failed với error message
+                string errorRedirectUrl = _configuration["PaymentRedirects:FailureUrl"] ??
+                    "http://localhost:3000/payment/order/results-failed/";
+
+                return Redirect($"{errorRedirectUrl.TrimEnd('/')}/error");
             }
         }
     }
