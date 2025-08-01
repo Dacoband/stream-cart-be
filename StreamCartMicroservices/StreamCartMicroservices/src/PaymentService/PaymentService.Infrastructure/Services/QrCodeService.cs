@@ -139,7 +139,69 @@ namespace PaymentService.Infrastructure.Services
                 return false;
             }
         }
+        public async Task<string> GenerateBulkQrCodeAsync(List<Guid> orderIds, decimal amount, Guid userId, PaymentMethod paymentMethod)
+        {
+            try
+            {
+                if (orderIds == null || !orderIds.Any())
+                {
+                    throw new ArgumentException("At least one order ID must be provided");
+                }
 
+                // Validate all orders exist and are in correct status
+                foreach (var orderId in orderIds)
+                {
+                    var order = await _orderServiceClient.GetOrderByIdAsync(orderId);
+                    if (order == null)
+                    {
+                        throw new ApplicationException($"Order with ID {orderId} not found.");
+                    }
+                    // Skip status validation for bulk orders as they might be in different states
+                }
+
+                if (paymentMethod != PaymentMethod.BankTransfer)
+                {
+                    _logger.LogWarning("QR code can only be generated for bank transfers");
+                    return string.Empty;
+                }
+
+                // Format mô tả với tất cả order IDs
+                string orderIdsList = string.Join(",", orderIds.Select(id => id.ToString("N")));
+                string description = $"ORDERS_{orderIdsList}";
+
+                // Làm tròn số tiền
+                int amountInt = (int)amount;
+
+                // Tham số QR code
+                string template = "compact";
+                string download = "true";
+
+                // Tạo URL QR code từ SePay với description chứa tất cả order IDs
+                string qrUrl = $"https://qr.sepay.vn/img?acc={_bankAccount}&bank={_bankName}" +
+                               $"&amount={amountInt}&des={description}&template={template}&download={download}";
+
+                // Tạo signature với tất cả order IDs
+                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string contentToSign = $"{orderIdsList}|{amount}|{userId}|{timestamp}";
+                string signature = await GenerateSignatureAsync(contentToSign);
+
+                // Lưu thông tin bổ sung vào metadata
+                string metadata = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{contentToSign}|{signature}"));
+
+                // Lưu URL QR code và metadata
+                string qrCodeInfo = $"{qrUrl}|{metadata}";
+
+                _logger.LogInformation("Generated SePay bulk QR code for {OrderCount} orders: {OrderIds}",
+                    orderIds.Count, string.Join(", ", orderIds));
+                return qrCodeInfo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating SePay bulk QR code for orders: {OrderIds}",
+                    string.Join(", ", orderIds ?? new List<Guid>()));
+                throw;
+            }
+        }
         private Task<string> GenerateSignatureAsync(string content)
         {
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secretKey));
