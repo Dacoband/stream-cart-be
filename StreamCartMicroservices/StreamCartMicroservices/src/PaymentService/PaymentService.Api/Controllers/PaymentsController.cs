@@ -227,7 +227,7 @@ namespace PaymentService.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Validate request data
+            
             if (requestDto.OrderIds == null || requestDto.OrderIds.Count == 0)
             {
                 return BadRequest("At least one order ID must be provided");
@@ -235,7 +235,7 @@ namespace PaymentService.Api.Controllers
 
             try
             {
-                // Get all orders
+               
                 decimal totalAmount = 0;
                 Guid? primaryUserId = null;
                 var orderDetails = new List<OrderDto>();
@@ -281,27 +281,24 @@ namespace PaymentService.Api.Controllers
                     );
                 }
 
-                // Create combined payment record
                 var createPaymentDto = new CreatePaymentDto
                 {
-                    OrderId = orderDetails[0].Id, // Primary order ID
+                    OrderId = orderDetails[0].Id, 
                     Amount = totalAmount,
                     PaymentMethod = PaymentMethod.BankTransfer,
                     CreatedBy = User.Identity?.Name ?? "System",
                     QrCode = qrCode,
-                    OrderReference = string.Join(",", requestDto.OrderIds) 
+                    //OrderReference = string.Join(",", requestDto.OrderIds) 
                 };
 
                 var payment = await _paymentService.CreatePaymentAsync(createPaymentDto);
 
-                // Update all orders' payment status to pending
                 foreach (var order in orderDetails)
                 {
                     await _orderServiceClient.UpdateOrderPaymentStatusAsync(
                         order.Id, PaymentStatus.Pending);
                 }
 
-                // Return QR code and payment information
                 return Ok(new
                 {
                     qrCode = qrCode,
@@ -318,18 +315,7 @@ namespace PaymentService.Api.Controllers
                 return StatusCode(500, new { error = $"Error generating QR code: {ex.Message}" });
             }
         }
-        /// <summary>
-        /// Xử lý callback từ SePay
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
-        /// <summary>
-        /// Xử lý callback từ SePay với chuyển hướng về frontend
-        /// </summary>
+
         [HttpPost("callback/sepay")]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -338,45 +324,89 @@ namespace PaymentService.Api.Controllers
         {
             try
             {
+                _logger.LogInformation("Received SePay callback: {@Request}", request);
+
                 // Trích xuất thông tin từ request của SePay
                 var transactionId = request.TransactionId;
                 var orderCode = request.OrderCode;
                 var amount = request.Amount;
                 var status = request.Status;
 
+                _logger.LogInformation("Extracted - TransactionId: {TransactionId}, OrderCode: {OrderCode}, Amount: {Amount}, Status: {Status}",
+                    transactionId, orderCode, amount, status);
+
                 // Tìm payment dựa trên mã đơn hàng
                 if (string.IsNullOrEmpty(orderCode))
                 {
-                    return BadRequest("Order code is null or empty");
+                    _logger.LogWarning("Could not extract order code from content: {Content}", request.Content);
+                    return BadRequest("Order code could not be extracted from payment content");
                 }
 
                 // Handle both single and bulk orders
                 List<Guid> orderIds = new List<Guid>();
 
-                if (orderCode.StartsWith("ORDERS_"))
+                try
                 {
-                    // Multiple orders format: ORDERS_id1,id2,id3
-                    var orderIdsString = orderCode.Replace("ORDERS_", "");
-                    orderIds = orderIdsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(id => Guid.Parse(id.Trim()))
-                        .ToList();
+                    if (orderCode.StartsWith("ORDERS_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Multiple orders format: ORDERS_id1,id2,id3
+                        var orderIdsString = orderCode.Substring(7); // Remove "ORDERS_"
+                        orderIds = orderIdsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(id => Guid.Parse(id.Trim()))
+                            .ToList();
+                    }
+                    else if (orderCode.StartsWith("ORDER_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Single order format: ORDER_id
+                        var orderIdString = orderCode.Substring(6); // Remove "ORDER_"
+                        orderIds.Add(Guid.Parse(orderIdString));
+                    }
+                    else if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Handle case without underscore: ORDERxxxxx
+                        var orderIdString = orderCode.Substring(5); // Remove "ORDER"
+
+                        // Tìm đoạn GUID hợp lệ trong chuỗi
+                        var guidPattern = @"[0-9a-fA-F]{32}";
+                        var match = System.Text.RegularExpressions.Regex.Match(orderIdString, guidPattern);
+
+                        if (match.Success)
+                        {
+                            var guidString = match.Value;
+                            // Chuyển đổi từ 32 ký tự thành GUID format
+                            var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                            orderIds.Add(Guid.Parse(formattedGuid));
+                        }
+                        else
+                        {
+                            throw new FormatException($"Could not extract valid GUID from order code: {orderCode}");
+                        }
+                    }
+                    else
+                    {
+                        throw new FormatException($"Invalid order code format: {orderCode}");
+                    }
                 }
-                else if (orderCode.StartsWith("ORDER_"))
+                catch (Exception ex)
                 {
-                    // Single order format: ORDER_id
-                    var orderId = Guid.Parse(orderCode.Replace("ORDER_", ""));
-                    orderIds.Add(orderId);
+                    _logger.LogError(ex, "Error parsing order code: {OrderCode}", orderCode);
+                    return BadRequest($"Invalid order code format: {orderCode}");
                 }
-                else
+
+                if (!orderIds.Any())
                 {
-                    return BadRequest("Invalid order code format");
+                    _logger.LogWarning("No valid order IDs extracted from order code: {OrderCode}", orderCode);
+                    return BadRequest("No valid order IDs found");
                 }
+
+                _logger.LogInformation("Extracted order IDs: {OrderIds}", string.Join(", ", orderIds));
 
                 // Find payment by first order ID (primary order)
                 var payments = await _paymentService.GetPaymentsByOrderIdAsync(orderIds.First());
 
                 if (payments == null || !payments.Any())
                 {
+                    _logger.LogWarning("Payment not found for order ID: {OrderId}", orderIds.First());
                     return BadRequest("Payment not found");
                 }
 
@@ -385,6 +415,7 @@ namespace PaymentService.Api.Controllers
                 // Ensure payment.QrCode is not null before accessing it
                 if (payment?.QrCode == null)
                 {
+                    _logger.LogWarning("QR Code not found for payment: {PaymentId}", payment?.Id);
                     return BadRequest("QR Code not found for the payment");
                 }
 
@@ -395,6 +426,9 @@ namespace PaymentService.Api.Controllers
                     QrCode = payment.QrCode,
                     RawResponse = System.Text.Json.JsonSerializer.Serialize(request)
                 };
+
+                _logger.LogInformation("Processing payment callback - PaymentId: {PaymentId}, IsSuccessful: {IsSuccessful}",
+                    payment.Id, callbackDto.IsSuccessful);
 
                 // Xử lý callback
                 var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
@@ -434,7 +468,7 @@ namespace PaymentService.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing SePay callback");
+                _logger.LogError(ex, "Error processing SePay callback: {@Request}", request);
 
                 // Trong trường hợp lỗi, redirect về trang failed với error message
                 string errorRedirectUrl = _configuration["PaymentRedirects:FailureUrl"] ??

@@ -7,11 +7,15 @@
         "Action": "Start"
       },
       {
-        "Path": "src\\ShopService\\ShopService.Api\\ShopService.Api.csproj",
+        "Path": "src\\OrderService\\OrderService.Api\\OrderService.Api.csproj",
         "Action": "Start"
       },
       {
-        "Path": "src\\ChatBotService\\ChatBoxService.Api\\ChatBoxService.Api.csproj",
+        "Path": "src\\PaymentService\\PaymentService.Api\\PaymentService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\AccountService\\AccountService.Api\\AccountService.Api.csproj",
         "Action": "Start"
       }
     ]
