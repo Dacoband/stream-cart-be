@@ -12,7 +12,7 @@ namespace OrderService.Domain.Entities
 
         public string OrderCode { get; private set; }
         public DateTime OrderDate { get; private set; }
-        public OrderStatus OrderStatus { get; private set; }
+        public OrderStatus OrderStatus { get;  set; }
         public decimal TotalPrice { get;  set; }
         public decimal ShippingFee { get;  set; }
 
@@ -73,19 +73,48 @@ namespace OrderService.Domain.Entities
             OrderStatus = OrderStatus.Pending;
             SetModifier(modifiedBy);    
         }
-        public void UpdateStatus (OrderStatus newStatus, string modifiedBy)
+        public void UpdateStatus(OrderStatus newStatus, string modifiedBy)
         {
-            if (newStatus == OrderStatus.Waiting)
+            if (OrderStatus == OrderStatus.Completed || OrderStatus == OrderStatus.Cancelled)
             {
-                throw new InvalidOperationException("Cannot update order status to Waiting");
+                throw new InvalidOperationException("Không thể thay đổi trạng thái của đơn hàng đã hoàn tất hoặc đã hủy");
             }
+            // Danh sách các trạng thái chuyển hợp lệ
+            var validTransitions = new Dictionary<OrderStatus, List<OrderStatus>>
+    {
+        { OrderStatus.Waiting, new() { OrderStatus.Pending, OrderStatus.Cancelled } },
+        { OrderStatus.Pending, new() { OrderStatus.Processing, OrderStatus.Cancelled, OrderStatus.Waiting } },
+        { OrderStatus.Processing, new() { OrderStatus.Packed } },
+        { OrderStatus.Packed, new() { OrderStatus.OnDelivere } },
+        { OrderStatus.Cancelled, new() { OrderStatus.Delivered } },
+        { OrderStatus.Delivered, new() { OrderStatus.Completed, OrderStatus.Returning } },
+        { OrderStatus.Returning, new() { OrderStatus.Refunded, OrderStatus.Completed } },
+    };
+
+            // Không được hủy nếu đã giao hàng
             if (newStatus == OrderStatus.Cancelled && OrderStatus == OrderStatus.Delivered)
             {
-                throw new InvalidOperationException("Cannot cancel an order that has already been delivered");
+                throw new InvalidOperationException("Không thể hủy đơn hàng đã được giao");
             }
+
+            // Kiểm tra trạng thái chuyển tiếp hợp lệ
+            if (validTransitions.ContainsKey(OrderStatus))
+            {
+                var nextAllowed = validTransitions[OrderStatus];
+                if (!nextAllowed.Contains(newStatus))
+                {
+                    throw new InvalidOperationException($"Không thể chuyển trạng thái từ {OrderStatus} sang {newStatus}");
+                }
+            }
+            else if (newStatus != OrderStatus.Completed && newStatus != OrderStatus.Cancelled)
+            {
+                throw new InvalidOperationException($"Không thể chuyển trạng thái từ {OrderStatus} sang {newStatus}");
+            }
+
             OrderStatus = newStatus;
             SetModifier(modifiedBy);
         }
+
 
         /// <summary>
         /// Auto-cancels an unconfirmed order due to shop timeout

@@ -51,7 +51,7 @@ namespace ProductService.Infrastructure.Repositories
             ProductSortOption sortOption = ProductSortOption.DateCreatedDesc,
             bool activeOnly = false,
             Guid? shopId = null,
-            Guid? categoryId = null)
+            Guid? categoryId = null, bool? InStockOnly = false)
         {
             // Build query
             var query = _dbSet.AsQueryable();
@@ -76,7 +76,10 @@ namespace ProductService.Infrastructure.Repositories
             {
                 query = query.Where(p => p.CategoryId == categoryId.Value);
             }
-
+            if(InStockOnly == true)
+            {
+                query.Where(x => x.StockQuantity > 0);
+            }
             // Sort data
             query = sortOption switch
             {

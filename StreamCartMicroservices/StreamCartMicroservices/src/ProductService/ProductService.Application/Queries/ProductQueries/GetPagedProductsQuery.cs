@@ -18,5 +18,6 @@ namespace ProductService.Application.Queries.ProductQueries
         public bool ActiveOnly { get; set; } = false;
         public Guid? ShopId { get; set; }
         public Guid? CategoryId { get; set; }
+        public bool? InStockOnly { get; set; } = false;
     }
 }

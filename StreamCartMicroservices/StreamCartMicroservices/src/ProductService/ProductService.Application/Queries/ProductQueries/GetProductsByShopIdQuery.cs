@@ -11,6 +11,10 @@ namespace ProductService.Application.Queries.ProductQueries
     public class GetProductsByShopIdQuery : IRequest<IEnumerable<ProductDto>>
     {
         public Guid ShopId { get; set; }
-        public bool ActiveOnly { get; set; }
+        public bool? ActiveOnly { get; set; }
+        public bool? IsInStock { get; set; }
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+
     }
 }

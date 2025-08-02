@@ -186,9 +186,10 @@ namespace ProductService.Api.Controllers
             [FromQuery] ProductSortOption sortOption = ProductSortOption.DateCreatedDesc,
             [FromQuery] bool activeOnly = false,
             [FromQuery] Guid? shopId = null,
-            [FromQuery] Guid? categoryId = null)
+            [FromQuery] Guid? categoryId = null,
+            [FromQuery] bool? InStockOnly = false)
         {
-            var pagedProducts = await _productService.GetPagedProductsAsync(pageNumber, pageSize, sortOption, activeOnly, shopId, categoryId);
+            var pagedProducts = await _productService.GetPagedProductsAsync(pageNumber, pageSize, sortOption, activeOnly, shopId, categoryId, InStockOnly);
             return Ok(ApiResponse<PagedResult<ProductDto>>.SuccessResult(pagedProducts));
         }
 

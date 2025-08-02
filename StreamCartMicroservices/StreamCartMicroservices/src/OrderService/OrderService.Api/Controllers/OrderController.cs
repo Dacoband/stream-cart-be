@@ -131,12 +131,11 @@ namespace OrderService.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<PagedResult<OrderDto>>> GetOrdersByAccountId(
             Guid accountId,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] FilterOrderDTO filter)
         {
             try
             {
-                var orders = await _orderService.GetOrdersByAccountIdAsync(accountId, pageNumber, pageSize);
+                var orders = await _orderService.GetOrdersByAccountIdAsync(accountId, filter);
                 return Ok(orders);
             }
             catch (Exception ex)
@@ -158,12 +157,11 @@ namespace OrderService.Api.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<PagedResult<OrderDto>>> GetOrdersByShopId(
             Guid shopId,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] FilterOrderDTO filter)
         {
             try
             {
-                var orders = await _orderService.GetOrdersByShopIdAsync(shopId, pageNumber, pageSize);
+                var orders = await _orderService.GetOrdersByShopIdAsync(shopId, filter);
                 return Ok(orders);
             }
             catch (Exception ex)

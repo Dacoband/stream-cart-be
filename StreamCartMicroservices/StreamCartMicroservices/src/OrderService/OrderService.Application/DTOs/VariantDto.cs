@@ -13,5 +13,9 @@ namespace OrderService.Application.DTOs
         //public string ImageUrl { get; set; } = string.Empty;
         public decimal? FlashSalePrice { get; set; }
         //public string[] Attributes { get; set; } = Array.Empty<string>();
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }    
+        public decimal? Weight { get; set; }
     }
 }

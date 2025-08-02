@@ -38,7 +38,7 @@ namespace OrderService.Application.Interfaces.IServices
         /// <param name="pageNumber">Page number</param>
         /// <param name="pageSize">Items per page</param>
         /// <returns>Paged result of orders</returns>
-        Task<PagedResult<OrderDto>> GetOrdersByAccountIdAsync(Guid accountId, int pageNumber = 1, int pageSize = 10);
+        Task<PagedResult<OrderDto>> GetOrdersByAccountIdAsync(Guid accountId, FilterOrderDTO filter);
 
         /// <summary>
         /// Gets orders for a specific shop
@@ -47,7 +47,7 @@ namespace OrderService.Application.Interfaces.IServices
         /// <param name="pageNumber">Page number</param>
         /// <param name="pageSize">Items per page</param>
         /// <returns>Paged result of orders</returns>
-        Task<PagedResult<OrderDto>> GetOrdersByShopIdAsync(Guid shopId, int pageNumber = 1, int pageSize = 10);
+        Task<PagedResult<OrderDto>> GetOrdersByShopIdAsync(Guid shopId, FilterOrderDTO filter);
 
         /// <summary>
         /// Searches for orders based on various filters

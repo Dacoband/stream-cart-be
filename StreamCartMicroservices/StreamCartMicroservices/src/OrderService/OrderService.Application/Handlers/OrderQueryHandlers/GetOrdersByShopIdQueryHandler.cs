@@ -42,7 +42,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                 var pagedOrders = await _orderRepository.GetPagedOrdersAsync(
                     accountId: null,
                     shopId: request.ShopId,
-                    orderStatus: null,
+                    orderStatus: request.Status,
                     paymentStatus: null,
                     startDate: null,
                     endDate: null,

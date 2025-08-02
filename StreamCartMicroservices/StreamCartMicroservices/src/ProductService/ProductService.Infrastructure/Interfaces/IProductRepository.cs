@@ -23,7 +23,8 @@ namespace ProductService.Infrastructure.Interfaces
             ProductSortOption sortOption = ProductSortOption.DateCreatedDesc,
             bool activeOnly = false,
             Guid? shopId = null,
-            Guid? categoryId = null);
+            Guid? categoryId = null,
+            bool? InStockOnly = false);
 
         Task<IEnumerable<Product>> GetBestSellingProductsAsync(
             int count = 10,

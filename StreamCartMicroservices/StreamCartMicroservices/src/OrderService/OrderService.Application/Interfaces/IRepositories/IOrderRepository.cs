@@ -1,4 +1,5 @@
-﻿using OrderService.Domain.Entities;
+﻿using MassTransit.Transports;
+using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Data.Interfaces;
 using Shared.Common.Domain.Bases;
@@ -101,6 +102,8 @@ namespace OrderService.Application.Interfaces.IRepositories
         /// <returns>Order statistics</returns>
         Task<OrderStatistics> GetOrderStatisticsAsync(Guid shopId, DateTime? startDate = null, DateTime? endDate = null);
         Task<IEnumerable<Orders>> GetShippedOrdersBeforeDateAsync(DateTime thresholdDate);
+        Task<List<Orders>> GetOrdersByStatusAndCreatedBeforeAsync(OrderStatus status, DateTime cutoff);
+        Task<List<Orders>> GetOrdersByStatusAndModifiedBeforeAsync(OrderStatus status, DateTime cutoff);
     }
 
     /// <summary>

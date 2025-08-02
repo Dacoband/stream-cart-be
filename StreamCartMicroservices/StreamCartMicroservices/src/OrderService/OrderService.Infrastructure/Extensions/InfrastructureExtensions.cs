@@ -28,89 +28,134 @@ namespace OrderService.Infrastructure.Extensions
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // Mapping enum PostgreSQL
             NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
             NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
 
+            // Cấu hình DataSource
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
             dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
             dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
             var dataSource = dataSourceBuilder.Build();
             services.AddSingleton(dataSource);
+
+            // Cấu hình DbContext
             services.AddDbContext<OrderContext>((serviceProvider, options) =>
             {
-                var dataSource = serviceProvider.GetRequiredService<NpgsqlDataSource>();
-                options.UseNpgsql(
-                    dataSource,
-                    npgsqlOptions =>
-                    {
-                        npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
-                        // Add explicit mappings here too
-                        npgsqlOptions.MapEnum<OrderStatus>("order_status");
-                        npgsqlOptions.MapEnum<PaymentStatus>("payment_status");
-                    });
+                var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
+                options.UseNpgsql(ds, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
+                    npgsqlOptions.MapEnum<OrderStatus>("order_status");
+                    npgsqlOptions.MapEnum<PaymentStatus>("payment_status");
+                });
 
-                // Enable unmapped types support
                 NpgsqlConnection.GlobalTypeMapper.EnableUnmappedTypes();
             });
 
-
+            // Đăng ký Repository & Services
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();
-            services.AddScoped<IOrderService, OrderManagementService >();
+            services.AddScoped<IOrderService, OrderManagementService>();
+            services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
+            services.AddHostedService<OrderNotificationWorker>();
 
+            // Messaging
             services.AddScoped<IMessagePublisher, MessagePublisher>();
 
+            // HTTP Clients
             services.AddHttpClient<IAccountServiceClient, AccountServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:AccountService"];
                 if (!string.IsNullOrEmpty(baseUrl))
-                {
                     client.BaseAddress = new Uri(baseUrl);
-                }
             });
 
             services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:ShopService"];
                 if (!string.IsNullOrEmpty(baseUrl))
-                {
                     client.BaseAddress = new Uri(baseUrl);
-                }
             });
+
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:ProductService"];
                 if (!string.IsNullOrEmpty(baseUrl))
-                {
                     client.BaseAddress = new Uri(baseUrl);
-                }
             });
+
             services.AddHttpClient<IWalletServiceClient, WalletServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:WalletService"];
                 if (!string.IsNullOrEmpty(baseUrl))
-                {
                     client.BaseAddress = new Uri(baseUrl);
-                }
             });
-            services.AddHostedService<OrderCompletionService>();
+
+            services.AddHttpClient<IAdressServiceClient, AddressServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:AddressService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                    client.BaseAddress = new Uri(baseUrl);
+            });
+
+            services.AddHttpClient<IMembershipServiceClient, MembershipServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:MembershipService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                    client.BaseAddress = new Uri(baseUrl);
+            });
+
+            services.AddHttpClient<IShopVoucherClientService, ShopVoucherServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:VoucherService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                    client.BaseAddress = new Uri(baseUrl);
+            });
+
+            services.AddHttpClient<IDeliveryClient, DeliveryServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:DeliveryService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                    client.BaseAddress = new Uri(baseUrl);
+            });
+
             services.AddQuartz(q =>
             {
-                var jobKey = new JobKey("AutoOrderCompleteJob");
-                q.AddJob<AutoOrderCompleteJob>(opts => opts.WithIdentity(jobKey));
-
+                var cancelDraftingKey = new JobKey("cancel-drafting-orders-job");
+                q.AddJob<CancelDraftingOrdersJob>(opts => opts.WithIdentity(cancelDraftingKey));
                 q.AddTrigger(opts => opts
-                    .ForJob(jobKey)
-                    .WithIdentity("AutoOrderCompleteJob-trigger")
-                    .WithCronSchedule("0 0 * * * ?")); // Chạy mỗi giờ
+                    .ForJob(cancelDraftingKey)
+                    .WithIdentity("cancel-drafting-orders-trigger")
+                    .WithCronSchedule("0 */5 * * * ?"));
+
+                var cancelPendingKey = new JobKey("cancel-pending-orders-job");
+                q.AddJob<CancelPendingOrdersJob>(opts => opts.WithIdentity(cancelPendingKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(cancelPendingKey)
+                    .WithIdentity("cancel-pending-orders-trigger")
+                    .WithCronSchedule("0 0 */1 * * ?"));
+
+                var cancelProcessingKey = new JobKey("cancel-processing-orders-job");
+                q.AddJob<CancelProcessingOrdersJob>(opts => opts.WithIdentity(cancelProcessingKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(cancelProcessingKey)
+                    .WithIdentity("cancel-processing-orders-trigger")
+                    .WithCronSchedule("0 30 */1 * * ?"));
+
+                var autoCompleteKey = new JobKey("auto-complete-delivered-orders-job");
+                q.AddJob<AutoCompleteDeliveredOrdersJob>(opts => opts.WithIdentity(autoCompleteKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(autoCompleteKey)
+                    .WithIdentity("auto-complete-delivered-orders-trigger")
+                    .WithCronSchedule("0 30 0 * * ?"));
             });
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-            services.AddScoped<IAdressServiceClient, AddressServiceClient>();
-            services.AddScoped<IMembershipServiceClient, MembershipServiceClient>();
-            services.AddScoped<IShopVoucherClientService,ShopVoucherServiceClient>();
-            services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
-            services.AddHostedService<OrderNotificationWorker>();
+
+            // Nếu có service chạy nền theo interval ngoài Quartz
+            services.AddHostedService<OrderCompletionService>();
+
             return services;
         }
     }
