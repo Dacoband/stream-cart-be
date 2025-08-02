@@ -127,7 +127,7 @@ namespace LivestreamService.Api.Controllers
                 };
 
                 var result = await _mediator.Send(command);
-                return Ok(ApiResponse<bool>.SuccessResult(result, "Kiểm duyệt tin nhắn thành công"));
+                return Ok(ApiResponse<LivestreamChatDTO>.SuccessResult(result, "Kiểm duyệt tin nhắn thành công"));
             }
             catch (Exception ex)
             {

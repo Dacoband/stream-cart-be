@@ -28,8 +28,5 @@
 		<PackageReference Include="MongoDB.Driver" Version="2.30.0" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Interfaces\" />
-	</ItemGroup>
 
 </Project>
