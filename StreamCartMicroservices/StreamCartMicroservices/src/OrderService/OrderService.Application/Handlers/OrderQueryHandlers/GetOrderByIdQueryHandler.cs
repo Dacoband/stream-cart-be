@@ -116,7 +116,8 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     EstimatedDeliveryDate = order.EstimatedDeliveryDate,
                     ActualDeliveryDate = order.ActualDeliveryDate,
                     LivestreamId = order.LivestreamId,
-                    Items = orderItemDtos
+                    Items = orderItemDtos,
+                    VoucherCode = order.VoucherCode,
                 };
 
                 _logger.LogInformation("Successfully retrieved order {OrderId} with {ItemCount} items",

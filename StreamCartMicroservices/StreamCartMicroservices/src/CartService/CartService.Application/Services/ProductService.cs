@@ -91,6 +91,7 @@ namespace CartService.Application.Services
                     productSnapshot.Length = variant.Length ?? product.Length;
                     productSnapshot.Width = variant.Width ?? product.Width;
                     productSnapshot.Height = variant.Height ?? product.Height;  
+                    productSnapshot.Weight = variant.Weight ?? product.Weight;
                   
 
                 }

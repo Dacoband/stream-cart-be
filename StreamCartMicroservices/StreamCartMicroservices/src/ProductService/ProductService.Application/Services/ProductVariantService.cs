@@ -37,7 +37,12 @@ namespace ProductService.Application.Services
                 Price = dto.Price,
                 FlashSalePrice = dto.FlashSalePrice,
                 Stock = dto.Stock,
-                CreatedBy = createdBy
+                CreatedBy = createdBy,
+                Length = dto.Length,
+                Width = dto.Width,
+                Height = dto.Height,
+                Weight = dto.Weight,
+                
             };
             return await _mediator.Send(command);
         }
@@ -51,7 +56,11 @@ namespace ProductService.Application.Services
                 Price = dto.Price,
                 FlashSalePrice = dto.FlashSalePrice,
                 Stock = dto.Stock,
-                UpdatedBy = updatedBy
+                UpdatedBy = updatedBy,
+                Length = dto.Length,
+                Width = dto.Width,
+                Height = dto.Height,
+                Weight = dto.Weight,
             };
             return await _mediator.Send(command);
         }

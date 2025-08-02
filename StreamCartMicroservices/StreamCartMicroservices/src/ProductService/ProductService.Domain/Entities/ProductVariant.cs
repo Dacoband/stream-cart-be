@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using Shared.Common.Domain.Bases;
 
 namespace ProductService.Domain.Entities
@@ -10,6 +11,20 @@ namespace ProductService.Domain.Entities
         public decimal Price { get; private set; }
         public decimal? FlashSalePrice { get; private set; }
         public int Stock { get; private set; }
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Weight { get;  set; }
+
+        //[StringLength(100)]
+        //public string Dimensions { get; private set; }
+        // With these three properties:
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Length { get;  set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Width { get;  set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal? Height { get;  set; }
 
 
         // Required by EF Core

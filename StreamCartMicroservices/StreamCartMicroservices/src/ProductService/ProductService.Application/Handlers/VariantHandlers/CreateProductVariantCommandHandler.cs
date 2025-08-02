@@ -50,6 +50,10 @@ namespace ProductService.Application.Handlers.VariantHandlers
                 request.Price,
                 request.Stock,
                 createdBy);
+            variant.Length = request.Length;
+            variant.Weight = request.Weight;
+            variant.Width = request.Width;
+            variant.Height = request.Height;
 
             // Set flash sale price if present
             if (request.FlashSalePrice.HasValue)

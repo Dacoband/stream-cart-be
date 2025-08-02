@@ -199,6 +199,10 @@ namespace ProductService.Application.Handlers.ProductHandlers
                         variantDto.Price,
                         variantDto.Stock,
                         createdBy);
+                    variant.Weight = variantDto.Height;
+                    variant.Width = variantDto.Width;
+                    variant.Length = variantDto.Length;
+                    variant.Height = variantDto.Height;
 
                     await _variantRepository.InsertAsync(variant);
 
