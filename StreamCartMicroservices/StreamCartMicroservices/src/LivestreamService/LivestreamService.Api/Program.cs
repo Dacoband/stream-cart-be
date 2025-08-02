@@ -9,6 +9,7 @@ using LivestreamService.Infrastructure.Extensions;
 using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
@@ -79,6 +80,34 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+// Add SignalR
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400; // 100 KB
+});
+
+// Register SignalR chat service
+builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
+
+// Add JWT authentication for SignalR
+builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/signalrchat") || path.StartsWithSegments("/notificationHub")))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
 
 var app = builder.Build();
 
@@ -96,6 +125,8 @@ if (!builder.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
+app.MapHub<SignalRChatHub>("/signalrchat");
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<ChatHub>("/chatHub");
 app.UseRouting();
 app.UseHttpsRedirection();

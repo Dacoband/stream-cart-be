@@ -24,6 +24,7 @@ namespace LivestreamService.Api.Controllers
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<ChatController> _logger;
         private readonly ILivekitService _livekitService;
+        private readonly IChatNotificationServiceSignalR  _signalRChatService;
 
         // Add a private readonly field for IConfiguration
         private readonly IConfiguration _configuration;
@@ -33,13 +34,15 @@ namespace LivestreamService.Api.Controllers
             ICurrentUserService currentUserService,
             ILogger<ChatController> logger,
             ILivekitService livekitService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IChatNotificationServiceSignalR signalRChatService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
             _livekitService = livekitService;
             _logger = logger;
             _configuration = configuration;
+            _signalRChatService = signalRChatService;
         }
 
         /// <summary>
@@ -561,6 +564,125 @@ namespace LivestreamService.Api.Controllers
                     Error = ex.Message,
                     StackTrace = ex.StackTrace
                 });
+            }
+        }
+        // Add this new endpoint to the existing ChatController
+
+        /// <summary>
+        /// Gửi tin nhắn qua SignalR
+        /// </summary>
+        [HttpPost("signalr/messages")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<ChatMessageDTO>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> SendSignalRMessage([FromBody] SendChatMessageDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                var username = _currentUserService.GetUsername();
+
+                // 1. Process message via MediatR (same as regular SendMessage)
+                var command = new SendChatMessageCommand
+                {
+                    ChatRoomId = request.ChatRoomId,
+                    SenderId = userId,
+                    Content = request.Content,
+                    MessageType = request.MessageType,
+                    AttachmentUrl = request.AttachmentUrl
+                };
+
+                var result = await _mediator.Send(command);
+
+                // 2. Additionally, send via SignalR
+                var signalRChatService = HttpContext.RequestServices.GetRequiredService<ISignalRChatService>();
+                await signalRChatService.SendMessageToChatRoomAsync(
+                    request.ChatRoomId,
+                    userId,
+                    username,
+                    request.Content);
+
+                return Created($"/api/chat/messages/{result.Id}",
+                    ApiResponse<ChatMessageDTO>.SuccessResult(result, "Gửi tin nhắn SignalR thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending SignalR chat message");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Tham gia chat room qua SignalR
+        /// </summary>
+        [HttpPost("signalr/rooms/{chatRoomId}/join")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<ChatRoomDTO>), 200)]
+        public async Task<IActionResult> JoinSignalRChatRoom(Guid chatRoomId)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                var username = _currentUserService.GetUsername();
+
+                // Get chat room info
+                var query = new GetChatRoomQuery { ChatRoomId = chatRoomId, RequesterId = userId };
+                var chatRoom = await _mediator.Send(query);
+
+                if (chatRoom == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Chat room không tồn tại"));
+                }
+
+                // Notify via SignalR that user joined the room
+                var signalRChatService = HttpContext.RequestServices.GetRequiredService<ISignalRChatService>();
+                await signalRChatService.NotifyUserJoinedChatRoomAsync(chatRoomId, userId, username);
+
+                return Ok(ApiResponse<ChatRoomDTO>.SuccessResult(chatRoom, "Tham gia chat room SignalR thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error joining SignalR chat room");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Tham gia livestream chat qua SignalR
+        /// </summary>
+        [HttpPost("signalr/livestream/{livestreamId}/join")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamChatDTO>), 200)]
+        public async Task<IActionResult> JoinSignalRLivestreamChat(Guid livestreamId)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                var username = _currentUserService.GetUsername();
+
+                // Get livestream info
+                // (You might want to add a query to check if the livestream exists)
+
+                // Create livestream chat DTO
+                var result = new LivestreamChatDTO1
+                {
+                    LivestreamId = livestreamId,
+                    UserId = userId,
+                    Username = username,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+
+                return Ok(ApiResponse<LivestreamChatDTO1>.SuccessResult(result, "Tham gia livestream chat SignalR thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error joining SignalR livestream chat");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
         public class TestRoomRequest

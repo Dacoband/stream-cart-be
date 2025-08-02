@@ -1031,6 +1031,19 @@
       "SwaggerKey": "livestream"
     },
     {
+      "DownstreamPathTemplate": "/api/chatsignalr/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/chatsignalr/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH" ],
+      "SwaggerKey": "livestream"
+    },
+    {
       "DownstreamPathTemplate": "/api/livestream-chat/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -1118,7 +1131,7 @@
       "UpstreamPathTemplate": "/api/shopmembership/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
       "SwaggerKey": "shop"
-      }
+    }
   ],
   "SwaggerEndPoints": [
     {
