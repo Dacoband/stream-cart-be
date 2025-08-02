@@ -2,6 +2,7 @@ using System;
 using MediatR;
 using Shared.Common.Domain.Bases;
 using OrderService.Application.DTOs.OrderDTOs;
+using OrderService.Domain.Enums;
 
 namespace OrderService.Application.Queries.OrderQueries
 {
@@ -24,5 +25,6 @@ namespace OrderService.Application.Queries.OrderQueries
         /// Items per page for pagination
         /// </summary>
         public int PageSize { get; set; } = 10;
+        public OrderStatus? Status { get; set; }
     }
 }

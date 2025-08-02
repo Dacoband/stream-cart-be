@@ -12,6 +12,10 @@ using System.Collections.Generic;
 using Shared.Messaging.Event.OrderEvents;
 using MassTransit;
 using OrderService.Application.Interfaces;
+using OrderService.Application.DTOs.Delivery;
+using OrderService.Domain.Entities;
+using OrderService.Application.Interfaces.IServices;
+using Microsoft.AspNetCore.Mvc;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
 {
@@ -21,16 +25,20 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         private readonly ILogger<UpdateOrderStatusCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly IAccountServiceClient _accountServiceClient;
+        private readonly IDeliveryClient _deliveryClient;
+        private readonly IProductServiceClient _productServiceClient;
 
         public UpdateOrderStatusCommandHandler(
             IOrderRepository orderRepository,
             ILogger<UpdateOrderStatusCommandHandler> logger,
-            IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient)
+            IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient, IDeliveryClient deliveryClient, IProductServiceClient productServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _publishEndpoint = publishEndpoint;
             _accountServiceClient = accountServiceClient;
+            _deliveryClient = deliveryClient;
+            _productServiceClient = productServiceClient;
         }
 
         public async Task<OrderDto> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -41,35 +49,129 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                 // Get the order
                 var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+                var deliveryItemList = new List<UserOrderItem>();
+                foreach (var item in order.Items)
+                {
+                    var deliveryItem = new UserOrderItem();
+                    var product = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                    deliveryItem.Quantity = item.Quantity;
+                    deliveryItem.Name = product.ProductName;
+                    deliveryItem.Width = (int)product.Width;
+                    deliveryItem.Weight = (int)product.Weight;
+                    deliveryItem.Height = (int)product.Height;
+                    deliveryItem.Length = (int)product.Length;
+                    if (product == null)
+                        throw new ApplicationException($"Không tìm thấy sản phẩm {item.Id}");
+                    if (item.VariantId.HasValue)
+                    {
+                        var variant = await _productServiceClient.GetVariantByIdAsync(item.VariantId.Value);
+                        if (variant == null)
+                            throw new ApplicationException($"Không tìm thấy sản phẩm {item.VariantId}");
+
+                        deliveryItem.Name = product.ProductName;
+                        deliveryItem.Width = (int)(product.Width ?? variant.Width);
+                        deliveryItem.Weight = (int)(product.Weight ?? variant.Weight);
+                        deliveryItem.Height = (int)(product.Height ?? variant.Height);
+                        deliveryItem.Length = (int)(product.Length ?? variant.Length);
+
+                    }
+                    deliveryItemList.Add(deliveryItem);
+                }
                 if (order == null)
                 {
                     _logger.LogWarning("Order with ID {OrderId} not found", request.OrderId);
                     throw new ApplicationException($"Order with ID {request.OrderId} not found");
                 }
                 var message = "";
+
                 switch (request.NewStatus)
                 {
+                    case OrderStatus.Waiting:
+                        order.UpdateStatus(OrderStatus.Waiting, request.ModifiedBy);
+                        message = "Đơn hàng đang được khởi tạo";
+                        break;
+
+                    case OrderStatus.Pending:
+                        order.UpdateStatus(OrderStatus.Pending, request.ModifiedBy);
+                        message = "Chờ người bán xác nhận đơn hàng";
+                        break;
+
                     case OrderStatus.Processing:
-                        order.Process(request.ModifiedBy);
-                        message = "đang được xử lý bởi hệ thống";
+                        order.UpdateStatus(OrderStatus.Processing, request.ModifiedBy);
+                        message = "Người gửi đang chuẩn bị hàng";
+
+                        // 👉 Gọi hàm tạo đơn GHN
+                        var ghnRequest = new UserCreateOrderRequest
+                        {
+                            FromName = order.FromShop,
+                            FromPhone = order.FromPhone,
+                            FromProvince = order.FromProvince,
+                            FromDistrict = order.FromDistrict,
+                            FromWard = order.FromWard,
+                            FromAddress = order.FromAddress,
+
+                            ToName = order.ToName,
+                            ToPhone = order.ToPhone,
+                            ToProvince = order.ToProvince,
+                            ToDistrict = order.ToDistrict,
+                            ToWard = order.ToWard,
+                            ToAddress = order.ToAddress,
+
+                            ServiceTypeId = 2, // Hoặc lấy từ config
+                            Note = order.CustomerNotes,
+                            Description = $"Đơn hàng #{order.OrderCode}",
+                            CodAmount = (int?)order.FinalAmount,
+                            Items = deliveryItemList,
+
+                        };
+
+                        var ghnResponse = await _deliveryClient.CreateGhnOrderAsync(ghnRequest);
+                        if (!ghnResponse.Success)
+                        {
+                            _logger.LogWarning("Không thể tạo đơn GHN cho đơn hàng {OrderId}", order.Id);
+                            throw new ApplicationException("Tạo đơn giao hàng thất bại: " + ghnResponse.Message);
+                        }
+
                         break;
-                    case OrderStatus.Shipped:
-                        order.Ship(order.TrackingCode, request.ModifiedBy);
-                        message = "đang được giao đến bạn";
+
+                    case OrderStatus.Packed:
+                        order.UpdateStatus(OrderStatus.Packed, request.ModifiedBy);
+                        message = "Đơn hàng đã được đóng gói";
                         break;
+
+                    case OrderStatus.OnDelivere:
+                        order.UpdateStatus(OrderStatus.OnDelivere, request.ModifiedBy);
+                        message = "Đơn hàng đang được vận chuyển";
+                        break;
+
                     case OrderStatus.Delivered:
-                        order.Deliver(request.ModifiedBy);
-                        message = "đã được giao thành công";
-
+                        order.UpdateStatus(OrderStatus.Delivered, request.ModifiedBy);
+                        message = "Đơn hàng đã được giao thành công";
                         break;
+
+                    case OrderStatus.Completed:
+                        order.UpdateStatus(OrderStatus.Completed, request.ModifiedBy);
+                        message = "Đơn hàng đã hoàn tất";
+                        break;
+
+                    case OrderStatus.Returning:
+                        order.UpdateStatus(OrderStatus.Returning, request.ModifiedBy);
+                        message = "Khách hàng đã yêu cầu trả hàng";
+                        break;
+
+                    case OrderStatus.Refunded:
+                        order.UpdateStatus(OrderStatus.Refunded, request.ModifiedBy);
+                        message = "Đơn hàng đã được hoàn tiền";
+                        break;
+
                     case OrderStatus.Cancelled:
-                        order.Cancel(request.ModifiedBy);
-                        message = "đã bị hủy";
-
+                        order.UpdateStatus(OrderStatus.Cancelled, request.ModifiedBy);
+                        message = "Đơn hàng đã bị hủy";
                         break;
+
                     default:
-                        _logger.LogWarning("Unsupported order status transition to {NewStatus}", request.NewStatus);
-                        throw new InvalidOperationException($"Unsupported status transition to {request.NewStatus}");
+                        _logger.LogWarning("Chuyển trạng thái không được hỗ trợ: {NewStatus}", request.NewStatus);
+                        throw new InvalidOperationException($"Không hỗ trợ chuyển sang trạng thái: {request.NewStatus}");
                 }
 
                 await _orderRepository.ReplaceAsync(order.Id.ToString(), order);

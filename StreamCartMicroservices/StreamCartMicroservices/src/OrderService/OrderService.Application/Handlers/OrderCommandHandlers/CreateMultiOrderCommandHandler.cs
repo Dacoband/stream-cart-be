@@ -84,7 +84,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     // Tạo đơn hàng và item
                     var order = CreateOrder(request, shopOrder, shopAddress, customerAddress);
-                   
+                  
                     order.SetCreator(request.AccountId.ToString());
                     var itemResult = await BuildOrderItemsAsync(order, shopOrder.Items, shopMembership);
                     if (!itemResult.Success) return Fail(itemResult.Message);
@@ -100,7 +100,10 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     decimal commissionRate = shopMembership.Commission ?? 0;
 
                      CalculateOrderTotals(order, commissionRate, voucherDiscount);
-
+                    if (request.PaymentMethod != "COD")
+                    {
+                        order.OrderStatus = Domain.Enums.OrderStatus.Pending;
+                    }
                     // Lưu đơn hàng ban đầu
                     await _orderRepository.InsertAsync(order);                    // Áp dụng voucher nếu có
                     if (!string.IsNullOrEmpty(shopOrder.VoucherCode))
