@@ -67,10 +67,6 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.Weight)
                     .HasColumnName("weight")
                     .HasColumnType("decimal(10,2)");
-
-                //entity.Property(e => e.Dimensions)
-                //    .HasColumnName("dimensions")
-                //    .HasMaxLength(100);
                 entity.Property(e => e.Length)
                     .HasColumnName("length")
                     .HasMaxLength(100);
@@ -166,7 +162,18 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.LastModifiedAt);
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
                 entity.Property(e => e.IsDeleted);
-
+                entity.Property(e => e.Weight)
+                   .HasColumnName("weight")
+                   .HasColumnType("decimal(10,2)");
+                entity.Property(e => e.Length)
+                    .HasColumnName("length")
+                    .HasMaxLength(100);
+                entity.Property(e => e.Width)
+                    .HasColumnName("width")
+                    .HasMaxLength(100);
+                entity.Property(e => e.Height)
+                    .HasColumnName("height")
+                    .HasMaxLength(100);
                 // Add soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });

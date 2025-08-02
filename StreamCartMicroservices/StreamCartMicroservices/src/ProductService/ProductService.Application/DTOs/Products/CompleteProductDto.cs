@@ -62,6 +62,11 @@ namespace ProductService.Application.DTOs.Products
         public int Stock { get; set; }
         [Required]
         public List<VariantAttributeDto> Attributes { get; set; } = new();
+        public decimal? Weight { get; set; }
+        //public string? Dimensions { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
     }
 
     public class VariantAttributeDto

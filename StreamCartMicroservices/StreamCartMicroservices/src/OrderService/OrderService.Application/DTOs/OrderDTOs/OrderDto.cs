@@ -31,6 +31,7 @@ namespace OrderService.Application.DTOs.OrderDTOs
         public Guid ShippingProviderId { get; set; }
 
         public Guid? LivestreamId { get; set; }
+        public string? VoucherCode { get; set; }
 
         public List<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
     }

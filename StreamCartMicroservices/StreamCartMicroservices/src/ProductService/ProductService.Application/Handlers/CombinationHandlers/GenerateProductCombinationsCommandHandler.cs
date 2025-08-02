@@ -68,6 +68,11 @@ namespace ProductService.Application.Handlers.CombinationHandlers
                     request.DefaultPrice,
                     request.DefaultStock,
                     request.CreatedBy);
+                variant.Width = request.Width;
+                variant.Height = request.Height;
+                variant.Length = request.Length;
+                variant.Weight = request.Weight;
+                
 
                 // Save the variant
                 await _variantRepository.InsertAsync(variant);

@@ -98,7 +98,8 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     EstimatedDeliveryDate = order.EstimatedDeliveryDate,
                     ActualDeliveryDate = order.ActualDeliveryDate,
                     LivestreamId = order.LivestreamId,
-                    Items = orderItemDtos
+                    Items = orderItemDtos,
+                    VoucherCode = order.VoucherCode,
                 };
 
                 return orderDto;
