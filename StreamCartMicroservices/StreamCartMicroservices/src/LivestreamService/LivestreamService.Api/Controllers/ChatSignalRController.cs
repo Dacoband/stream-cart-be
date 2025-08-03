@@ -25,20 +25,17 @@ namespace LivestreamService.Api.Controllers
         private readonly IMediator _mediator;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<ChatSignalRController> _logger;
-        private readonly ILivekitService _livekitService;
         private readonly IChatNotificationServiceSignalR _signalRChatService;
 
         public ChatSignalRController(
             IMediator mediator,
             ICurrentUserService currentUserService,
             ILogger<ChatSignalRController> logger,
-            ILivekitService livekitService,
             IChatNotificationServiceSignalR signalRChatService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
             _logger = logger;
-            _livekitService = livekitService;
             _signalRChatService = signalRChatService;
         }
 
@@ -105,7 +102,37 @@ namespace LivestreamService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Lấy danh sách chat rooms của shop
+        /// </summary>
+        [HttpGet("shop-rooms")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<ChatRoomDTO>>), 200)]
+        public async Task<IActionResult> GetShopChatRooms(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] bool? isActive = null)
+        {
+            try
+            {
+                var shopId = Guid.Parse(_currentUserService.GetShopId());
+                var query = new GetShopChatRoomsQuery
+                {
+                    ShopId = shopId,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    IsActive = isActive
+                };
 
+                var result = await _mediator.Send(query);
+                return Ok(ApiResponse<PagedResult<ChatRoomDTO>>.SuccessResult(result, "Lấy danh sách chat rooms của shop thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting shop chat rooms");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
         /// <summary>
         /// Tạo chat room mới với shop qua SignalR
         /// </summary>

@@ -30,11 +30,11 @@ namespace LivestreamService.Domain.Entities
 
         [BsonElement("isActive")]
         public bool IsActive { get; set; } = true;
-        [BsonElement("liveKitRoomName")]
-        public string? LiveKitRoomName { get; set; }
+        //[BsonElement("liveKitRoomName")]
+        //public string? LiveKitRoomName { get; set; }
 
-        [BsonElement("customerToken")]
-        public string? CustomerToken { get; set; }
+        //[BsonElement("customerToken")]
+        //public string? CustomerToken { get; set; }
         [BsonElement("userName")]
         public string? UserName { get; set; }
 
@@ -66,8 +66,8 @@ namespace LivestreamService.Domain.Entities
         public ChatRoom(
             Guid userId,
             Guid shopId,
-            string? liveKitRoomName = null,
-            string? customerToken = null,
+            //string? liveKitRoomName = null,
+            //string? customerToken = null,
             string? userName = null,
             string? shopName = null,
             Guid? relatedOrderId = null,
@@ -75,8 +75,8 @@ namespace LivestreamService.Domain.Entities
         {
             UserId = userId;
             ShopId = shopId;
-            LiveKitRoomName = liveKitRoomName;
-            CustomerToken = customerToken;
+            //LiveKitRoomName = liveKitRoomName;
+            //CustomerToken = customerToken;
             UserName = userName;
             ShopName = shopName;
             RelatedOrderId = relatedOrderId;
@@ -90,13 +90,13 @@ namespace LivestreamService.Domain.Entities
             LastModifiedAt = DateTime.UtcNow;
             LastModifiedBy = modifiedBy;
         }
-        public void UpdateLiveKitInfo(string? liveKitRoomName, string? customerToken, string modifiedBy)
-        {
-            LiveKitRoomName = liveKitRoomName;
-            CustomerToken = customerToken;
-            LastModifiedAt = DateTime.UtcNow;
-            LastModifiedBy = modifiedBy;
-        }
+        //public void UpdateLiveKitInfo(string? liveKitRoomName, string? customerToken, string modifiedBy)
+        //{
+        //    //LiveKitRoomName = liveKitRoomName;
+        //    CustomerToken = customerToken;
+        //    LastModifiedAt = DateTime.UtcNow;
+        //    LastModifiedBy = modifiedBy;
+        //}
         public void DeactivateRoom(string modifiedBy)
         {
             IsActive = false;
@@ -125,17 +125,17 @@ namespace LivestreamService.Domain.Entities
         }
 
         public void UpdateChatRoomInfo(
-            string? liveKitRoomName = null,
-            string? customerToken = null,
+            //string? liveKitRoomName = null,
+            //string? customerToken = null,
             string? userName = null,
             string? shopName = null,
             string? modifiedBy = null)
         {
-            if (!string.IsNullOrEmpty(liveKitRoomName))
-                LiveKitRoomName = liveKitRoomName;
+            //if (!string.IsNullOrEmpty(liveKitRoomName))
+            //    LiveKitRoomName = liveKitRoomName;
 
-            if (!string.IsNullOrEmpty(customerToken))
-                CustomerToken = customerToken;
+            //if (!string.IsNullOrEmpty(customerToken))
+            //    CustomerToken = customerToken;
 
             if (!string.IsNullOrEmpty(userName))
                 UserName = userName;

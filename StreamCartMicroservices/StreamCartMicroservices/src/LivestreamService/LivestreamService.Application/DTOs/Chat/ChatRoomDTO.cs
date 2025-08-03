@@ -20,8 +20,8 @@ namespace LivestreamService.Application.DTOs.Chat
         public string? ShopLogoUrl { get; set; }
         public ChatMessageDTO? LastMessage { get; set; }
         public int UnreadCount { get; set; }
-        public string? LiveKitRoomName { get; set; }
-        public bool IsLiveKitActive { get; set; }
+        //public string? LiveKitRoomName { get; set; }
+        //public bool IsLiveKitActive { get; set; }
     }
 
     public class ChatMessageDTO
