@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL; // Add this import for PostgreSQL
 using Shared.Common.Extensions;
+using Shared.Common.Settings;
 using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -110,15 +111,8 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
 });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("SignalRCorsPolicy", policy =>
-    {
-        policy.AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials() // Important for SignalR authentication
-              .SetIsOriginAllowed(origin => true); // Allow any origin with credentials
-                                                   // In production, replace this with specific origins
-                                                   // .WithOrigins("https://yourfrontend.com", "http://localhost:3000")
-    });
+    options.AddPolicy(name: CorsConstant.PolicyName,
+        policy => { policy.WithOrigins("*").AllowAnyHeader().AllowAnyMethod(); });
 });
 var app = builder.Build();
 
@@ -137,8 +131,9 @@ if (!builder.Environment.IsEnvironment("Docker"))
     app.UseHttpsRedirection();
 }
 
-app.UseCors("SignalRCorsPolicy"); // Use the specific policy
+//app.UseCors("SignalRCorsPolicy"); // Use the specific policy
 app.UseRouting();
+app.UseCors(CorsConstant.PolicyName);
 app.UseHttpsRedirection();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
