@@ -75,7 +75,7 @@ namespace LivestreamService.Application.Handlers.Chat
                     LastMessageAt = chatRoom.LastMessageAt,
                     RelatedOrderId = chatRoom.RelatedOrderId,
                     IsActive = chatRoom.IsActive,
-                    LiveKitRoomName = chatRoom.LiveKitRoomName,
+                    //LiveKitRoomName = chatRoom.LiveKitRoomName,
                     UserName = user?.Fullname ?? user?.Username,
                     UserAvatarUrl = user?.AvatarUrl,
                     ShopName = shop?.ShopName,

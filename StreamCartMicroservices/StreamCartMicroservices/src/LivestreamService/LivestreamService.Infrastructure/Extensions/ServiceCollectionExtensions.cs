@@ -88,6 +88,7 @@ namespace LivestreamService.Infrastructure.Extensions
                 options.KeepAliveInterval = TimeSpan.FromSeconds(30);
             });
             services.AddScoped<IChatNotificationServiceSignalR, ChatNotificationServiceSignalR>();
+            services.AddScoped<IChatNotificationService, ChatNotificationService>();
             return services;
 
         }

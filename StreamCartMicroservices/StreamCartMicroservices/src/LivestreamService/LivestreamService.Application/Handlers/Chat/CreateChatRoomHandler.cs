@@ -46,8 +46,8 @@ namespace LivestreamService.Application.Handlers.Chat
                         await _chatRoomRepository.ReplaceAsync(existingRoom.Id.ToString(), existingRoom);
                     }
                     existingRoom.UpdateChatRoomInfo(
-                       liveKitRoomName: request.LiveKitRoomName,
-                       customerToken: request.CustomerToken,
+                       //liveKitRoomName: request.LiveKitRoomName,
+                       //customerToken: request.CustomerToken,
                        userName: request.UserName,
                        shopName: request.ShopName,
                        modifiedBy: request.UserId.ToString()
@@ -75,8 +75,8 @@ namespace LivestreamService.Application.Handlers.Chat
                 var chatRoom = new ChatRoom(
                     request.UserId,
                     request.ShopId,
-                    request.LiveKitRoomName,
-                    request.CustomerToken,
+                    //request.LiveKitRoomName,
+                    //request.CustomerToken,
                     userName,
                     shopName,
                     request.RelatedOrderId,

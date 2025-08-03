@@ -180,9 +180,9 @@ namespace LivestreamService.Api.Controllers
                 }
                 
                 // Tạo LiveKit room name từ chat room info
-                var livekitRoomName = !string.IsNullOrEmpty(chatRoom.LiveKitRoomName)
-                    ? chatRoom.LiveKitRoomName
-                    : $"chat-shop-{chatRoom.ShopId}-customer-{chatRoom.UserId}";
+                //var livekitRoomName = !string.IsNullOrEmpty(chatRoom.LiveKitRoomName)
+                //    ? chatRoom.LiveKitRoomName
+                //    : $"chat-shop-{chatRoom.ShopId}-customer-{chatRoom.UserId}";
 
                 // ✅ Tạo unique identity based on role
                 string uniqueIdentity;
@@ -200,17 +200,18 @@ namespace LivestreamService.Api.Controllers
 
                 // Generate token với unique identity
                 var token = await _livekitService.GenerateChatTokenAsync(
-                    livekitRoomName,
+                    //livekitRoomName,
+                    "",
                     uniqueIdentity,
                     isShop: isShopUser);
 
-                _logger.LogInformation("Generated token for {Role} in room {RoomName} with identity {Identity}", 
-                    isShopUser ? "seller" : "customer", livekitRoomName, uniqueIdentity);
+                //_logger.LogInformation("Generated token for {Role} in room {RoomName} with identity {Identity}", 
+                //    isShopUser ? "seller" : "customer", livekitRoomName, uniqueIdentity);
 
                 var result = new ShopChatTokenDTO
                 {
                     ChatRoomId = chatRoomId,
-                    LiveKitRoomName = livekitRoomName,
+                   // LiveKitRoomName = livekitRoomName,
                     ShopToken = token,
                     CustomerName = chatRoom.UserName,
                     ShopIdentity = uniqueIdentity,
@@ -255,11 +256,11 @@ namespace LivestreamService.Api.Controllers
                 var result = await _mediator.Send(query);
 
                 // Enhance với LiveKit room status
-                foreach (var room in result.Items)
-                {
-                    var livekitRoomName = $"chat-shop-{room.ShopId}-customer-{room.UserId}";
-                    room.IsLiveKitActive = await _livekitService.IsRoomActiveAsync(livekitRoomName);
-                }
+                //foreach (var room in result.Items)
+                //{
+                //    var livekitRoomName = $"chat-shop-{room.ShopId}-customer-{room.UserId}";
+                //    room.IsLiveKitActive = await _livekitService.IsRoomActiveAsync(livekitRoomName);
+                //}
 
                 return Ok(ApiResponse<PagedResult<ChatRoomDTO>>.SuccessResult(result, "Lấy danh sách chat rooms thành công"));
             }
@@ -526,11 +527,11 @@ namespace LivestreamService.Api.Controllers
                 var result = await _mediator.Send(query);
 
                 // Enhance với LiveKit room status
-                foreach (var room in result.Items)
-                {
-                    var livekitRoomName = $"chat-shop-{room.ShopId}-customer-{room.UserId}";
-                    room.IsLiveKitActive = await _livekitService.IsRoomActiveAsync(livekitRoomName);
-                }
+                //foreach (var room in result.Items)
+                //{
+                //    var livekitRoomName = $"chat-shop-{room.ShopId}-customer-{room.UserId}";
+                //    room.IsLiveKitActive = await _livekitService.IsRoomActiveAsync(livekitRoomName);
+                //}
 
                 return Ok(ApiResponse<PagedResult<ChatRoomDTO>>.SuccessResult(result, "Lấy danh sách chat rooms của shop thành công"));
             }
