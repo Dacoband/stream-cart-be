@@ -136,15 +136,16 @@ if (!builder.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-app.MapHub<SignalRChatHub>("/signalrchat");
-app.MapHub<NotificationHub>("/notificationHub");
-app.MapHub<ChatHub>("/chatHub");
+
 app.UseCors("SignalRCorsPolicy"); // Use the specific policy
 app.UseRouting();
 app.UseHttpsRedirection();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<SignalRChatHub>("/signalrchat");
+app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChatHub>("/chatHub");
 app.MapControllers();
 
 app.Run();
