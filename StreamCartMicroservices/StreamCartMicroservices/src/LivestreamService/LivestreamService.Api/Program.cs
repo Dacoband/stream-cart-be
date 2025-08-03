@@ -108,7 +108,18 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
         }
     };
 });
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("SignalRCorsPolicy", policy =>
+    {
+        policy.AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials() // Important for SignalR authentication
+              .SetIsOriginAllowed(origin => true); // Allow any origin with credentials
+                                                   // In production, replace this with specific origins
+                                                   // .WithOrigins("https://yourfrontend.com", "http://localhost:3000")
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -128,9 +139,9 @@ if (!builder.Environment.IsEnvironment("Docker"))
 app.MapHub<SignalRChatHub>("/signalrchat");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<ChatHub>("/chatHub");
+app.UseCors("SignalRCorsPolicy"); // Use the specific policy
 app.UseRouting();
 app.UseHttpsRedirection();
-app.UseConfiguredCors();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
