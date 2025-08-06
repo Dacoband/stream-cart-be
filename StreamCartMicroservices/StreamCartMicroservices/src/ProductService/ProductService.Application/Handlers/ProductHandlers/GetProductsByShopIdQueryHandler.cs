@@ -27,14 +27,26 @@ namespace ProductService.Application.Handlers.ProductHandlers
             var products = await _productRepository.GetByShopIdAsync(request.ShopId);
 
             // Lọc theo trạng thái nếu cần
-            if (request.ActiveOnly)
+            if (request.ActiveOnly.HasValue)
             {
-                products = products.Where(p => p.IsActive);
+                products = products.Where(p => p.IsDeleted == !request.ActiveOnly);
             }
+            if (request.IsInStock.HasValue)
+            {
+                products = request.IsInStock.Value
+                    ? products.Where(x => x.StockQuantity > 0)
+                    : products.Where(x => x.StockQuantity == 0);
+            }
+
+            // 👉 Áp dụng phân trang trước khi thực hiện truy vấn DB nặng hoặc lặp
+            var pagedProducts = products
+                .Skip((request.PageIndex - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
 
             var result = new List<ProductDto>();
 
-            foreach (var p in products)
+            foreach (var p in pagedProducts)
             {
                 decimal finalPrice = p.BasePrice;
                 if (p.DiscountPrice.HasValue && p.DiscountPrice.Value > 0)
@@ -42,7 +54,6 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     finalPrice = p.BasePrice * (1 - (p.DiscountPrice.Value / 100));
                 }
 
-                // Get primary image if exists
                 var primaryImage = await _productImageRepository.GetPrimaryImageAsync(p.Id);
                 string? primaryImageUrl = primaryImage?.ImageUrl;
 
@@ -59,14 +70,12 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     StockQuantity = p.StockQuantity,
                     IsActive = p.IsActive,
                     Weight = p.Weight,
-                    //Dimensions = p.Dimensions,
                     Length = p.Length,
                     Width = p.Width,
                     Height = p.Height,
                     HasVariant = p.HasVariant,
                     QuantitySold = p.QuantitySold,
                     ShopId = p.ShopId,
-                    //LivestreamId = p.LivestreamId,
                     PrimaryImageUrl = primaryImageUrl,
                     HasPrimaryImage = primaryImage != null,
                     CreatedAt = p.CreatedAt,
@@ -78,5 +87,6 @@ namespace ProductService.Application.Handlers.ProductHandlers
 
             return result;
         }
+
     }
 }

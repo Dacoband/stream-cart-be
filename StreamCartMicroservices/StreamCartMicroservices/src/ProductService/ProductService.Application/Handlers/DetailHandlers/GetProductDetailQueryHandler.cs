@@ -173,7 +173,11 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     Stock = variant.Stock,
                     Price = variant.Price,
                     FlashSalePrice = variant.FlashSalePrice,
-                    VariantImage = variantImageDto
+                    VariantImage = variantImageDto,
+                    Length = variant.Length,
+                    Weight = variant.Weight,
+                    Width = variant.Width,
+                    Height = variant.Height,
                 });
             }
 

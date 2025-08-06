@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MassTransit.Transports;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Domain.Entities;
@@ -328,6 +329,19 @@ namespace OrderService.Infrastructure.Repositories
                 _logger.LogError(ex, "Lỗi khi lấy danh sách đơn hàng đã giao trước ngày {ThresholdDate}", thresholdDate);
                 throw;
             }
+        }
+        public async Task<List<Orders>> GetOrdersByStatusAndCreatedBeforeAsync(OrderStatus status, DateTime cutoff)
+        {
+            return await _orderContext.Orders
+                .Where(o => o.OrderStatus == status && o.CreatedAt < cutoff)
+            .ToListAsync();
+        }
+
+        public async Task<List<Orders>> GetOrdersByStatusAndModifiedBeforeAsync(OrderStatus status, DateTime cutoff)
+        {
+            return await _orderContext.Orders
+                .Where(o => o.OrderStatus == status && o.LastModifiedAt < cutoff)
+                .ToListAsync();
         }
     }
 }

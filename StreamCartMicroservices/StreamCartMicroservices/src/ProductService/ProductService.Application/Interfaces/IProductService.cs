@@ -18,7 +18,7 @@ namespace ProductService.Application.Interfaces
         Task<bool> DeleteProductAsync(Guid id, string deletedBy);
         Task<ProductDto?> GetProductByIdAsync(Guid id);
         Task<IEnumerable<ProductDto>> GetAllProductsAsync(bool activeOnly = false);
-        Task<PagedResult<ProductDto>> GetPagedProductsAsync(int pageNumber, int pageSize, ProductSortOption sortOption, bool activeOnly, Guid? shopId, Guid? categoryId);
+        Task<PagedResult<ProductDto>> GetPagedProductsAsync(int pageNumber, int pageSize, ProductSortOption sortOption, bool activeOnly, Guid? shopId, Guid? categoryId, bool? InStockOnly);
         Task<IEnumerable<ProductDto>> GetProductsByShopIdAsync(Guid shopId, bool activeOnly = false);
         Task<IEnumerable<ProductDto>> GetProductsByCategoryIdAsync(Guid categoryId, bool activeOnly = false);
         Task<IEnumerable<ProductDto>> GetBestSellingProductsAsync(int count, Guid? shopId, Guid? categoryId);

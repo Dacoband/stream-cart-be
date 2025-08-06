@@ -90,7 +90,7 @@ namespace ProductService.Application.Services
             return await _mediator.Send(query);
         }
 
-        public async Task<PagedResult<ProductDto>> GetPagedProductsAsync(int pageNumber, int pageSize, ProductSortOption sortOption, bool activeOnly, Guid? shopId, Guid? categoryId)
+        public async Task<PagedResult<ProductDto>> GetPagedProductsAsync(int pageNumber, int pageSize, ProductSortOption sortOption, bool activeOnly, Guid? shopId, Guid? categoryId, bool? InStockOnly)
         {
             var query = new GetPagedProductsQuery
             {
@@ -99,7 +99,8 @@ namespace ProductService.Application.Services
                 SortOption = sortOption,
                 ActiveOnly = activeOnly,
                 ShopId = shopId,
-                CategoryId = categoryId
+                CategoryId = categoryId,
+                InStockOnly = InStockOnly
             };
             return await _mediator.Send(query);
         }

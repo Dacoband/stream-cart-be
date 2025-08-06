@@ -140,7 +140,7 @@ namespace OrderService.Infrastructure.Services
             }
         }
 
-        public async Task<PagedResult<OrderDto>> GetOrdersByAccountIdAsync(Guid accountId, int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResult<OrderDto>> GetOrdersByAccountIdAsync(Guid accountId, FilterOrderDTO filter)
         {
             try
             {
@@ -149,8 +149,8 @@ namespace OrderService.Infrastructure.Services
                 var searchParams = new OrderSearchParamsDto
                 {
                     AccountId = accountId,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize
+                    PageNumber = filter.PageIndex,
+                    PageSize = filter.PageSize,
                 };
 
                 var query = new SearchOrdersQuery { SearchParams = searchParams };
@@ -163,7 +163,7 @@ namespace OrderService.Infrastructure.Services
             }
         }
 
-        public async Task<PagedResult<OrderDto>> GetOrdersByShopIdAsync(Guid shopId, int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResult<OrderDto>> GetOrdersByShopIdAsync(Guid shopId, FilterOrderDTO filter)
         {
             try
             {
@@ -171,8 +171,8 @@ namespace OrderService.Infrastructure.Services
                 var query = new GetOrdersByShopIdQuery
                 {
                     ShopId = shopId,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize
+                    PageNumber = filter.PageIndex,
+                    PageSize = filter.PageSize
                 };
                 return await _mediator.Send(query);
             }
