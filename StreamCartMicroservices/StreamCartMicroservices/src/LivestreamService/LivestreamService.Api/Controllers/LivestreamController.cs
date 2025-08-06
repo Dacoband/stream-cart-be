@@ -506,5 +506,68 @@ namespace LivestreamService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error deleting livestream: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Get livestream statistics for a shop
+        /// </summary>
+        [HttpGet("shop/{shopId}/statistics")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamStatisticsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetLivestreamStatistics(
+            Guid shopId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                // Set default date range if not provided
+                var from = fromDate ?? DateTime.UtcNow.Date.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all livestreams for the shop within the date range
+                var livestreams = await _livestreamRepository.GetLivestreamsByShopIdAsync(shopId);
+
+                // Filter by date range
+                var filteredLivestreams = livestreams.Where(l =>
+                    (l.ScheduledStartTime >= from && l.ScheduledStartTime <= to) ||
+                    (l.ActualStartTime.HasValue && l.ActualStartTime.Value >= from && l.ActualStartTime.Value <= to)
+                ).ToList();
+
+                // Calculate statistics
+                var totalLivestreams = filteredLivestreams.Count;
+
+                // Calculate total duration in minutes
+                decimal totalDuration = 0;
+                foreach (var livestream in filteredLivestreams)
+                {
+                    if (livestream.ActualStartTime.HasValue)
+                    {
+                        var endTime = livestream.ActualEndTime ?? to; // Use current time if still ongoing
+                        var duration = (decimal)(endTime - livestream.ActualStartTime.Value).TotalMinutes;
+                        totalDuration += Math.Max(0, duration); // Ensure non-negative
+                    }
+                }
+
+                // Sum viewer counts
+                var totalViewers = filteredLivestreams.Sum(l => l.MaxViewer ?? 0);
+
+                // Create statistics DTO
+                var statistics = new LivestreamStatisticsDTO
+                {
+                    TotalLivestreams = totalLivestreams,
+                    TotalDuration = totalDuration,
+                    TotalViewers = totalViewers,
+                    FromDate = from,
+                    ToDate = to
+                };
+
+                return Ok(ApiResponse<LivestreamStatisticsDTO>.SuccessResult(statistics, "Livestream statistics retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving livestream statistics for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error retrieving livestream statistics: {ex.Message}"));
+            }
+        }
     }
 }
