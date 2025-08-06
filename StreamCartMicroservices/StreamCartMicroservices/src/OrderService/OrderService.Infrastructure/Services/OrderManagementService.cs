@@ -151,6 +151,7 @@ namespace OrderService.Infrastructure.Services
                     AccountId = accountId,
                     PageNumber = filter.PageIndex,
                     PageSize = filter.PageSize,
+                    OrderStatus = filter.Status
                 };
 
                 var query = new SearchOrdersQuery { SearchParams = searchParams };

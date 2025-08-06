@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using dotenv.net;
 using LivestreamService.Api.Services;
 using LivestreamService.Application.Commands;
@@ -112,8 +112,15 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: CorsConstant.PolicyName,
-        policy => { policy.WithOrigins("*").AllowAnyHeader().AllowAnyMethod(); });
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000") // FE Next.js local
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // cần cho SignalR
+        });
 });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline

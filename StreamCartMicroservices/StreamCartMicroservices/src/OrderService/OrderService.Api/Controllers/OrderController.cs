@@ -552,7 +552,12 @@ namespace OrderService.Api.Controllers
                 var to = toDate ?? DateTime.UtcNow;
 
                 // Get all orders for the shop within the time period
-                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, 1, 1000);
+                var filter = new FilterOrderDTO
+                {
+                    PageIndex = 1,
+                    PageSize = 1000
+                };
+                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, filter);
                 var orders = ordersResult.Items
                     .Where(o => o.OrderDate >= from && o.OrderDate <= to)
                     .Where(o => o.OrderStatus != OrderStatus.Cancelled);
@@ -623,7 +628,12 @@ namespace OrderService.Api.Controllers
                 var to = toDate ?? DateTime.UtcNow;
 
                 // Get all orders for the shop within the time period
-                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, 1, 1000);
+                var filter = new FilterOrderDTO
+                {
+                    PageIndex = 1,
+                    PageSize = 1000
+                };
+                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, filter);
                 var currentPeriodOrders = ordersResult.Items
                     .Where(o => o.OrderDate >= from && o.OrderDate <= to)
                     .ToList();
