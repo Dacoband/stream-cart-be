@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shared.Common.Services.Email;
 using ShopService.Application.Interfaces;
 using ShopService.Application.Services;
+using ShopService.Infrastructure.Services;
 using System.Reflection;
 
 namespace ShopService.Application.Extensions
@@ -28,6 +29,22 @@ namespace ShopService.Application.Extensions
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
             {
                 var serviceUrl = configuration["ServiceUrls:ProductService"];
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
+            });
+            services.AddHttpClient<IOrderServiceClient, IOrderServiceClient>(client =>
+            {
+                var serviceUrl = configuration["ServiceUrls:OrderService"];
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    client.BaseAddress = new Uri(serviceUrl);
+                }
+            });
+            services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>(client =>
+            {
+                var serviceUrl = configuration["ServiceUrls:LivestreamService"];
                 if (!string.IsNullOrEmpty(serviceUrl))
                 {
                     client.BaseAddress = new Uri(serviceUrl);

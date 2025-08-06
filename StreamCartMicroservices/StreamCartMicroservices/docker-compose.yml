@@ -185,6 +185,8 @@ services:
  
       - ServiceUrls__AccountService=http://account-service
       - ServiceUrls__ProductService=http://product-service
+      - ServiceUrls__LivestreamService=http://livestream-service
+      - ServiceUrls__OrderService=http://order-service
     depends_on:
       rabbitmq:
         condition: service_healthy
