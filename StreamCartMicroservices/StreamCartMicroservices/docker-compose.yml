@@ -23,13 +23,15 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       
   account-service:
