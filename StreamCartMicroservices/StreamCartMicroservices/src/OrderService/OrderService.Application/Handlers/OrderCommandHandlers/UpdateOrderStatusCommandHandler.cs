@@ -117,14 +117,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             ToWard = order.ToWard,
                             ToAddress = order.ToAddress,
 
-                            ServiceTypeId = 2, // Hoặc lấy từ config
+                            ServiceTypeId = 2, 
                             Note = order.CustomerNotes,
                             Description = $"Đơn hàng #{order.OrderCode}",
                             CodAmount = (int?)order.FinalAmount,
                             Items = deliveryItemList,
 
                         };
-
+                        if((order.PaymentStatus == PaymentStatus.paid))
+                        {
+                            ghnRequest.CodAmount = 0;
+                        }
                         var ghnResponse = await _deliveryClient.CreateGhnOrderAsync(ghnRequest);
                         if (!ghnResponse.Success)
                         {

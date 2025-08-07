@@ -101,6 +101,9 @@ services:
       - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME}
       - EMAIL_PROVIDER=${EMAIL_PROVIDER}
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USERNAME}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
       # Appwrite Settings
       - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
       - APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT}

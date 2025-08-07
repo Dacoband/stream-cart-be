@@ -18,7 +18,7 @@ namespace ShopService.Application.Interfaces
         /// <param name="createShopDto">Thông tin shop mới</param>
         /// <param name="createdByAccountId">ID của người tạo</param>
         /// <returns>Shop đã tạo</returns>
-        Task<ShopDto> CreateShopAsync(CreateShopDto createShopDto, Guid createdByAccountId);
+        Task<ShopDto> CreateShopAsync(CreateShopDto createShopDto, Guid createdByAccountId, string accesstoken);
 
         /// <summary>
         /// Cập nhật thông tin shop

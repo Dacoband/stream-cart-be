@@ -41,7 +41,7 @@ namespace ShopService.Application.Services
 
         #region CRUD Shop Operations
 
-        public async Task<ShopDto> CreateShopAsync(CreateShopDto createShopDto, Guid createdByAccountId)
+        public async Task<ShopDto> CreateShopAsync(CreateShopDto createShopDto, Guid createdByAccountId, string accessToken)
         {
             try
             {
@@ -52,7 +52,15 @@ namespace ShopService.Application.Services
                     LogoURL = createShopDto.LogoURL,
                     CoverImageURL = createShopDto.CoverImageURL,
                     AccountId = createdByAccountId,
-                    CreatedBy = createdByAccountId.ToString()
+                    CreatedBy = createdByAccountId.ToString(),
+                    City = createShopDto.City,
+                    Country = createShopDto.Country,
+                     District = createShopDto.District,
+                     PhoneNumber = createShopDto.PhoneNumber,
+                     PostalCode = createShopDto.PostalCode,
+                     Street = createShopDto.Street,
+                     Ward = createShopDto.Ward,
+                     AccessToken = accessToken,
                 };
 
                 var result = await _mediator.Send(command);

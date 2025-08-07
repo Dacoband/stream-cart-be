@@ -143,12 +143,15 @@ namespace ShopService.Api.Controllers
 
             try
             {
+              
+
                 // Kiểm tra tên shop đã tồn tại chưa
                 var isNameUnique = await _shopManagementService.IsShopNameUniqueAsync(createShopDto.ShopName);
                 if (!isNameUnique)
-                    return BadRequest(new { error = "Tên shop đã tồn tại" });
+                { return BadRequest(new { error = "Tên shop đã tồn tại" }); }
 
-                var shop = await _shopManagementService.CreateShopAsync(createShopDto, accountId);
+                var accessToken = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                var shop = await _shopManagementService.CreateShopAsync(createShopDto, accountId, accessToken);
                 return CreatedAtAction(nameof(GetShopById), new { id = shop.Id }, shop);
             }
             catch (Exception ex)

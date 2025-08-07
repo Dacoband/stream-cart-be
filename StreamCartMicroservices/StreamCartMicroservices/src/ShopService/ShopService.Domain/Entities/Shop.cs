@@ -226,5 +226,16 @@ namespace ShopService.Domain.Entities
         {
             return base.IsValid() && !string.IsNullOrWhiteSpace(ShopName);
         }
+        public void Pending(string? modifier = null)
+        {
+            ApprovalStatus = ApprovalStatus.Pending;
+            ApprovalDate = DateTime.UtcNow;
+            Status = ShopStatus.Inactive;
+
+            if (!string.IsNullOrWhiteSpace(modifier))
+                SetModifier(modifier);
+            else
+                LastModifiedAt = DateTime.UtcNow;
+        }
     }
 }
