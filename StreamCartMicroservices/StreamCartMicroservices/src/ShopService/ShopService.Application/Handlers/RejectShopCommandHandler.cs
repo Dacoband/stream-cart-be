@@ -47,13 +47,13 @@ namespace ShopService.Application.Handlers
             await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
 
             // Tạo và publish event thông báo shop đã bị reject
-            await _messagePublisher.PublishAsync(new ShopRejected
-            {
-                ShopId = shop.Id,
-                ShopName = shop.ShopName,
-                Reason = request.RejectionReason,
-                RejectionDate = DateTime.UtcNow
-            }, cancellationToken);
+            //await _messagePublisher.PublishAsync(new ShopRejected
+            //{
+            //    ShopId = shop.Id,
+            //    ShopName = shop.ShopName,
+            //    Reason = request.RejectionReason,
+            //    RejectionDate = DateTime.UtcNow
+            //}, cancellationToken);
             //Send mail 
             var account = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(shop.CreatedBy));
             var htmlBody = $@"

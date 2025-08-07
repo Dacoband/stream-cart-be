@@ -47,13 +47,13 @@ namespace ShopService.Application.Handlers
             await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
 
             // Publish event
-            await _messagePublisher.PublishAsync(new ShopApproved
-            {
-                ShopId = shop.Id,
-                ShopName = shop.ShopName,
-                AccountId = Guid.Empty, 
-                ApprovalDate = shop.ApprovalDate ?? DateTime.UtcNow
-            }, cancellationToken);
+            //await _messagePublisher.PublishAsync(new ShopApproved
+            //{
+            //    ShopId = shop.Id,
+            //    ShopName = shop.ShopName,
+            //    AccountId = Guid.Empty, 
+            //    ApprovalDate = shop.ApprovalDate ?? DateTime.UtcNow
+            //}, cancellationToken);
             //Send mail 
             var account = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(shop.CreatedBy));
             var htmlBody = $@"
