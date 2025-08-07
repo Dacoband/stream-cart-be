@@ -16,5 +16,13 @@ namespace ShopService.Application.Commands
         public string CoverImageURL { get; set; } = string.Empty;
         public Guid AccountId { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string Ward { get; set; } = string.Empty;
+        public string District { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string AccessToken {  get; set; } = string.Empty;
     }
 }

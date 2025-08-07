@@ -51,7 +51,9 @@ namespace ShopService.Application.Handlers
                 request.CoverImageURL,
                 request.UpdatedBy
             );
-
+            if (shop.ApprovalStatus == Domain.Enums.ApprovalStatus.Rejected) { 
+                shop.Pending(request.UpdatedBy);
+            }
             // Lưu thay đổi
             await _shopRepository.ReplaceAsync(shop.Id.ToString(), shop);
 

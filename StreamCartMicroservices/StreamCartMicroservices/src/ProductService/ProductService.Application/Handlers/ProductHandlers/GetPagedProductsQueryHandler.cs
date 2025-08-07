@@ -31,7 +31,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 request.SortOption,
                 request.ActiveOnly,
                 request.ShopId,
-                request.CategoryId);
+                request.CategoryId, request.InStockOnly);
 
             var productDtos = new List<ProductDto>();
 

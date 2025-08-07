@@ -11,7 +11,7 @@ namespace ShopService.Application.Extensions
 {
     public static class ApplicationExtensions
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddApplicationServices(this IServiceCollection     services, IConfiguration configuration)
         {
             // Đăng ký MediatR
             services.AddMediatR(cfg => 
@@ -56,7 +56,7 @@ namespace ShopService.Application.Extensions
             services.AddScoped<IEmailService, MailJetEmailService>();
             services.AddScoped<IMembershipService, MembershipService>();
             services.AddScoped<IShopMembershipService, ShopMembershipService>();
-
+            services.AddScoped<IAddressServiceClient, AddressServiceClient>();
             return services;
         }
     }
