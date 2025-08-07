@@ -81,12 +81,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-// Add SignalR
-builder.Services.AddSignalR(options =>
-{
-    options.EnableDetailedErrors = true;
-    options.MaximumReceiveMessageSize = 102400; // 100 KB
-});
 
 // Register SignalR chat service
 builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
@@ -109,17 +103,17 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
         }
     };
 });
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: CorsConstant.PolicyName,
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:3000") // FE Next.js local
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials(); // cần cho SignalR
-        });
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy(name: CorsConstant.PolicyName,
+//        policy =>
+//        {
+//            policy.WithOrigins("http://localhost:3000") // FE Next.js local
+//                  .AllowAnyHeader()
+//                  .AllowAnyMethod()
+//                  .AllowCredentials(); // cần cho SignalR
+//        });
+//});
 
 var app = builder.Build();
 
@@ -140,7 +134,7 @@ if (!builder.Environment.IsEnvironment("Docker"))
 
 //app.UseCors("SignalRCorsPolicy"); // Use the specific policy
 app.UseRouting();
-app.UseCors(CorsConstant.PolicyName);
+app.UseCors("DefaultCorsPolicy");
 app.UseHttpsRedirection();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
