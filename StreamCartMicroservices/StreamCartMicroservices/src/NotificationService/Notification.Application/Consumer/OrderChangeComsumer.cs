@@ -16,23 +16,33 @@ namespace Notification.Application.Consumer
     {
         private readonly INotificationRepository _notificationRepository;
         private readonly IRealTimeNotifier _notifier;
-        public OrderChangeComsumer(INotificationRepository notificationRepository, IRealTimeNotifier notifier)
+        private readonly IAccountServiceClient _accountServiceClient;
+        public OrderChangeComsumer(INotificationRepository notificationRepository, IRealTimeNotifier notifier, IAccountServiceClient accountServiceClient)
         {
             _notifier = notifier;
             _notificationRepository = notificationRepository;
+            _accountServiceClient = accountServiceClient;
         }
         public async Task Consume(ConsumeContext<OrderCreatedOrUpdatedEvent> context)
         {
-            var notification = new Notifications()
+            foreach(var acc in context.Message.UserId)
             {
-                RecipientUserID = context.Message.UserId,
-                OrderCode = context.Message.OrderCode,
-                Type = "Order",
-                Message = $"Đơn hàng {context.Message.OrderCode} {context.Message.Message} ",
-            };
-            notification.SetCreator("system");
-            await _notificationRepository.CreateAsync(notification);
-            await _notifier.SendNotificationToUser(context.Message.UserId, notification);
+                var account = await _accountServiceClient.GetAccountByIdAsync(Guid.Parse(acc));
+                var notification = new Notifications()
+                {
+                    RecipientUserID = acc,
+                    OrderCode = context.Message.OrderCode,
+                    Type = "Order",
+                    Message = $"Đơn hàng {context.Message.OrderCode} {context.Message.Message} ",
+                };
+                notification.SetCreator("system");
+                await _notificationRepository.CreateAsync(notification);
+                await _notifier.SendNotificationToUser(acc, notification);
+
+            }
+
+
+           
         }
     }
 }

@@ -275,7 +275,7 @@ namespace AccountService.Api.Controllers
 
         // Get Moderators by Shop
         [HttpGet("moderators/by-shop/{shopId}")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
         public async Task<IActionResult> GetModeratorsByShop(Guid shopId)
         {

@@ -132,24 +132,29 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     Items = orderItemDtos
                 };
                 //pubish OrderChangeEvent to NotificationSevice
+                var recipent = new List<string> { request.CancelledBy };
+               
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                   recipent.Add(acc.Id.ToString());
+                }
+                var orderItemEvent = order.Items.Select(x => new OrderItemInEvent
+                {
+                    ProductId = x.ProductId.ToString(),
+                    VariantId = x.VariantId.ToString(),
+                    Quantity = x.Quantity,
+                }).ToList();
+
                 var orderChangEvent = new OrderCreatedOrUpdatedEvent()
                 {
                     OrderCode = order.OrderCode,
                     Message = "đã bị hủy",
-                    UserId = request.CancelledBy,
+                    UserId = recipent,
+                    OrderStatus = orderDto.OrderStatus.ToString(),
+                    OrderItems = orderItemEvent,
                 };
                 await _publishEndpoint.Publish(orderChangEvent);
-                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                foreach (var acc in shopAccount)
-                {
-                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
-                    {
-                        OrderCode = order.OrderCode,
-                        Message = "đã bị hủy",
-                        UserId = acc.Id.ToString(),
-                    };
-                    await _publishEndpoint.Publish(ordChangeEvent);
-                }
                 _logger.LogInformation("Order {OrderId} cancelled successfully", request.OrderId);
                 return orderDto;
             }

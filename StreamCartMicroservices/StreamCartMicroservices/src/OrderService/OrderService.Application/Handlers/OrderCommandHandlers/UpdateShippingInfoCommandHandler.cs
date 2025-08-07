@@ -106,7 +106,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 {
                     OrderCode = order.OrderCode,
                     Message = "đã được thay đổi địa chỉ gioa hàng thành công",
-                    UserId = request.ModifiedBy,
+                    UserId = new List<string> { request.ModifiedBy },
                 };
                 await _publishEndpoint.Publish(orderChangEvent);
                 return orderDto;

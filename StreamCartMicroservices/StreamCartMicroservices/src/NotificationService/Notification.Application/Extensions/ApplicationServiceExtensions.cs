@@ -34,7 +34,7 @@ namespace Notification.Application.Extensions
             services.AddScoped<IRequestHandler<GetMyNotificationQuery, ApiResponse<ListNotificationDTO>>, GetMyNotificationHandler>();
             services.AddScoped<IRequestHandler<MarkAsRead, ApiResponse<bool>>, MarkAsReadHandler>();
 
-
+            services.AddScoped<IAccountServiceClient,AccountServiceClient>();
             return services;
         }
     }
