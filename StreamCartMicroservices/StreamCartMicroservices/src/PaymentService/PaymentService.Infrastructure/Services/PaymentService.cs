@@ -38,7 +38,9 @@ namespace PaymentService.Infrastructure.Services
                     UserId = userId,
                     Amount = createPaymentDto.Amount,
                     PaymentMethod = createPaymentDto.PaymentMethod,
-                    CreatedBy = createPaymentDto.CreatedBy
+                    CreatedBy = createPaymentDto.CreatedBy,
+                    QrCode = createPaymentDto.QrCode 
+
                 };
 
                 return await _mediator.Send(command);

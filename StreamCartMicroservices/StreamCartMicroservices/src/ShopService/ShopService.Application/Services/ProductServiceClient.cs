@@ -232,5 +232,32 @@ namespace ShopService.Application.Services
                 return false;
             }
         }
+        public async Task<TopProductsDTO> GetTopAIRecommendedProductsAsync(Guid shopId, DateTime fromDate, DateTime toDate, int limit = 5)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/products/shop/{shopId}/ai-recommendations?fromDate={fromDate:yyyy-MM-dd}&toDate={toDate:yyyy-MM-dd}&limit={limit}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to get AI recommended products for shop {ShopId}. Status: {StatusCode}",
+                        shopId, response.StatusCode);
+                    return new TopProductsDTO();
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<TopProductsDTO>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return apiResponse?.Data ?? new TopProductsDTO();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting AI recommended products for shop {ShopId}", shopId);
+                return new TopProductsDTO();
+            }
+        }
     }
 }

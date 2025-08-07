@@ -1,5 +1,6 @@
 ﻿using LivestreamService.Application.Interfaces;
 using LivestreamService.Infrastructure.Data;
+using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using LivestreamService.Infrastructure.Settings;
@@ -80,13 +81,10 @@ namespace LivestreamService.Infrastructure.Extensions
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
 
             // Thêm SignalR
-            services.AddSignalR(options =>
-            {
-                options.EnableDetailedErrors = true;
-                options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
-                options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
-                options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-            });
+            services.AddSignalR()
+                .AddHubOptions<SignalRChatHub>(options => { options.EnableDetailedErrors = true; })
+                .AddHubOptions<NotificationHub>(options => { options.EnableDetailedErrors = true; });
+            services.AddScoped<IChatNotificationServiceSignalR, ChatNotificationServiceSignalR>();
             services.AddScoped<IChatNotificationService, ChatNotificationService>();
             return services;
 

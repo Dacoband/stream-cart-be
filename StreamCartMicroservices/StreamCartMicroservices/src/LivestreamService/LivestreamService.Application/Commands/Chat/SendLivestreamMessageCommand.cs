@@ -15,10 +15,10 @@ namespace LivestreamService.Application.Commands.Chat
         public Guid? ReplyToMessageId { get; set; }
     }
 
-    public class ModerateLivestreamMessageCommand : IRequest<bool>
+    public class ModerateLivestreamMessageCommand : IRequest<LivestreamChatDTO>
     {
         public Guid MessageId { get; set; }
-        public Guid ModeratorId { get; set; }
         public bool IsModerated { get; set; }
+        public Guid ModeratorId { get; set; }
     }
 }

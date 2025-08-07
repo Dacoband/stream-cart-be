@@ -54,6 +54,10 @@ namespace PaymentService.Application.Handlers
                 if (!string.IsNullOrEmpty(request.CreatedBy))
                     payment.SetCreator(request.CreatedBy);
 
+                if (!string.IsNullOrEmpty(request.QrCode))
+                {
+                    payment.UpdateQrCode(request.QrCode, request.CreatedBy);
+                }
                 // Validate payment
                 if (!payment.IsValid())
                 {

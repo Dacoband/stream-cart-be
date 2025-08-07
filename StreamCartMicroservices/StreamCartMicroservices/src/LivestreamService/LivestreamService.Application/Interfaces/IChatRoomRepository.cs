@@ -11,6 +11,8 @@ namespace LivestreamService.Application.Interfaces
 {
     public interface IChatRoomRepository : IGenericRepository<ChatRoom>
     {
+        Task<IEnumerable<ChatRoom>> GetChatRoomsByUserIdAsync(Guid userId);
+
         Task<ChatRoom?> GetByUserAndShopAsync(Guid userId, Guid shopId);
         Task<PagedResult<ChatRoom>> GetUserChatRoomsAsync(
             Guid userId,

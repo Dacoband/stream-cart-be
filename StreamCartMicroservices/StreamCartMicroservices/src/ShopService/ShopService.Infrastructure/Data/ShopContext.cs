@@ -14,8 +14,7 @@ namespace ShopService.Infrastructure.Data
         public DbSet<ShopMembership> ShopMembership { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<ShopVoucher> ShopVouchers { get; set; }
-
-
+        public DbSet<ShopDashboard> ShopDashboards { get; set; }
         public ShopContext(DbContextOptions<ShopContext> options) : base(options)
         {
         }
@@ -474,57 +473,117 @@ namespace ShopService.Infrastructure.Data
 
                 // Indexes
                 entity.HasIndex(e => e.WalletId).HasDatabaseName("ix_wallet_transactions_wallet_id");
+                // Soft delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<ShopDashboard>(entity =>
+            {
+                entity.ToTable("shop_dashboards");
 
+                entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.Id)
+                    .HasColumnName("id");
 
+                entity.Property(e => e.ShopId)
+                    .HasColumnName("shop_id")
+                    .IsRequired();
 
+                entity.Property(e => e.FromTime)
+                    .HasColumnName("from_time");
 
+                entity.Property(e => e.ToTime)
+                    .HasColumnName("to_time");
 
+                entity.Property(e => e.PeriodType)
+                    .HasColumnName("period_type")
+                    .HasMaxLength(20);
 
+                // Livestream Statistics
+                entity.Property(e => e.TotalLivestream)
+                    .HasColumnName("total_livestream");
 
+                entity.Property(e => e.TotalLivestreamDuration)
+                    .HasColumnName("total_livestream_duration")
+                    .HasColumnType("decimal(10,2)");
 
+                entity.Property(e => e.TotalLivestreamViewers)
+                    .HasColumnName("total_livestream_viewers");
 
+                // Order Statistics
+                entity.Property(e => e.TotalRevenue)
+                    .HasColumnName("total_revenue")
+                    .HasColumnType("decimal(18,2)");
 
+                entity.Property(e => e.OrderInLivestream)
+                    .HasColumnName("order_in_livestream");
 
+                entity.Property(e => e.TotalOrder)
+                    .HasColumnName("total_order");
 
+                entity.Property(e => e.CompleteOrderCount)
+                    .HasColumnName("complete_order_count");
 
+                entity.Property(e => e.RefundOrderCount)
+                    .HasColumnName("refund_order_count");
 
+                entity.Property(e => e.ProcessingOrderCount)
+                    .HasColumnName("processing_order_count");
 
+                entity.Property(e => e.CanceledOrderCount)
+                    .HasColumnName("canceled_order_count");
 
+                // Customer Statistics
+                entity.Property(e => e.RepeatCustomerCount)
+                    .HasColumnName("repeat_customer_count");
 
+                entity.Property(e => e.NewCustomerCount)
+                    .HasColumnName("new_customer_count");
 
+                entity.Property(e => e.Notes)
+                    .HasColumnName("notes")
+                    .HasMaxLength(1000);
 
+                // Product lists - stored as JSON
+                entity.Property(e => e.TopOrderProducts)
+                    .HasColumnName("top_order_products")
+                    .HasColumnType("jsonb");
 
+                entity.Property(e => e.TopAIRecommendedProducts)
+                    .HasColumnName("top_ai_recommended_products")
+                    .HasColumnType("jsonb");
 
+                // BaseEntity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
 
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
 
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
 
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
 
+                entity.Property(e => e.IsDeleted)
+                    .HasColumnName("is_deleted");
 
+                // Foreign key relationship with Shop
+                entity.HasOne<Shop>()
+                    .WithMany()
+                    .HasForeignKey(d => d.ShopId)
+                    .HasConstraintName("fk_shop_dashboards_shops")
+                    .OnDelete(DeleteBehavior.Cascade);
 
+                // Indexes
+                entity.HasIndex(e => e.ShopId)
+                    .HasDatabaseName("ix_shop_dashboards_shop_id");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                entity.HasIndex(e => new { e.ShopId, e.FromTime, e.ToTime, e.PeriodType })
+                    .HasDatabaseName("ix_shop_dashboards_period_lookup");
 
                 // Soft delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);

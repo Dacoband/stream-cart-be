@@ -36,9 +36,11 @@ namespace ShopService.Infrastructure.Extensions
             services.AddScoped<IShopVoucherRepository, ShopVoucherRepository>();
 
 
+            services.AddScoped<IShopDashboardService, ShopDashboardService>();
 
             services.AddScoped<IMembershipRepository, MembershipRepository>();
             services.AddScoped<IShopMembershipRepository, ShopMembershipRepository>();
+            services.AddScoped<IShopDashboardRepository, ShopDashboardRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
             services.AddScoped<IShopUnitOfWork, ShopUnitOfWork>();
             return services;

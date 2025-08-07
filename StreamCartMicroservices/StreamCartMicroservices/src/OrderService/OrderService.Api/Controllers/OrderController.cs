@@ -11,6 +11,8 @@ using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
+using ShopService.Application.DTOs.Dashboard;
+using ShopService.Application.Interfaces;
 using System;
 using System.Threading.Tasks;
 
@@ -25,14 +27,16 @@ namespace OrderService.Api.Controllers
         private readonly ILogger<OrderController> _logger;
         private readonly ICurrentUserService _currentUserService;
         private readonly IMediator _mediator;
+        private readonly Application.Interfaces.IServices.IProductServiceClient _productServiceClient;
 
 
-        public OrderController(IOrderService orderService, ILogger<OrderController> logger, ICurrentUserService currentUserService,IMediator mediator)
+        public OrderController(IOrderService orderService, ILogger<OrderController> logger, ICurrentUserService currentUserService, IMediator mediator, Application.Interfaces.IServices.IProductServiceClient productServiceClient)
         {
             _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUserService = currentUserService;
             _mediator = mediator;
+            _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
         }
 
         /// <summary>
@@ -453,11 +457,11 @@ namespace OrderService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                var userId = _currentUserService.GetUserId();
 
                 var command = new CreateMultiOrderCommand
                 {
-                    AccountId = Guid.Parse(userId),
+                    AccountId = userId,
                     PaymentMethod = request.PaymentMethod,
                     LivestreamId = request.LivestreamId,
                     CreatedFromCommentId = request.CreatedFromCommentId,
@@ -478,10 +482,443 @@ namespace OrderService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error creating orders: {ex.Message}"));
             }
         }
+
+        /// <summary>
+        /// Lấy thống kê chi tiết đơn hàng theo cửa hàng
+        /// </summary>
+        /// <param name="shopId">ID của cửa hàng</param>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <returns>Thống kê đơn hàng</returns>
+        [HttpGet("shop/{shopId}/statistics")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<OrderStatisticsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetShopOrderStatistics(
+            Guid shopId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var statistics = await _orderService.GetOrderStatisticsAsync(shopId, fromDate, toDate);
+
+                var result = new OrderStatisticsDTO
+                {
+                    TotalOrders = statistics.TotalOrders,
+                    TotalRevenue = statistics.TotalRevenue,
+                    CompleteOrderCount = statistics.OrdersByStatus.ContainsKey(OrderStatus.Delivered) ?
+                        statistics.OrdersByStatus[OrderStatus.Delivered] : 0,
+                    ProcessingOrderCount = (statistics.OrdersByStatus.ContainsKey(OrderStatus.Processing) ?
+                        statistics.OrdersByStatus[OrderStatus.Processing] : 0) +
+                        (statistics.OrdersByStatus.ContainsKey(OrderStatus.Shipped) ?
+                        statistics.OrdersByStatus[OrderStatus.Shipped] : 0),
+                    CanceledOrderCount = statistics.OrdersByStatus.ContainsKey(OrderStatus.Cancelled) ?
+                        statistics.OrdersByStatus[OrderStatus.Cancelled] : 0,
+                    RefundOrderCount = 0, // Implement once refund functionality is available
+                    AverageOrderValue = statistics.AverageOrderValue,
+                    PeriodStart = fromDate ?? DateTime.UtcNow.AddDays(-30),
+                    PeriodEnd = toDate ?? DateTime.UtcNow
+                };
+
+                return Ok(ApiResponse<OrderStatisticsDTO>.SuccessResult(result, "Lấy thống kê đơn hàng thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving order statistics for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        /// Lấy danh sách sản phẩm bán chạy nhất của cửa hàng
+        /// </summary>
+        /// <param name="shopId">ID của cửa hàng</param>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <param name="limit">Số lượng sản phẩm tối đa trả về</param>
+        /// <returns>Danh sách sản phẩm bán chạy</returns>
+        [HttpGet("shop/{shopId}/top-products")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<TopProductsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetTopSellingProducts(
+            Guid shopId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] int limit = 5)
+        {
+            try
+            {
+                var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all orders for the shop within the time period
+                var filter = new FilterOrderDTO
+                {
+                    PageIndex = 1,
+                    PageSize = 1000
+                };
+                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, filter);
+                var orders = ordersResult.Items
+                    .Where(o => o.OrderDate >= from && o.OrderDate <= to)
+                    .Where(o => o.OrderStatus != OrderStatus.Cancelled);
+
+                // Group orders by product, calculate sales and revenue
+                var productSales = orders
+                    .SelectMany(o => o.Items)
+                    .GroupBy(i => i.ProductId)
+                    .Select(g => new
+                    {
+                        ProductId = g.Key,
+                        Quantity = g.Sum(i => i.Quantity),
+                        Revenue = g.Sum(i => i.TotalPrice)
+                    })
+                    .OrderByDescending(p => p.Quantity)
+                    .Take(limit)
+                    .ToList();
+                // Get product details
+                var topProducts = new List<TopProductDTO>();
+                foreach (var product in productSales)
+                {
+                    var productDetails = await _productServiceClient.GetProductByIdAsync(product.ProductId);
+                    if (productDetails != null)
+                    {
+                        topProducts.Add(new TopProductDTO
+                        {
+                            ProductId = product.ProductId,
+                            ProductName = productDetails.ProductName ?? "Unknown Product",
+                            ProductImageUrl = productDetails.PrimaryImageUrl ?? string.Empty,
+                            SalesCount = product.Quantity,
+                            Revenue = product.Revenue
+                        });
+                    }
+                }
+
+                var result = new TopProductsDTO
+                {
+                    Products = topProducts.ToArray()
+                };
+
+                return Ok(ApiResponse<TopProductsDTO>.SuccessResult(result, "Lấy danh sách sản phẩm bán chạy thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving top products for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        /// <summary>
+        /// Lấy thống kê về khách hàng của cửa hàng
+        /// </summary>
+        /// <param name="shopId">ID của cửa hàng</param>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <returns>Thống kê khách hàng</returns>
+        [HttpGet("shop/{shopId}/customer-statistics")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerStatisticsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetCustomerStatistics(
+            Guid shopId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all orders for the shop within the time period
+                var filter = new FilterOrderDTO
+                {
+                    PageIndex = 1,
+                    PageSize = 1000
+                };
+                var ordersResult = await _orderService.GetOrdersByShopIdAsync(shopId, filter);
+                var currentPeriodOrders = ordersResult.Items
+                    .Where(o => o.OrderDate >= from && o.OrderDate <= to)
+                    .ToList();
+
+                // Get all customers who ordered in this period
+                var customerIds = currentPeriodOrders
+                    .Select(o => o.AccountId)
+                    .Distinct()
+                    .ToList();
+
+                // Get previous orders to identify returning customers
+                var previousOrdersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    ShopId = shopId,
+                    StartDate = null,
+                    EndDate = from.AddDays(-1),
+                    PageNumber = 1,
+                    PageSize = 1000
+                });
+                var previousCustomerIds = previousOrdersResult.Items
+                    .Select(o => o.AccountId)
+                    .Distinct()
+                    .ToList();
+
+                // Count new vs returning customers
+                var newCustomers = customerIds.Count(id => !previousCustomerIds.Contains(id));
+                var returningCustomers = customerIds.Count(id => previousCustomerIds.Contains(id));
+
+                var result = new CustomerStatisticsDTO
+                {
+                    NewCustomers = newCustomers,
+                    RepeatCustomers = returningCustomers,
+                    TotalCustomers = newCustomers + returningCustomers
+                };
+
+                return Ok(ApiResponse<CustomerStatisticsDTO>.SuccessResult(result, "Lấy thống kê khách hàng thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving customer statistics for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        /// <summary>
+        /// Lấy thống kê đơn hàng theo từng ngày/tuần/tháng
+        /// </summary>
+        /// <param name="shopId">ID của cửa hàng</param>
+        /// <param name="fromDate">Ngày bắt đầu</param>
+        /// <param name="toDate">Ngày kết thúc</param>
+        /// <param name="period">Loại thời gian (daily, weekly, monthly)</param>
+        /// <returns>Thống kê đơn hàng theo thời gian</returns>
+        [HttpGet("shop/{shopId}/time-series")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<OrderTimeSeriesDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetOrderTimeSeries(
+            Guid shopId,
+            [FromQuery] DateTime fromDate,
+            [FromQuery] DateTime toDate,
+            [FromQuery] string period = "daily")
+        {
+            try
+            {
+                // Get all orders for the shop within the time period
+                var ordersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    ShopId = shopId,
+                    StartDate = fromDate,
+                    EndDate = toDate,
+                    PageNumber = 1,
+                    PageSize = 10000  // Use a large number to get all orders
+                });
+
+                var orders = ordersResult.Items.ToList();
+
+                // Group orders by time period
+                var timeSeriesData = new List<OrderTimePoint>();
+
+                if (period.ToLower() == "daily")
+                {
+                    var dailyGroups = orders
+                        .GroupBy(o => o.OrderDate.Date)
+                        .OrderBy(g => g.Key);
+                    foreach (var group in dailyGroups)
+                    {
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = group.Key,
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount)
+                        });
+                    }
+                }
+                else if (period.ToLower() == "weekly")
+                {
+                    // Group by week (using ISO8601 week numbers)
+                    var weeklyGroups = orders
+                        .GroupBy(o => {
+                            var date = o.OrderDate.Date;
+                            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+                            var weekOfYear = cal.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstDay, DayOfWeek.Monday);
+                            return new { Year = date.Year, Week = weekOfYear };
+                        })
+                        .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Week);
+
+                    foreach (var group in weeklyGroups)
+                    {
+                        // Calculate the start date of the week
+                        var firstOrder = group.OrderBy(o => o.OrderDate).First();
+                        var weekStart = firstOrder.OrderDate.Date;
+
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = weekStart,
+                            Label = $"Week {group.Key.Week}, {group.Key.Year}",
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount)
+                        });
+                    }
+                }
+                else if (period.ToLower() == "monthly")
+                {
+                    var monthlyGroups = orders
+                        .GroupBy(o => new { o.OrderDate.Year, o.OrderDate.Month })
+                        .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month);
+
+                    foreach (var group in monthlyGroups)
+                    {
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = new DateTime(group.Key.Year, group.Key.Month, 1),
+                            Label = $"{new DateTime(group.Key.Year, group.Key.Month, 1):MMM yyyy}",
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount)
+                        });
+                    }
+                }
+
+                var result = new OrderTimeSeriesDTO
+                {
+                    Period = period,
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    DataPoints = timeSeriesData.ToArray()
+                };
+
+                return Ok(ApiResponse<OrderTimeSeriesDTO>.SuccessResult(result, "Lấy thống kê đơn hàng theo thời gian thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving order time series for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        /// <summary>
+        /// Lấy thống kê đơn hàng cho các livestream
+        /// </summary>
+        /// <param name="shopId">ID của cửa hàng</param>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <returns>Thống kê đơn hàng livestream</returns>
+        [HttpGet("shop/{shopId}/livestream-orders")]
+        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamOrdersDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetLivestreamOrders(
+            Guid shopId,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all orders for the shop within the time period
+                var ordersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    ShopId = shopId,
+                    StartDate = from,
+                    EndDate = to,
+                    PageNumber = 1,
+                    PageSize = 1000
+                });
+
+                var orders = ordersResult.Items.ToList();
+
+                // Separate livestream orders
+                var livestreamOrders = orders.Where(o => o.LivestreamId.HasValue).ToList();
+                var nonLivestreamOrders = orders.Where(o => !o.LivestreamId.HasValue).ToList();
+                // Group by livestream
+                var livestreamStats = livestreamOrders
+                    .GroupBy(o => o.LivestreamId)
+                    .Select(g => new LivestreamOrderStat
+                    {
+                        LivestreamId = g.Key ?? Guid.Empty,
+                        OrderCount = g.Count(),
+                        Revenue = g.Sum(o => o.FinalAmount)
+                    })
+                    .OrderByDescending(s => s.OrderCount)
+                    .ToArray();
+
+                var result = new LivestreamOrdersDTO
+                {
+                    TotalLivestreamOrders = livestreamOrders.Count,
+                    TotalNonLivestreamOrders = nonLivestreamOrders.Count,
+                    LivestreamRevenue = livestreamOrders.Sum(o => o.FinalAmount),
+                    NonLivestreamRevenue = nonLivestreamOrders.Sum(o => o.FinalAmount),
+                    LivestreamStats = livestreamStats
+                };
+
+                return Ok(ApiResponse<LivestreamOrdersDTO>.SuccessResult(result, "Lấy thống kê đơn hàng livestream thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving livestream orders for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
     }
 
     // DTOs for controller input
+    public class OrderStatisticsDTO
+    {
+        public int TotalOrders { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public int CompleteOrderCount { get; set; }
+        public int ProcessingOrderCount { get; set; }
+        public int CanceledOrderCount { get; set; }
+        public int RefundOrderCount { get; set; }
+        public decimal AverageOrderValue { get; set; }
+        public DateTime PeriodStart { get; set; }
+        public DateTime PeriodEnd { get; set; }
+    }
 
+    public class TopProductDTO
+    {
+        public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string ProductImageUrl { get; set; } = string.Empty;
+        public int SalesCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class TopProductsDTO
+    {
+        public TopProductDTO[] Products { get; set; } = Array.Empty<TopProductDTO>();
+    }
+
+    public class CustomerStatisticsDTO
+    {
+        public int NewCustomers { get; set; }
+        public int RepeatCustomers { get; set; }
+        public int TotalCustomers { get; set; }
+    }
+    public class OrderTimeSeriesDTO
+    {
+        public string Period { get; set; } = "daily";
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public OrderTimePoint[] DataPoints { get; set; } = Array.Empty<OrderTimePoint>();
+    }
+
+    public class LivestreamOrderStat
+    {
+        public Guid LivestreamId { get; set; }
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class LivestreamOrdersDTO
+    {
+        public int TotalLivestreamOrders { get; set; }
+        public int TotalNonLivestreamOrders { get; set; }
+        public decimal LivestreamRevenue { get; set; }
+        public decimal NonLivestreamRevenue { get; set; }
+        public LivestreamOrderStat[] LivestreamStats { get; set; } = Array.Empty<LivestreamOrderStat>();
+    }
+    public class OrderTimePoint
+    {
+        public DateTime Date { get; set; }
+        public string? Label { get; set; }
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
     public class UpdateOrderStatusDto
     {
         public OrderStatus Status { get; set; }

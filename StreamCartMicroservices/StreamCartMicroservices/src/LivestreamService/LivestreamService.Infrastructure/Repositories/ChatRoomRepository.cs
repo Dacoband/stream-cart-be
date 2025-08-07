@@ -276,5 +276,22 @@ namespace LivestreamService.Infrastructure.Repositories
                 .Sort(sort)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<ChatRoom>> GetChatRoomsByUserIdAsync(Guid userId)
+        {
+            var filter = Builders<ChatRoom>.Filter.And(
+                Builders<ChatRoom>.Filter.Eq(x => x.UserId, userId),
+                Builders<ChatRoom>.Filter.Eq(x => x.IsDeleted, false)
+            );
+
+            // Use the same sort order as other methods
+            var sort = Builders<ChatRoom>.Sort
+                .Descending(x => x.LastMessageAt)
+                .Descending(x => x.StartedAt);
+
+            return await _collection
+                .Find(filter)
+                .Sort(sort)
+                .ToListAsync();
+        }
     }
 }

@@ -63,5 +63,7 @@ namespace ShopService.Application.Interfaces
         /// <param name="isActive">Trạng thái hoạt động</param>
         /// <returns>true nếu cập nhật thành công</returns>
         Task<bool> UpdateProductStatusAsync(Guid productId, bool isActive);
+        Task<TopProductsDTO> GetTopAIRecommendedProductsAsync(Guid shopId, DateTime fromDate, DateTime toDate, int limit = 5);
+
     }
 }

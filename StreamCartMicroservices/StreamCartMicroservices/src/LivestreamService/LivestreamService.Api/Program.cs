@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using dotenv.net;
 using LivestreamService.Api.Services;
 using LivestreamService.Application.Commands;
@@ -9,11 +9,13 @@ using LivestreamService.Infrastructure.Extensions;
 using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL; // Add this import for PostgreSQL
 using Shared.Common.Extensions;
+using Shared.Common.Settings;
 using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -80,6 +82,39 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Register SignalR chat service
+builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
+
+// Add JWT authentication for SignalR
+builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/signalrchat") || path.StartsWithSegments("/notificationHub")))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy(name: CorsConstant.PolicyName,
+//        policy =>
+//        {
+//            policy.WithOrigins("http://localhost:3000") // FE Next.js local
+//                  .AllowAnyHeader()
+//                  .AllowAnyMethod()
+//                  .AllowCredentials(); // cần cho SignalR
+//        });
+//});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -96,13 +131,17 @@ if (!builder.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-app.MapHub<ChatHub>("/chatHub");
+
+//app.UseCors("SignalRCorsPolicy"); // Use the specific policy
 app.UseRouting();
+app.UseCors("DefaultCorsPolicy");
 app.UseHttpsRedirection();
-app.UseConfiguredCors();
 app.UseAuthHeaderMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<SignalRChatHub>("/signalrchat");
+app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChatHub>("/chatHub");
 app.MapControllers();
 
 app.Run();

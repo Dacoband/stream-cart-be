@@ -48,8 +48,8 @@ namespace LivestreamService.Application.Handlers.Chat
                     IsActive = chatRoom.IsActive,
                     UserName = chatRoom.UserName,
                     ShopName = chatRoom.ShopName,
-                    LiveKitRoomName = chatRoom.LiveKitRoomName,
-                    IsLiveKitActive = false, // Sẽ được cập nhật từ controller
+                   // LiveKitRoomName = chatRoom.LiveKitRoomName,
+                    //IsLiveKitActive = false, // Sẽ được cập nhật từ controller
                     UnreadCount = 0, // Có thể tính toán sau nếu cần
                     LastMessage = null, // Có thể lấy từ repository khác nếu cần
                     UserAvatarUrl = null, // Có thể lấy từ Account Service nếu cần
