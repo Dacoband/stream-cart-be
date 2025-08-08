@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -34,9 +35,9 @@ namespace OrderService.Application.Handlers.OrderItemQueryHandlers
                 _logger.LogInformation("Getting order items for order {OrderId}", request.OrderId);
 
                 var orderItems = await _orderItemRepository.GetByOrderIdAsync(request.OrderId);
-                if (orderItems == null)
+                if (orderItems == null || !orderItems.Any())
                 {
-                    _logger.LogWarning("No order items found for order {OrderId}", request.OrderId);
+                    _logger.LogInformation("No order items found for order {OrderId}", request.OrderId);
                     return new List<OrderItemDto>();
                 }
 
@@ -44,7 +45,28 @@ namespace OrderService.Application.Handlers.OrderItemQueryHandlers
 
                 foreach (var item in orderItems)
                 {
-                    var productDetails = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                    // Get product details with enhanced error handling
+                    string productName = "Unknown Product";
+                    string productImageUrl = string.Empty;
+
+                    try
+                    {
+                        if (item.ProductId != Guid.Empty)
+                        {
+                            var productDetails = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                            if (productDetails != null)
+                            {
+                                productName = productDetails.ProductName ?? "Unknown Product";
+                                productImageUrl = productDetails.PrimaryImageUrl ?? string.Empty;
+                            }
+                        }
+                    }
+                    catch (Exception productEx)
+                    {
+                        _logger.LogWarning(productEx, "Failed to get product details for ProductId {ProductId} in order {OrderId}",
+                            item.ProductId, request.OrderId);
+                        // Continue with default values
+                    }
 
                     orderItemDtos.Add(new OrderItemDto
                     {
@@ -56,18 +78,22 @@ namespace OrderService.Application.Handlers.OrderItemQueryHandlers
                         UnitPrice = item.UnitPrice,
                         DiscountAmount = item.DiscountAmount,
                         TotalPrice = item.TotalPrice,
-                        Notes = item.Notes,
+                        Notes = item.Notes ?? string.Empty,
                         RefundRequestId = item.RefundRequestId,
-                        ProductName = productDetails?.ProductName ?? "Unknown Product",
-                        ProductImageUrl = productDetails?.PrimaryImageUrl ?? string.Empty
+                        ProductName = productName,
+                        ProductImageUrl = productImageUrl
                     });
                 }
+
+                _logger.LogInformation("Successfully retrieved {Count} order items for order {OrderId}",
+                    orderItemDtos.Count, request.OrderId);
 
                 return orderItemDtos;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting order items by order ID: {ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "Error getting order items by order ID {OrderId}: {ErrorMessage}",
+                    request.OrderId, ex.Message);
                 throw;
             }
         }
