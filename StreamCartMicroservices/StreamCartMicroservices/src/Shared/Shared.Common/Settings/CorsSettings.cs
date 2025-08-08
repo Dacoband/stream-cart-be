@@ -12,6 +12,7 @@ namespace Shared.Common.Settings
         public string[] AllowedMethods { get; set; } = Array.Empty<string>();
         public string[] AllowedHeaders { get; set; } = Array.Empty<string>();
         public bool AllowCredentials { get; set; } = false;
+        public bool SetIsOriginAllowed { get; set; } = false; 
         public int MaxAge { get; set; } = 86400;
     }
 }

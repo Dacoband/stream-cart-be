@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
-using Npgsql.EntityFrameworkCore.PostgreSQL; // Add this import for PostgreSQL
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Shared.Common.Extensions;
 using Shared.Common.Settings;
 using System.Text.RegularExpressions;
@@ -34,15 +34,24 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseInitializer>();
 
 builder.Services.AddScoped<ILivestreamRepository, LivestreamRepository>();
-
 builder.Services.AddAutoMapper(typeof(Program));
-
 builder.Services.AddScoped<ILivekitService, LivekitService>();
 
 builder.Services.AddAppSettings(builder.Configuration);
+
+// ✅ Configure CORS first, before other services
 builder.Services.AddConfiguredCors(builder.Configuration);
+
+// ✅ Configure forwarded headers for reverse proxy/load balancer
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
+                              Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddJwtAuthentication(builder.Configuration);
-//builder.Services.AddMessaging(builder.Configuration);
 builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddCurrentUserService();
 builder.Services.AddHttpContextAccessor();
@@ -85,7 +94,20 @@ builder.Services.AddSwaggerGen(c =>
 // Register SignalR chat service
 builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
 
-// Add JWT authentication for SignalR
+// ✅ Enhanced SignalR configuration for HTTPS/Production
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400; // 100KB
+    options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+
+    // ✅ Additional configuration for production
+    options.StreamBufferCapacity = 10;
+});
+
+// ✅ Enhanced JWT configuration for SignalR with HTTPS support
 builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.Events = new JwtBearerEvents
@@ -95,42 +117,47 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
 
-            Console.WriteLine($"[SignalR] Path: {path}, Token present: {!string.IsNullOrEmpty(accessToken)}");
+            Console.WriteLine($"[SignalR JWT] Path: {path}");
+            Console.WriteLine($"[SignalR JWT] Token present: {!string.IsNullOrEmpty(accessToken)}");
+            Console.WriteLine($"[SignalR JWT] Scheme: {context.Request.Scheme}");
+            Console.WriteLine($"[SignalR JWT] Host: {context.Request.Host}");
 
             if (!string.IsNullOrEmpty(accessToken) &&
                 (path.StartsWithSegments("/signalrchat") || path.StartsWithSegments("/notificationHub")))
             {
                 context.Token = accessToken;
-                Console.WriteLine($"[SignalR] Token set for path: {path}");
+                Console.WriteLine($"[SignalR JWT] Token set for SignalR connection");
             }
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
         {
-            Console.WriteLine($"[SignalR] Auth FAILED: {context.Exception.Message}");
-            Console.WriteLine($"[SignalR] Path: {context.Request.Path}");
+            Console.WriteLine($"[SignalR JWT] Authentication FAILED: {context.Exception.Message}");
+            Console.WriteLine($"[SignalR JWT] Exception: {context.Exception}");
+            Console.WriteLine($"[SignalR JWT] Path: {context.Request.Path}");
+            Console.WriteLine($"[SignalR JWT] Scheme: {context.Request.Scheme}");
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
-            Console.WriteLine($"[SignalR] Token VALIDATED for: {context.Principal?.Identity?.Name}");
+            Console.WriteLine($"[SignalR JWT] Token VALIDATED successfully");
+            Console.WriteLine($"[SignalR JWT] User: {context.Principal?.Identity?.Name}");
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            Console.WriteLine($"[SignalR JWT] Authentication Challenge");
+            Console.WriteLine($"[SignalR JWT] Error: {context.Error}");
+            Console.WriteLine($"[SignalR JWT] ErrorDescription: {context.ErrorDescription}");
             return Task.CompletedTask;
         }
     };
 });
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy(name: CorsConstant.PolicyName,
-//        policy =>
-//        {
-//            policy.WithOrigins("http://localhost:3000") // FE Next.js local
-//                  .AllowAnyHeader()
-//                  .AllowAnyMethod()
-//                  .AllowCredentials(); // cần cho SignalR
-//        });
-//});
 
 var app = builder.Build();
+
+// ✅ CRITICAL: Use forwarded headers for proxy/load balancer
+app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline
 app.UseSwagger();
@@ -141,21 +168,55 @@ app.UseSwaggerUI(c =>
     c.DefaultModelsExpandDepth(0);
 });
 
-// Conditionally apply HTTPS redirection
-if (!builder.Environment.IsEnvironment("Docker"))
+// ✅ CRITICAL: Correct middleware order for HTTPS and SignalR
+app.UseRouting();
+
+// ✅ CRITICAL: CORS must come before authentication for SignalR to work with HTTPS
+app.UseCors("DefaultCorsPolicy");
+
+// ✅ HTTPS redirection - only for direct HTTPS, not behind proxy
+if (!builder.Environment.IsEnvironment("Docker") && !builder.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }
 
-//app.UseCors("SignalRCorsPolicy"); // Use the specific policy
-app.UseRouting();
-app.UseCors("DefaultCorsPolicy");
-app.UseHttpsRedirection();
+// ✅ Custom middleware for auth headers
 app.UseAuthHeaderMiddleware();
+
+// ✅ Authentication and Authorization - correct order
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHub<SignalRChatHub>("/signalrchat");
-app.MapHub<NotificationHub>("/notificationHub");
+
+// ✅ CRITICAL: Map SignalR hubs with proper configuration for HTTPS
+app.MapHub<SignalRChatHub>("/signalrchat", options =>
+{
+    // ✅ FIXED: Use combination of transport types instead of .All
+    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.ServerSentEvents |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+
+    // ✅ Allow all connection types for better compatibility
+    options.ApplicationMaxBufferSize = 64 * 1024; // 64KB
+    options.TransportMaxBufferSize = 64 * 1024; // 64KB
+
+    // ✅ WebSocket specific settings
+    options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
+    options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
+});
+
+app.MapHub<NotificationHub>("/notificationHub", options =>
+{
+    // ✅ FIXED: Use combination of transport types instead of .All
+    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.ServerSentEvents |
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+
+    options.ApplicationMaxBufferSize = 64 * 1024;
+    options.TransportMaxBufferSize = 64 * 1024;
+    options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
+    options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
+});
+
 app.MapControllers();
 
 app.Run();
