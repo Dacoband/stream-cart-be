@@ -26,7 +26,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _logger.LogInformation("User {UserId} joined SignalR livestream {LivestreamId} chat",
                 _currentUserService.GetUserId(), livestreamId);
 
-            await Clients.Group($"livestream_sr_{livestreamId}")
+            await Clients.Group($"livestream_{livestreamId}")
                 .SendAsync("UserJoined", new { UserId = _currentUserService.GetUserId(), Timestamp = DateTime.UtcNow });
         }
 
@@ -37,7 +37,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _logger.LogInformation("User {UserId} left SignalR livestream {LivestreamId} chat",
                 userId, livestreamId);
 
-            await Clients.Group($"livestream_sr_{livestreamId}")
+            await Clients.Group($"livestream_{livestreamId}")
                 .SendAsync("UserLeft", new { UserId = userId, Timestamp = DateTime.UtcNow });
         }
         public async Task JoinDirectChatRoom(string chatRoomId)
@@ -58,7 +58,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _logger.LogInformation("User {UserId} left SignalR chat room {ChatRoomId}",
                 userId, chatRoomId);
 
-            await Clients.Group($"chatroom_sr_{chatRoomId}")
+            await Clients.Group($"chatroom_{chatRoomId}")
                 .SendAsync("UserLeft", new { UserId = userId, Timestamp = DateTime.UtcNow });
         }
         public async Task SendMessageToLivestream(string livestreamId, string message)
