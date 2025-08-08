@@ -1015,8 +1015,62 @@ namespace LivestreamService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Manual test failed: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Debug thời gian server và token
+        /// </summary>
+        [HttpGet("debug/time-info")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult GetTimeInfo()
+        {
+            var currentUtc = DateTime.UtcNow;
+            var currentLocal = DateTime.Now;
 
+            // Nếu có token trong header, decode để xem
+            string tokenInfo = "No token provided";
+            if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var token = authHeader.ToString().Replace("Bearer ", "");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    try
+                    {
+                        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                        var jsonToken = handler.ReadJwtToken(token);
+
+                        var iat = jsonToken.Claims.FirstOrDefault(c => c.Type == "iat")?.Value;
+                        var exp = jsonToken.Claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+                        var nbf = jsonToken.Claims.FirstOrDefault(c => c.Type == "nbf")?.Value;
+
+                        tokenInfo = new
+                        {
+                            IssuedAt = iat != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(iat)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            ExpiresAt = exp != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(exp)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            NotBefore = nbf != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(nbf)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            IsExpired = exp != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(exp)) < DateTimeOffset.UtcNow : false
+                        }.ToString();
+                    }
+                    catch (Exception ex)
+                    {
+                        tokenInfo = $"Token decode error: {ex.Message}";
+                    }
+                }
+            }
+
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    ServerTimeUTC = currentUtc.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    ServerTimeLocal = currentLocal.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ServerTimezone = TimeZoneInfo.Local.Id,
+                    UnixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    TokenInfo = tokenInfo,
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                },
+                "Server time information"));
+        }
         #endregion
+
     }
     public class TestConnectionRequest
     {
