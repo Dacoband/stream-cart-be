@@ -94,21 +94,26 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
+
+            Console.WriteLine($"[SignalR] Path: {path}, Token present: {!string.IsNullOrEmpty(accessToken)}");
+
             if (!string.IsNullOrEmpty(accessToken) &&
                 (path.StartsWithSegments("/signalrchat") || path.StartsWithSegments("/notificationHub")))
             {
                 context.Token = accessToken;
+                Console.WriteLine($"[SignalR] Token set for path: {path}");
             }
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
         {
-            Console.WriteLine($"[SignalR] Auth failed: {context.Exception.Message}");
+            Console.WriteLine($"[SignalR] Auth FAILED: {context.Exception.Message}");
+            Console.WriteLine($"[SignalR] Path: {context.Request.Path}");
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
-            Console.WriteLine($"[SignalR] Token validated for: {context.Principal?.Identity?.Name}");
+            Console.WriteLine($"[SignalR] Token VALIDATED for: {context.Principal?.Identity?.Name}");
             return Task.CompletedTask;
         }
     };

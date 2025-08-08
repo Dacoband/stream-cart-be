@@ -4,9 +4,11 @@ using LivestreamService.Application.DTOs.Chat;
 using LivestreamService.Application.Interfaces;
 using LivestreamService.Application.Queries.Chat;
 using LivestreamService.Domain.Enums;
+using LivestreamService.Infrastructure.Hubs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
@@ -980,32 +982,47 @@ namespace LivestreamService.Api.Controllers
         }
 
         /// <summary>
-        /// Test endpoint không cần authentication
+        /// Test manual SignalR connection
         /// </summary>
-        [HttpGet("health")]
+        [HttpPost("test-manual-connection")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
-        public IActionResult Health()
+        public async Task<IActionResult> TestManualConnection([FromBody] TestConnectionRequest request)
         {
-            return Ok(ApiResponse<object>.SuccessResult(
-                new
+            try
+            {
+                // Simulate một connection tới hub
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+
+                // Test gửi message đến tất cả clients
+                await hubContext.Clients.All.SendAsync("TestMessage", new
                 {
-                    Service = "LivestreamService.ChatSignalR",
-                    Status = "Healthy",
-                    SignalREndpoints = new[]
+                    Message = "Test from manual connection",
+                    Timestamp = DateTime.UtcNow,
+                    TestId = request.TestId ?? Guid.NewGuid().ToString()
+                });
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
                     {
-                "/signalrchat",
-                "/notificationHub",
-                "/chatHub"
+                        TestId = request.TestId,
+                        Message = "Manual test sent successfully",
+                        Timestamp = DateTime.UtcNow
                     },
-                    Timestamp = DateTime.UtcNow
-                },
-                "Service is healthy"));
+                    "Manual connection test successful"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Manual test failed: {ex.Message}"));
+            }
         }
 
         #endregion
     }
-
+    public class TestConnectionRequest
+    {
+        public string? TestId { get; set; }
+        public string? Message { get; set; }
+    }
     public class TypingStatusDTO
     {
         [Required]
