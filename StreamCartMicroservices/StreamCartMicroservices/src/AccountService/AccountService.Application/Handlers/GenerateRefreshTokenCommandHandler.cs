@@ -31,7 +31,7 @@ namespace AccountService.Application.Handlers
             var refreshToken = GenerateRandomToken();
 
             // Lưu refresh token vào database với thời hạn 7 ngày
-            account.SetRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7));
+            account.SetRefreshToken(refreshToken, DateTime.UtcNow.AddDays(30));
             await _accountRepository.ReplaceAsync(account.Id.ToString(), account);
 
             return refreshToken;
@@ -40,7 +40,7 @@ namespace AccountService.Application.Handlers
         private string GenerateRandomToken()
         {
             // Tạo một token ngẫu nhiên 32 byte (256 bit)
-            var randomBytes = new byte[32];
+            var randomBytes = new byte[64];
             using (var rng = RandomNumberGenerator.Create())
             {
                 rng.GetBytes(randomBytes);
