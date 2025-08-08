@@ -913,6 +913,95 @@ namespace LivestreamService.Api.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi kiểm tra kết nối SignalR"));
             }
         }
+        /// <summary>
+        /// Test SignalR connectivity và handshake
+        /// </summary>
+        [HttpGet("test-connectivity")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult TestConnectivity()
+        {
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    SignalRHub = "/signalrchat",
+                    WebSocketUrl = "wss://brightpa.me/signalrchat",
+                    Status = "Available",
+                    HandshakeInstructions = new
+                    {
+                        Step1 = "Connect to WebSocket URL",
+                        Step2 = "Send handshake immediately: {\"protocol\":\"json\",\"version\":1}",
+                        Step3 = "Wait for response: {}",
+                        Step4 = "Then send commands"
+                    },
+                    SupportedMethods = new[]
+                    {
+                "JoinDirectChatRoom",
+                "SendMessageToChatRoom",
+                "SetTypingStatus"
+                    },
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                    Timestamp = DateTime.UtcNow
+                },
+                "SignalR connectivity test"));
+        }
+
+        /// <summary>
+        /// Test authentication với token hiện tại
+        /// </summary>
+        [HttpGet("test-auth")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult TestAuth()
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                var username = _currentUserService.GetUsername();
+                var roles = _currentUserService.GetRoles();
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        UserId = userId,
+                        Username = username,
+                        Roles = roles,
+                        TokenValid = true,
+                        CanUseSignalR = true,
+                        Claims = User.Claims.Select(c => new { c.Type, c.Value }).Take(10),
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Authentication successful for SignalR"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Auth failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Test endpoint không cần authentication
+        /// </summary>
+        [HttpGet("health")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult Health()
+        {
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    Service = "LivestreamService.ChatSignalR",
+                    Status = "Healthy",
+                    SignalREndpoints = new[]
+                    {
+                "/signalrchat",
+                "/notificationHub",
+                "/chatHub"
+                    },
+                    Timestamp = DateTime.UtcNow
+                },
+                "Service is healthy"));
+        }
 
         #endregion
     }

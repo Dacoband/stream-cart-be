@@ -22,7 +22,7 @@ namespace LivestreamService.Infrastructure.Hubs
         }
         public async Task JoinLivestreamChatRoom(string livestreamId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_sr_{livestreamId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_{livestreamId}");
             _logger.LogInformation("User {UserId} joined SignalR livestream {LivestreamId} chat",
                 _currentUserService.GetUserId(), livestreamId);
 
@@ -33,7 +33,7 @@ namespace LivestreamService.Infrastructure.Hubs
         public async Task LeaveLivestreamChatRoom(string livestreamId)
         {
             var userId = _currentUserService.GetUserId();
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"livestream_sr_{livestreamId}");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"livestream_{livestreamId}");
             _logger.LogInformation("User {UserId} left SignalR livestream {LivestreamId} chat",
                 userId, livestreamId);
 
@@ -43,18 +43,18 @@ namespace LivestreamService.Infrastructure.Hubs
         public async Task JoinDirectChatRoom(string chatRoomId)
         {
             var userId = _currentUserService.GetUserId();
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom_sr_{chatRoomId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"chatroom_{chatRoomId}");
             _logger.LogInformation("User {UserId} joined SignalR chat room {ChatRoomId}",
                 userId, chatRoomId);
 
-            await Clients.Group($"chatroom_sr_{chatRoomId}")
+            await Clients.Group($"chatroom_{chatRoomId}")
                 .SendAsync("UserJoined", new { UserId = userId, Timestamp = DateTime.UtcNow });
         }
 
         public async Task LeaveDirectChatRoom(string chatRoomId)
         {
             var userId = _currentUserService.GetUserId();
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chatroom_sr_{chatRoomId}");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chatroom_{chatRoomId}");
             _logger.LogInformation("User {UserId} left SignalR chat room {ChatRoomId}",
                 userId, chatRoomId);
 
@@ -69,7 +69,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _logger.LogInformation("User {UserId} sent message to livestream {LivestreamId}: {Message}",
                 userId, livestreamId, message);
 
-            await Clients.Group($"livestream_sr_{livestreamId}")
+            await Clients.Group($"livestream_{livestreamId}")
                 .SendAsync("ReceiveLivestreamMessage", new
                 {
                     SenderId = userId,
@@ -87,7 +87,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _logger.LogInformation("User {UserId} sent message to chat room {ChatRoomId}: {Message}",
                 userId, chatRoomId, message);
 
-            await Clients.Group($"chatroom_sr_{chatRoomId}")
+            await Clients.Group($"chatroom_{chatRoomId}")
                 .SendAsync("ReceiveChatMessage", new
                 {
                     SenderId = userId,
@@ -98,7 +98,7 @@ namespace LivestreamService.Infrastructure.Hubs
         }
         public async Task SetTypingStatus(string chatRoomId, bool isTyping)
         {
-            await Clients.OthersInGroup($"chatroom_sr_{chatRoomId}")
+            await Clients.OthersInGroup($"chatroom_{chatRoomId}")
                 .SendAsync("UserTyping", new
                 {
                     UserId = _currentUserService.GetUserId(),
