@@ -385,11 +385,6 @@ services:
       - ServiceUrls__ShopService=http://shop-service
       - ServiceUrls__AccountService=http://account-service
       - ServiceUrls__ProductService=http://product-service
-      # SignalR Configuration
-      - SignalR__EnableDetailedErrors=true
-      - SignalR__MaxReceiveMessageSize=32768
-      - SignalR__ClientTimeoutInterval=60
-      - SignalR__KeepAliveInterval=30
       - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
 
       # Chat Configuration
