@@ -57,6 +57,8 @@ namespace OrderService.Infrastructure.Extensions
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();
             services.AddScoped<IOrderService, OrderManagementService>();
+            services.AddScoped<IOrderItemService, OrderItemManagementService>();
+
             services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
             services.AddHostedService<OrderNotificationWorker>();
 

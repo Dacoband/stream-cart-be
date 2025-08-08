@@ -107,7 +107,7 @@ builder.Services.AddSignalR(options =>
     options.StreamBufferCapacity = 10;
 });
 
-// ✅ Enhanced JWT configuration for SignalR with HTTPS support
+// ✅ FIXED: Enhanced JWT configuration for SignalR with better error handling
 builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.Events = new JwtBearerEvents
@@ -122,12 +122,14 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
             Console.WriteLine($"[SignalR JWT] Scheme: {context.Request.Scheme}");
             Console.WriteLine($"[SignalR JWT] Host: {context.Request.Host}");
 
+            // ✅ FIXED: Check for SignalR paths and set token
             if (!string.IsNullOrEmpty(accessToken) &&
                 (path.StartsWithSegments("/signalrchat") || path.StartsWithSegments("/notificationHub")))
             {
                 context.Token = accessToken;
                 Console.WriteLine($"[SignalR JWT] Token set for SignalR connection");
             }
+
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
@@ -136,12 +138,31 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
             Console.WriteLine($"[SignalR JWT] Exception: {context.Exception}");
             Console.WriteLine($"[SignalR JWT] Path: {context.Request.Path}");
             Console.WriteLine($"[SignalR JWT] Scheme: {context.Request.Scheme}");
+
+            // ✅ FIXED: Don't fail the handshake for SignalR paths
+            if (context.Request.Path.StartsWithSegments("/signalrchat") ||
+                context.Request.Path.StartsWithSegments("/notificationHub"))
+            {
+                Console.WriteLine($"[SignalR JWT] Skipping challenge for SignalR path");
+                context.NoResult();
+            }
+
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
             Console.WriteLine($"[SignalR JWT] Token VALIDATED successfully");
             Console.WriteLine($"[SignalR JWT] User: {context.Principal?.Identity?.Name}");
+
+            // ✅ ADDED: Log user claims for debugging
+            if (context.Principal?.Claims != null)
+            {
+                foreach (var claim in context.Principal.Claims)
+                {
+                    Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+                }
+            }
+
             return Task.CompletedTask;
         },
         OnChallenge = context =>
@@ -149,6 +170,30 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
             Console.WriteLine($"[SignalR JWT] Authentication Challenge");
             Console.WriteLine($"[SignalR JWT] Error: {context.Error}");
             Console.WriteLine($"[SignalR JWT] ErrorDescription: {context.ErrorDescription}");
+            Console.WriteLine($"[SignalR JWT] Path: {context.Request.Path}");
+
+            // ✅ FIXED: Handle SignalR authentication challenges properly
+            if (context.Request.Path.StartsWithSegments("/signalrchat") ||
+                context.Request.Path.StartsWithSegments("/notificationHub"))
+            {
+                Console.WriteLine($"[SignalR JWT] Handling SignalR auth challenge");
+
+                // Check if we have a token in query string
+                var accessToken = context.Request.Query["access_token"];
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    Console.WriteLine($"[SignalR JWT] No access token found in query string");
+                    context.HandleResponse();
+                    context.Response.StatusCode = 401;
+                    return context.Response.WriteAsync("Unauthorized: No access token provided");
+                }
+
+                Console.WriteLine($"[SignalR JWT] Access token found but validation failed");
+                context.HandleResponse();
+                context.Response.StatusCode = 401;
+                return context.Response.WriteAsync("Unauthorized: Token validation failed");
+            }
+
             return Task.CompletedTask;
         }
     };
@@ -202,7 +247,7 @@ app.MapHub<SignalRChatHub>("/signalrchat", options =>
     // ✅ WebSocket specific settings
     options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
     options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
-});
+}).RequireAuthorization(); // ✅ ADDED: Ensure authorization is required
 
 app.MapHub<NotificationHub>("/notificationHub", options =>
 {
@@ -215,7 +260,7 @@ app.MapHub<NotificationHub>("/notificationHub", options =>
     options.TransportMaxBufferSize = 64 * 1024;
     options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
     options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
-});
+}).RequireAuthorization(); // ✅ ADDED: Ensure authorization is required
 
 app.MapControllers();
 
