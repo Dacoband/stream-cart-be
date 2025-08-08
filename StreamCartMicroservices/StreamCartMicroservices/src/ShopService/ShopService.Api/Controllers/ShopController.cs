@@ -160,6 +160,30 @@ namespace ShopService.Api.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        [HttpPut("rejected/{id}")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ShopDto>> UpdateRejectedShop(UpdateRejectedShopDTO updateShopDto, [FromRoute]Guid id)
+        {
+            var accountId = _currentUserService.GetUserId();
+            if (accountId == Guid.Empty)
+                return Unauthorized();
+
+            try
+            {
+
+                var accessToken = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                var shop = await _shopManagementService.UpdateRejectedShopAsync(updateShopDto, accountId, accessToken,id);
+                return Ok( shop);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tạo shop mới: {Message}", ex.Message);
+                return BadRequest(new { error = ex.Message });
+            }
+        }
 
         /// <summary>
         /// Cập nhật thông tin shop

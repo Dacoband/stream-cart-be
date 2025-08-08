@@ -246,5 +246,6 @@ namespace ShopService.Application.Interfaces
         /// <param name="shopId">ID của shop</param>
         /// <returns>Shop đã cập nhật</returns>
         Task<ShopDto> SyncProductCountFromProductServiceAsync(Guid shopId);
+        Task<ShopDto> UpdateRejectedShopAsync(UpdateRejectedShopDTO createShopDto, Guid createdByAccountId, string accessToken, Guid id);
     }
 }
