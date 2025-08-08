@@ -1018,6 +1018,30 @@
       "SwaggerKey": "livestream"
     },
     {
+      "DownstreamPathTemplate": "/signalrchat",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/signalrchat",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/notificationHub",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/notificationHub",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
       "DownstreamPathTemplate": "/api/stream-views/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
