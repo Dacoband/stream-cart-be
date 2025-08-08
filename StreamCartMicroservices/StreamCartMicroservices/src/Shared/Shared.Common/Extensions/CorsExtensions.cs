@@ -73,6 +73,7 @@ namespace Shared.Common.Extensions
                     {
                         builder.SetPreflightMaxAge(TimeSpan.FromSeconds(corsSettings.MaxAge));
                     }
+                    builder.WithExposedHeaders("*");
                 });
             });
 
