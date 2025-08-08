@@ -81,7 +81,13 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true; // ✅ Quan trọng để debug
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+});
 // Register SignalR chat service
 builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
 
@@ -100,7 +106,13 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
                 context.Token = accessToken;
             }
             return Task.CompletedTask;
-        }
+        },
+         OnAuthenticationFailed = context =>
+         {
+             // ✅ Log authentication failures
+             Console.WriteLine($"JWT Auth failed: {context.Exception.Message}");
+             return Task.CompletedTask;
+         }
     };
 });
 //builder.Services.AddCors(options =>
