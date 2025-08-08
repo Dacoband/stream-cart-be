@@ -25,7 +25,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"chatroom_sr_{chatRoomId}")
+                await _hubContext.Clients.Group($"chatroom_{chatRoomId}")
                     .SendAsync("ReceiveChatMessage", new
                     {
                         SenderId = senderId,
@@ -48,7 +48,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"livestream_sr_{livestreamId}")
+                await _hubContext.Clients.Group($"livestream_{livestreamId}")
                     .SendAsync("ReceiveLivestreamMessage", new
                     {
                         SenderId = senderId,
@@ -71,7 +71,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"chatroom_sr_{chatRoomId}")
+                await _hubContext.Clients.Group($"chatroom_{chatRoomId}")
                     .SendAsync("UserJoined", new
                     {
                         UserId = userId,
@@ -92,7 +92,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"chatroom_sr_{chatRoomId}")
+                await _hubContext.Clients.Group($"chatroom_{chatRoomId}")
                     .SendAsync("UserLeft", new
                     {
                         UserId = userId,

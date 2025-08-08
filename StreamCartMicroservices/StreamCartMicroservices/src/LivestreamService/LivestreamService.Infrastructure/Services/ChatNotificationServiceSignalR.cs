@@ -11,11 +11,11 @@ namespace LivestreamService.Infrastructure.Services
     public class ChatNotificationServiceSignalR : IChatNotificationServiceSignalR
     {
         private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly ILogger<ChatNotificationService> _logger;
+        private readonly ILogger<ChatNotificationServiceSignalR> _logger;
 
         public ChatNotificationServiceSignalR(
             IHubContext<NotificationHub> hubContext,
-            ILogger<ChatNotificationService> logger)
+            ILogger<ChatNotificationServiceSignalR> logger)
         {
             _hubContext = hubContext;
             _logger = logger;
