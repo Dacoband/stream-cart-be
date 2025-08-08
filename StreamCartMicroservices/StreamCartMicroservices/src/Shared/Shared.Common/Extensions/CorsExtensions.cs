@@ -24,7 +24,8 @@ namespace Shared.Common.Extensions
                     {
                         if (corsSettings.AllowedOrigins.Contains("*"))
                         {
-                            builder.AllowAnyOrigin();
+                           // builder.AllowAnyOrigin();
+                            builder.SetIsOriginAllowed(_ => true);
                         }
                         else
                         {
