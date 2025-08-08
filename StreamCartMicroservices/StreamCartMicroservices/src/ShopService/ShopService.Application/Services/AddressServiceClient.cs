@@ -51,5 +51,87 @@ namespace ShopService.Application.Services
             }
         
     }
+        public async Task<ApiResponse<AddressDto>> UpdateAddressAsync(Guid id, CreateAddressDto dto, string token)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                var response = await _httpClient.PutAsJsonAsync($"https://brightpa.me/api/addresses/{id}", dto);
+
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonConvert.DeserializeObject<ApiResponse<AddressDto>>(content);
+                    return result!;
+                }
+                else
+                {
+                    _logger.LogError("Error updating address: {Content}", content);
+                    return ApiResponse<AddressDto>.ErrorResult("Failed to update address");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred while calling UpdateAddress API");
+                return ApiResponse<AddressDto>.ErrorResult("Exception: " + ex.Message);
+            }
+        }
+        public async Task<ApiResponse<AddressDto>> GetAddressByIdAsync(Guid id, string token)
+        {
+            try
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/addresses/{id}");
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonConvert.DeserializeObject<ApiResponse<AddressDto>>(content);
+                    return result!;
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Address not found: {Content}", content);
+                    return ApiResponse<AddressDto>.ErrorResult("Address not found");
+                }
+                else
+                {
+                    _logger.LogError("Error retrieving address: {Content}", content);
+                    return ApiResponse<AddressDto>.ErrorResult("Failed to retrieve address");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred while calling GetAddressById API");
+                return ApiResponse<AddressDto>.ErrorResult("Exception: " + ex.Message);
+            }
+        }
+        public async Task<ApiResponse<IEnumerable<AddressDto>>> GetAddressesByShopIdAsync(Guid shopId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/addresses/shops/{shopId}");
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonConvert.DeserializeObject<ApiResponse<IEnumerable<AddressDto>>>(content);
+                    return result!;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to retrieve shop addresses: {Content}", content);
+                    return ApiResponse<IEnumerable<AddressDto>>.ErrorResult("Failed to retrieve shop addresses");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred while calling GetAddressesByShopId API");
+                return ApiResponse<IEnumerable<AddressDto>>.ErrorResult("Exception: " + ex.Message);
+            }
+        }
     }
 }

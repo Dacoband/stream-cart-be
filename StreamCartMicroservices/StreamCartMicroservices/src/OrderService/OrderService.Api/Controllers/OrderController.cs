@@ -9,6 +9,7 @@ using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Extensions;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
 using ShopService.Application.DTOs.Dashboard;
@@ -219,7 +220,13 @@ namespace OrderService.Api.Controllers
                 if (order == null)
                     return NotFound();
 
-                await _orderService.UpdateOrderStatusAsync(id, statusDto.Status, modifiedBy);
+                //await _orderService.UpdateOrderStatusAsync(id, statusDto.Status, modifiedBy);
+                await _mediator.Send(new UpdateOrderStatusCommand()
+                {
+                    OrderId = id,
+                    NewStatus = statusDto.Status,
+                    ModifiedBy = modifiedBy,
+                });
                 if (order == null)
                 {
                     return NotFound();
@@ -428,7 +435,7 @@ namespace OrderService.Api.Controllers
                 }
 
                 // Gọi service để xác nhận đơn hàng
-                var updatedOrder = await _orderService.ConfirmOrderDeliveredAsync(orderId, customerId);
+                var updatedOrder = await _orderService.ConfirmOrderDeliveredAsync(orderId, customerId.ToString());
                 if (updatedOrder == null)
                 {
                     _logger.LogWarning("Không thể xác nhận đơn hàng {OrderId}: Đơn hàng không tồn tại hoặc không thuộc về khách hàng", orderId);

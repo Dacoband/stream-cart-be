@@ -182,24 +182,24 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                 _logger.LogInformation("Order created successfully with ID {OrderId} and Code {OrderCode}", order.Id, order.OrderCode);
                 //pubish OrderChangeEvent to NotificationSevice
-                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
-                {
-                    OrderCode = order.OrderCode,
-                    Message ="được tạo mới thành công",
-                    UserId = request.AccountId.ToString(),
-                };
-                await _publishEndpoint.Publish(orderChangEvent);
-                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                foreach (var acc in shopAccount)
-                {
-                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
-                    {
-                        OrderCode = order.OrderCode,
-                        Message = "vừa được cập nhật mã vận đơn",
-                        UserId = acc.Id.ToString(),
-                    };
-                    await _publishEndpoint.Publish(ordChangeEvent);
-                }
+                //var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                //{
+                //    OrderCode = order.OrderCode,
+                //    Message ="được tạo mới thành công",
+                //    UserId = request.AccountId.ToString(),
+                //};
+                //await _publishEndpoint.Publish(orderChangEvent);
+                //var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                //foreach (var acc in shopAccount)
+                //{
+                //    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
+                //    {
+                //        OrderCode = order.OrderCode,
+                //        Message = "vừa được cập nhật mã vận đơn",
+                //        UserId = acc.Id.ToString(),
+                //    };
+                //    await _publishEndpoint.Publish(ordChangeEvent);
+                //}
                 return orderDto;
             }
             catch (Exception ex)

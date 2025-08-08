@@ -61,6 +61,9 @@ namespace ShopService.Application.Services
                      Street = createShopDto.Street,
                      Ward = createShopDto.Ward,
                      AccessToken = accessToken,
+                     Tax = createShopDto.Tax,
+                     BankNumber = createShopDto.BankNumber,
+                     BankName = createShopDto.BankName  
                 };
 
                 var result = await _mediator.Send(command);
@@ -174,6 +177,41 @@ namespace ShopService.Application.Services
             {
                 _logger.LogError(ex, "Lỗi khi lấy tất cả các shop");
                 return Enumerable.Empty<ShopDto>();
+            }
+        }
+
+        public async Task<ShopDto> UpdateRejectedShopAsync(UpdateRejectedShopDTO createShopDto, Guid createdByAccountId, string accessToken, Guid id)
+        {
+            try
+            {
+                var command = new UpdateRejectedShopCommand
+                {
+                    Id = id,
+                    ShopName = createShopDto.ShopName,
+                    Description = createShopDto.Description,
+                    LogoURL = createShopDto.LogoURL,
+                    CoverImageURL = createShopDto.CoverImageURL,
+                    CreatedBy = createdByAccountId.ToString(),
+                    City = createShopDto.City,
+                    Country = createShopDto.Country,
+                    District = createShopDto.District,
+                    PhoneNumber = createShopDto.PhoneNumber,
+                    PostalCode = createShopDto.PostalCode,
+                    Street = createShopDto.Street,
+                    Ward = createShopDto.Ward,
+                    AccessToken = accessToken,
+                    Tax = createShopDto.Tax,
+                    BankName = createShopDto.BankName,
+                    BankNumber = createShopDto.BankNumber
+                };
+
+                var result = await _mediator.Send(command);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tạo shop mới bởi tài khoản {AccountId}", createdByAccountId);
+                throw;
             }
         }
 

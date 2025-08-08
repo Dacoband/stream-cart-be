@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using MassTransit;
 using MassTransit.Transports;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
+using OrderService.Application.DTOs.Delivery;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.DTOs.OrderItemDTOs;
 using OrderService.Application.DTOs.WalletDTOs;
@@ -14,6 +16,7 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Services.User;
+using Shared.Messaging.Event.OrderEvents;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +34,11 @@ namespace OrderService.Infrastructure.Services
         private readonly ICurrentUserService _currentUserService;
         private readonly IWalletServiceClient _walletServiceClient;
         private readonly IMapper _mapper;
+        private readonly IProductServiceClient _productServiceClient;
+        private readonly IDeliveryClient _deliveryClient;
+        private readonly IPublishEndpoint _publishEndpoint;
+
+
         public OrderManagementService(
             IMediator mediator,
             IOrderRepository orderRepository,
@@ -39,7 +47,7 @@ namespace OrderService.Infrastructure.Services
             IShopServiceClient shopServiceClient,
             ICurrentUserService currentUserService, 
             IMapper mapper,
-            IWalletServiceClient walletServiceClient)
+            IWalletServiceClient walletServiceClient, IProductServiceClient productServiceClient, IDeliveryClient deliveryClient, IPublishEndpoint publishEndpoint)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -49,6 +57,9 @@ namespace OrderService.Infrastructure.Services
             _currentUserService = currentUserService;
             _mapper = mapper;
             _walletServiceClient = walletServiceClient;
+            _productServiceClient = productServiceClient;
+            _deliveryClient = deliveryClient;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto)
@@ -409,7 +420,7 @@ namespace OrderService.Infrastructure.Services
 
 
         /// <summary>
-        public async Task<OrderDto> ConfirmOrderDeliveredAsync(Guid orderId, Guid customerId)
+        public async Task<OrderDto> ConfirmOrderDeliveredAsync(Guid orderId, string customerId)
         {
             try
             {
@@ -420,7 +431,7 @@ namespace OrderService.Infrastructure.Services
                     return null;
                 }
 
-                if (order.AccountId != customerId)
+                if (order.AccountId != Guid.Parse( customerId) && customerId.ToString() != "system")
                 {
                     _logger.LogWarning("Khách hàng {CustomerId} không có quyền xác nhận đơn hàng {OrderId}", customerId, orderId);
                     return null;
@@ -433,12 +444,15 @@ namespace OrderService.Infrastructure.Services
                 }
 
                 // Cập nhật trạng thái đơn hàng
-                order.UpdateStatus(OrderStatus.Delivered, customerId.ToString());
+                order.UpdateStatus(OrderStatus.Completed, customerId.ToString());
                 await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
 
                 // Xử lý thanh toán cho shop
                 await ProcessPaymentToShopAsync(order);
+                //Cập nhật reward
 
+                //Cập nhật rate
+            
                 // Chuyển đổi sang DTO
                 return _mapper.Map<OrderDto>(order);
             }
@@ -451,17 +465,16 @@ namespace OrderService.Infrastructure.Services
         private async Task ProcessPaymentToShopAsync(Orders order)
         {
             // Tính toán số tiền thanh toán cho shop (trừ 10% phí)
-            decimal totalAmount = order.TotalPrice;
-            decimal fee = totalAmount * 0.1m; // 10% phí
-            decimal amountToShop = totalAmount - fee;
+            decimal totalAmount = order.NetAmount;
+           
 
             // Gửi yêu cầu thanh toán đến WalletService
             var paymentRequest = new ShopPaymentRequest
             {
                 OrderId = order.Id,
                 ShopId = order.ShopId,
-                Amount = amountToShop,
-                Fee = fee,
+                Amount = totalAmount,
+                Fee = 0,
                 TransactionType = "OrderComplete",
                 TransactionReference = order.Id.ToString(),
                 Description = $"Thanh toán đơn hàng #{order.OrderCode}"
@@ -478,6 +491,282 @@ namespace OrderService.Infrastructure.Services
             //});
         }
 
+        public async Task<OrderDto> UpdateOrderStatus(UpdateOrderStatusDto request)
+        {
+            try
+            {
+                _logger.LogInformation("Updating order status for order {OrderId} to {NewStatus}", request.OrderId, request.NewStatus);
+
+                // Get the order
+                var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+                var deliveryItemList = new List<UserOrderItem>();
+                foreach (var item in order.Items)
+                {
+                    var deliveryItem = new UserOrderItem();
+                    var product = await _productServiceClient.GetProductByIdAsync(item.ProductId);
+                    deliveryItem.Quantity = item.Quantity;
+                    deliveryItem.Name = product.ProductName;
+                    deliveryItem.Width = (int)product.Width;
+                    deliveryItem.Weight = (int)product.Weight;
+                    deliveryItem.Height = (int)product.Height;
+                    deliveryItem.Length = (int)product.Length;
+                    if (product == null)
+                        throw new ApplicationException($"Không tìm thấy sản phẩm {item.Id}");
+                    if (item.VariantId.HasValue)
+                    {
+                        var variant = await _productServiceClient.GetVariantByIdAsync(item.VariantId.Value);
+                        if (variant == null)
+                            throw new ApplicationException($"Không tìm thấy sản phẩm {item.VariantId}");
+
+                        deliveryItem.Name = product.ProductName;
+                        deliveryItem.Width = (int)(product.Width ?? variant.Width);
+                        deliveryItem.Weight = (int)(product.Weight ?? variant.Weight);
+                        deliveryItem.Height = (int)(product.Height ?? variant.Height);
+                        deliveryItem.Length = (int)(product.Length ?? variant.Length);
+
+                    }
+                    deliveryItemList.Add(deliveryItem);
+                }
+                if (order == null)
+                {
+                    _logger.LogWarning("Order with ID {OrderId} not found", request.OrderId);
+                    throw new ApplicationException($"Order with ID {request.OrderId} not found");
+                }
+                var message = "";
+
+                switch (request.NewStatus)
+                {
+                    case OrderStatus.Waiting:
+                        order.UpdateStatus(OrderStatus.Waiting, request.ModifiedBy);
+                        message = "Đơn hàng đang được khởi tạo";
+                        break;
+
+                    case OrderStatus.Pending:
+                        order.UpdateStatus(OrderStatus.Pending, request.ModifiedBy);
+                        message = "Chờ người bán xác nhận đơn hàng";
+                        break;
+
+                    case OrderStatus.Processing:
+                        order.UpdateStatus(OrderStatus.Processing, request.ModifiedBy);
+                        message = "Người gửi đang chuẩn bị hàng";
+
+                        // 👉 Gọi hàm tạo đơn GHN
+                        var ghnRequest = new UserCreateOrderRequest
+                        {
+                            FromName = order.FromShop,
+                            FromPhone = order.FromPhone,
+                            FromProvince = order.FromProvince,
+                            FromDistrict = order.FromDistrict,
+                            FromWard = order.FromWard,
+                            FromAddress = order.FromAddress,
+
+                            ToName = order.ToName,
+                            ToPhone = order.ToPhone,
+                            ToProvince = order.ToProvince,
+                            ToDistrict = order.ToDistrict,
+                            ToWard = order.ToWard,
+                            ToAddress = order.ToAddress,
+
+                            ServiceTypeId = 2,
+                            Note = order.CustomerNotes,
+                            Description = $"Đơn hàng #{order.OrderCode}",
+                            CodAmount = (int?)order.FinalAmount,
+                            Items = deliveryItemList,
+
+                        };
+                        if ((order.PaymentStatus == PaymentStatus.paid))
+                        {
+                            ghnRequest.CodAmount = 0;
+                        }
+                        var ghnResponse = await _deliveryClient.CreateGhnOrderAsync(ghnRequest);
+                        if (!ghnResponse.Success)
+                        {
+                            _logger.LogWarning("Không thể tạo đơn GHN cho đơn hàng {OrderId}", order.Id);
+                            throw new ApplicationException("Tạo đơn giao hàng thất bại: " + ghnResponse.Message);
+                        }
+
+                        break;
+
+                    case OrderStatus.Packed:
+                        order.UpdateStatus(OrderStatus.Packed, request.ModifiedBy);
+                        message = "Đơn hàng đã được đóng gói";
+                        break;
+
+                    case OrderStatus.OnDelivere:
+                        order.UpdateStatus(OrderStatus.OnDelivere, request.ModifiedBy);
+                        message = "Đơn hàng đang được vận chuyển";
+                        break;
+
+                    case OrderStatus.Delivered:
+                        order.UpdateStatus(OrderStatus.Delivered, request.ModifiedBy);
+                        message = "Đơn hàng đã được giao thành công";
+                        break;
+
+                    case OrderStatus.Completed:
+                        order.UpdateStatus(OrderStatus.Completed, request.ModifiedBy);
+                        message = "Đơn hàng đã hoàn tất";
+                        await ConfirmOrderDeliveredAsync(request.OrderId,request.ModifiedBy);
+                        break;
+
+                    case OrderStatus.Returning:
+                        order.UpdateStatus(OrderStatus.Returning, request.ModifiedBy);
+                        message = "Khách hàng đã yêu cầu trả hàng";
+                        break;
+
+                    case OrderStatus.Refunded:
+                        order.UpdateStatus(OrderStatus.Refunded, request.ModifiedBy);
+                        message = "Đơn hàng đã được hoàn tiền";
+                        break;
+
+                    case OrderStatus.Cancelled:
+                        order.UpdateStatus(OrderStatus.Cancelled, request.ModifiedBy);
+                        message = "Đơn hàng đã bị hủy";
+                        break;
+
+                    default:
+                        _logger.LogWarning("Chuyển trạng thái không được hỗ trợ: {NewStatus}", request.NewStatus);
+                        throw new InvalidOperationException($"Không hỗ trợ chuyển sang trạng thái: {request.NewStatus}");
+                }
+
+                await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+
+                var shippingAddressDto = new ShippingAddressDto
+                {
+                    FullName = order.ToName,
+                    Phone = order.ToPhone,
+                    AddressLine1 = order.ToAddress,
+                    Ward = order.ToWard,
+                    City = order.ToProvince,
+                    State = order.ToDistrict,
+                    PostalCode = order.ToPostalCode,
+                    Country = "Vietnam",
+                    IsDefault = false
+                };
+
+                // Convert items to DTOs
+                var orderItemDtos = new List<OrderItemDto>();
+                if (order.Items != null)
+                {
+                    foreach (var item in order.Items)
+                    {
+                        orderItemDtos.Add(new OrderItemDto
+                        {
+                            Id = item.Id,
+                            OrderId = item.OrderId,
+                            ProductId = item.ProductId,
+                            VariantId = item.VariantId,
+                            Quantity = item.Quantity,
+                            UnitPrice = item.UnitPrice,
+                            DiscountAmount = item.DiscountAmount,
+                            TotalPrice = item.TotalPrice,
+                            Notes = item.Notes
+                        });
+                    }
+                }
+
+                var orderDto = new OrderDto
+                {
+                    Id = order.Id,
+                    OrderCode = order.OrderCode,
+                    AccountId = order.AccountId,
+                    ShopId = order.ShopId,
+                    OrderDate = order.OrderDate,
+                    OrderStatus = order.OrderStatus,
+                    PaymentStatus = order.PaymentStatus,
+                    ShippingAddress = shippingAddressDto,
+                    ShippingProviderId = order.ShippingProviderId,
+                    ShippingFee = order.ShippingFee,
+                    TotalPrice = order.TotalPrice,
+                    DiscountAmount = order.DiscountAmount,
+                    FinalAmount = order.FinalAmount,
+                    CustomerNotes = order.CustomerNotes,
+                    TrackingCode = order.TrackingCode,
+                    EstimatedDeliveryDate = order.EstimatedDeliveryDate,
+                    ActualDeliveryDate = order.ActualDeliveryDate,
+                    LivestreamId = order.LivestreamId,
+                    Items = orderItemDtos
+                };
+
+                _logger.LogInformation("Order status updated successfully for order {OrderId}", request.OrderId);
+
+                var recipent = new List<string> { request.ModifiedBy };
+
+
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                    recipent.Add(acc.Id.ToString());
+                }
+                var shopRate = await CalculateShopCompletionRate(order.ShopId);
+                var userRate = await CalculateUserCompletionRate(Guid.Parse(order.CreatedBy));
+                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                {
+                    OrderCode = order.OrderCode,
+                    Message = message,
+                    UserId = recipent,
+                    OrderStatus = request.NewStatus.ToString(),
+                    ShopRate = shopRate,
+                    UserRate = userRate,
+                    CreatedBy = order.CreatedBy,
+                    ShopId = order.ShopId.ToString(),
+                    
+                };
+                if (orderChangEvent.OrderStatus == "Pending")
+                {
+                    orderChangEvent.OrderStatus = null;
+                }
+                await _publishEndpoint.Publish(orderChangEvent);
+
+                return orderDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order status: {ErrorMessage}", ex.Message);
+                throw;
+            }
+        }
+        public async Task<double> CalculateUserCompletionRate(Guid userId)
+        {
+            var orders = await _orderRepository.GetByAccountIdAsync(userId);
+            int totalOrders = orders.Count();
+            int completedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Completed);
+
+            // Chỉ trừ những đơn bị user hủy
+            int canceledByUser = orders.Count(o =>
+                o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == userId.ToString()
+            );
+
+            int validOrders = totalOrders - canceledByUser;
+
+            if (validOrders == 0) return 0.0;
+
+            return (double)completedOrders / validOrders * 100;
+        }
+
+        public async Task<double> CalculateShopCompletionRate(Guid shopId)
+        {
+            var orders = await _orderRepository.GetByShopIdAsync(shopId);
+            int totalOrders = orders.Count();
+            int completedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Completed);
+
+            // Đơn bị shop hủy
+            int canceledByShop = orders.Count(o =>
+                o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == shopId.ToString()
+            );
+
+            // Đơn do hệ thống hủy (null hoặc không rõ ai hủy)
+            int canceledBySystem = orders.Count(o =>
+                o.OrderStatus == OrderStatus.Cancelled  && string.IsNullOrEmpty(o.LastModifiedBy)
+            );
+
+            // Điểm phạt = 1% cho mỗi đơn bị shop hủy
+            int penaltyPoints = 1;
+
+            double rawRate = totalOrders == 0 ? 0.0 : (double)completedOrders / totalOrders * 100;
+            double finalRate = Math.Max(0, rawRate - penaltyPoints);
+
+            return finalRate;
+        }
 
     }
 

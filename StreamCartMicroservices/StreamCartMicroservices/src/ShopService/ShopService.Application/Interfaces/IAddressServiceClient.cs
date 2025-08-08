@@ -11,5 +11,8 @@ namespace ShopService.Application.Interfaces
     public interface IAddressServiceClient
     {
         Task<ApiResponse<AddressDto>> CreateAddressAsync(CreateAddressDto dto, string token);
+        Task<ApiResponse<AddressDto>> UpdateAddressAsync(Guid id, CreateAddressDto dto, string token);
+        Task<ApiResponse<AddressDto>> GetAddressByIdAsync(Guid id, string token);
+        Task<ApiResponse<IEnumerable<AddressDto>>> GetAddressesByShopIdAsync(Guid shopId);
     }
 }

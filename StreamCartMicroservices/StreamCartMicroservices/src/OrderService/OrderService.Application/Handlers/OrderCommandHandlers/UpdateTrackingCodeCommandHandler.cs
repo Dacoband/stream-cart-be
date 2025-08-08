@@ -107,25 +107,22 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     Items = orderItemDtos
                 };
                 //pubish OrderChangeEvent to NotificationSevice
+                var recipent = new List<string> { request.ModifiedBy };
+               
+                
+                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                foreach (var acc in shopAccount)
+                {
+                    recipent.Add(acc.Id.ToString());
+                }
                 var orderChangEvent = new OrderCreatedOrUpdatedEvent()
                 {
                     OrderCode = order.OrderCode,
                     Message = "đã được cập nhật mã vận đơn thành công",
-                    UserId = request.ModifiedBy,
+                    UserId = recipent,
                 };
-                
                 await _publishEndpoint.Publish(orderChangEvent);
-                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                foreach (var acc in shopAccount)
-                {
-                    var ordChangeEvent = new OrderCreatedOrUpdatedEvent()
-                    {
-                        OrderCode = order.OrderCode,
-                        Message = "vừa được cập nhật mã vận đơn",
-                        UserId = acc.Id.ToString(),
-                    };
-                    await _publishEndpoint.Publish(ordChangeEvent);
-                }
+
                 _logger.LogInformation("Tracking code updated successfully for order {OrderId}", request.OrderId);
                 return orderDto;
             }

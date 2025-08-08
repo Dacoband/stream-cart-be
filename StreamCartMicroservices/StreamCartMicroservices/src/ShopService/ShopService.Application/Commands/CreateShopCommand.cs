@@ -24,5 +24,8 @@ namespace ShopService.Application.Commands
         public string PostalCode { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string AccessToken {  get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankNumber { get; set; } = string.Empty;
+        public string Tax { get; set; } = string.Empty;
     }
 }
