@@ -10,7 +10,7 @@ namespace LivestreamService.Application.DTOs
     {
 
         public string? Id { get; set; }
-        public string? Name { get; set; }
+        public string? ProductName { get; set; }
         public string? Description { get; set; }
         public decimal BasePrice { get; set; }
         public string? ImageUrl { get; set; }
@@ -19,5 +19,6 @@ namespace LivestreamService.Application.DTOs
         public bool IsActive { get; set; }
         public Guid ShopId { get; set; }
         public string? ShopName { get; set; }
+        public string? SKU { get; set; }
     }
 }

@@ -101,13 +101,12 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
                     // ✅ LOẠI BỎ FlashSaleId vì đã bị xóa khỏi entity
-                    FlashSaleId = null,
                     IsPin = livestreamProduct.IsPin,
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,
                     CreatedAt = livestreamProduct.CreatedAt,
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
-                    ProductName = product.Name,
+                    ProductName = product.ProductName,
                     ProductImageUrl = product.ImageUrl,
                     VariantName = variant?.Name
                 };

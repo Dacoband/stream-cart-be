@@ -43,7 +43,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                         {
                             Id = lp.Id,
                             ProductId = lp.ProductId,
-                            ProductName = product.Name,
+                            ProductName = product.ProductName,
                             ProductImageUrl = product.ImageUrl,
                             Price = lp.Price,
                             Stock = lp.Stock,

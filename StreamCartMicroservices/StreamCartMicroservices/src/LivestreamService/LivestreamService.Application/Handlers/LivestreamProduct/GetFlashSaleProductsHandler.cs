@@ -62,7 +62,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             Stock = lp.Stock,
                             CreatedAt = lp.CreatedAt,
                             LastModifiedAt = lp.LastModifiedAt,
-                            ProductName = product.Name,
+                            ProductName = product.ProductName,
                             ProductImageUrl = product.ImageUrl,
                             VariantName = variant?.Name
                         });

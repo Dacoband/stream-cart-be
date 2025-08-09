@@ -39,5 +39,6 @@ namespace LivestreamService.Application.Interfaces
         Task<List<ProductDTO>> GetProductsWithFlashSaleAsync();
         Task<bool> UpdateProductStatusAsync(Guid productId, bool isActive);
         Task<bool> CheckProductExistsAsync(Guid productId);
+        Task<string?> GetCombinationStringByVariantIdAsync(Guid variantId);
     }
 }
