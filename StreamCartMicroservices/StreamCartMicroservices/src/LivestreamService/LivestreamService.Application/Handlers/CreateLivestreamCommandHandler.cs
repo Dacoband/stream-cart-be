@@ -212,7 +212,7 @@ namespace LivestreamService.Application.Handlers
                         Stock = livestreamProduct.Stock,
                         CreatedAt = livestreamProduct.CreatedAt,
                         LastModifiedAt = livestreamProduct.LastModifiedAt,
-                        ProductName = product?.Name,
+                        ProductName = product?.ProductName,
                         ProductImageUrl = product?.ImageUrl,
                         VariantName = variant?.Name
                     });

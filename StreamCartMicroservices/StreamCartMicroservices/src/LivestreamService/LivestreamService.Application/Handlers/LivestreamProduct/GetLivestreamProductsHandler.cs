@@ -56,10 +56,13 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
 
                         // Lấy thông tin variant nếu có
                         ProductVariantDTO variantInfo = null;
+                        var variantDetail = "";
                         if (!string.IsNullOrEmpty(product.VariantId))
                         {
                             variantInfo = await _productServiceClient.GetProductVariantAsync(product.ProductId, product.VariantId);
+                             variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync( Guid.Parse(product.VariantId));
                         }
+
 
                         result.Add(new LivestreamProductDTO
                         {
@@ -72,9 +75,11 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             Stock = product.Stock,
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,
-                            ProductName = productInfo?.Name ?? "Không rõ",
+                            ProductName = productInfo?.ProductName ?? "Không rõ",
                             ProductImageUrl = productInfo?.ImageUrl ?? "",
-                            VariantName = variantInfo?.Name ?? ""
+                            VariantName = productInfo?.ProductName + variantDetail ?? "",
+                            ProductStock = variantInfo?.Stock ?? productInfo.StockQuantity, 
+                            SKU = variantInfo?.SKU ?? productInfo.SKU,
                         });
                     }
                     catch (Exception ex)
@@ -95,7 +100,9 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             LastModifiedAt = product.LastModifiedAt,
                             ProductName = "Không thể lấy thông tin",
                             ProductImageUrl = "",
-                            VariantName = ""
+                            VariantName = "",
+                            ProductStock = 0,
+                            SKU = "",
                         });
                     }
                 }

@@ -67,7 +67,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
 
                     // Product info
-                    ProductName = product.Name,
+                    ProductName = product.ProductName,
                     ProductDescription = product.Description,
                     ProductImageUrl = product.ImageUrl,
                     BasePrice = product.BasePrice,

@@ -43,7 +43,7 @@ namespace LivestreamService.Infrastructure.Services
             {
                 _logger.LogInformation("Getting product by ID: {ProductId}", productId);
 
-                var response = await _httpClient.GetAsync($"api/products/{productId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/products/{productId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -74,7 +74,7 @@ namespace LivestreamService.Infrastructure.Services
                 _logger.LogInformation("Getting product variant: ProductId={ProductId}, VariantId={VariantId}",
                     productId, variantId);
 
-                var response = await _httpClient.GetAsync($"api/product-variants/{variantId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -358,6 +358,43 @@ namespace LivestreamService.Infrastructure.Services
                 return false;
             }
         }
+        public async Task<string?> GetCombinationStringByVariantIdAsync(Guid variantId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-combinations/{variantId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<ProductCombinationDto>>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (apiResponse?.Data == null || !apiResponse.Data.Any())
+                {
+                    return null;
+                }
+
+                // Ghép AttributeName + ValueName thành chuỗi "Color Red + Size M"
+                var combinationString = string.Join(" + ",
+                    apiResponse.Data.Select(c => $"{c.AttributeName} {c.ValueName}")
+                );
+
+                return combinationString;
+            }
+            catch (Exception ex)
+            {
+                // Có thể log lỗi ở đây
+                return null;
+            }
+        }
+
+
     }
 
     // Helper class for API responses
