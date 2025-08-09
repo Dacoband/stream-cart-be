@@ -103,11 +103,9 @@ builder.Services.AddSignalR(options =>
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
 
-    // ✅ Additional configuration for production
     options.StreamBufferCapacity = 10;
 });
 
-// ✅ FIXED: Enhanced JWT configuration for SignalR with better error handling
 builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.Events = new JwtBearerEvents
@@ -247,6 +245,7 @@ app.MapHub<SignalRChatHub>("/signalrchat", options =>
     // ✅ WebSocket specific settings
     options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
     options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
+    options.AllowStatefulReconnects = false; 
 }).RequireAuthorization(); // ✅ ADDED: Ensure authorization is required
 
 app.MapHub<NotificationHub>("/notificationHub", options =>
@@ -260,8 +259,8 @@ app.MapHub<NotificationHub>("/notificationHub", options =>
     options.TransportMaxBufferSize = 64 * 1024;
     options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
     options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
-}).RequireAuthorization(); // ✅ ADDED: Ensure authorization is required
-
+    options.AllowStatefulReconnects = false;
+}).RequireAuthorization(); 
 app.MapControllers();
 
 app.Run();

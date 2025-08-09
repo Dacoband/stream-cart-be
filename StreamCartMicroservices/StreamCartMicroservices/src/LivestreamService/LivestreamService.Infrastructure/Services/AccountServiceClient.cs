@@ -61,7 +61,7 @@ namespace LivestreamService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error getting account with ID {AccountId}", accountId);
-                throw;
+                return new AccountDTO(); 
             }
         }
 
@@ -69,7 +69,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"/api/accounts/seller/{sellerId}");
+                var response = await _httpClient.GetAsync($"/api/accounts/{sellerId}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
