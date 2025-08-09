@@ -255,8 +255,8 @@ namespace AccountService.Api.Controllers
 
             try
             {
-                if (!await _accountService.CanManageAccountStatusAsync(userIdClaim, id))
-                    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to change this account's status").ToString());
+                //if (!await _accountService.CanManageAccountStatusAsync(userIdClaim, id))
+                //    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to change this account's status").ToString());
 
                 var updatedAccount = await _accountService.UpdateAccountStatusAsync(id, isActive, userIdClaim);
 
@@ -283,9 +283,9 @@ namespace AccountService.Api.Controllers
 
             try
             {
-                var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
-                if (sellerAccount == null || sellerAccount.Role != RoleType.Seller || sellerAccount.ShopId != shopId)
-                    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to access moderators for this shop").ToString());
+                //var sellerAccount = await _accountService.GetAccountByIdAsync(userIdClaim);
+                //if (sellerAccount == null || sellerAccount.Role != RoleType.Seller || sellerAccount.ShopId != shopId)
+                //    return Forbid(ApiResponse<object>.ErrorResult("You don't have permission to access moderators for this shop").ToString());
 
                 var allModerators = await _accountService.GetAccountsByRoleAsync(RoleType.Moderator);
 
