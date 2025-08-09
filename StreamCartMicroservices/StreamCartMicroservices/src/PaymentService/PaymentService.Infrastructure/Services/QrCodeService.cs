@@ -25,7 +25,7 @@ namespace PaymentService.Infrastructure.Services
             _logger = logger;
 
             // Đọc thông tin ngân hàng từ cấu hình
-            _bankAccount = _configuration["Payment:SePay:BankAccount"] ?? "0343219324";
+            _bankAccount = _configuration["Payment:SePay:BankAccount"] ?? "0933952474";
             _bankName = _configuration["Payment:SePay:BankName"] ?? "MB";
             _secretKey = _configuration["Payment:QrCode:SecretKey"] ?? "DefaultSecretKey";
             _orderServiceClient = orderServiceClient;
