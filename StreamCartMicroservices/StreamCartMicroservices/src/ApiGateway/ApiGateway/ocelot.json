@@ -1018,7 +1018,7 @@
       "SwaggerKey": "livestream"
     },
     {
-      "DownstreamPathTemplate": "/signalrchat",
+      "DownstreamPathTemplate": "/signalrchat/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -1026,11 +1026,11 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/signalrchat",
+      "UpstreamPathTemplate": "/signalrchat/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST" ]
     },
     {
-      "DownstreamPathTemplate": "/notificationHub",
+      "DownstreamPathTemplate": "/notificationHub/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -1038,7 +1038,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/notificationHub",
+      "UpstreamPathTemplate": "/notificationHub/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST" ]
     },
     {
