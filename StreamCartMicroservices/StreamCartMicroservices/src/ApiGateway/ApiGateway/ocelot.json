@@ -1027,7 +1027,8 @@
         }
       ],
       "UpstreamPathTemplate": "/signalrchat/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AllowWebSockets": true
     },
     {
       "DownstreamPathTemplate": "/notificationHub/{everything}",
@@ -1039,7 +1040,8 @@
         }
       ],
       "UpstreamPathTemplate": "/notificationHub/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AllowWebSockets": true
     },
     {
       "DownstreamPathTemplate": "/api/stream-views/{everything}",
@@ -1078,7 +1080,8 @@
       ],
       "UpstreamPathTemplate": "/api/chatsignalr/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH" ],
-      "SwaggerKey": "livestream"
+      "SwaggerKey": "livestream",
+      "AllowWebSockets": true
     },
     {
       "DownstreamPathTemplate": "/api/livestream-chat/{everything}",
