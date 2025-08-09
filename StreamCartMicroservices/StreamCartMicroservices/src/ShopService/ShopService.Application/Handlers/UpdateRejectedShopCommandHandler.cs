@@ -76,13 +76,13 @@ namespace ShopService.Application.Handlers
                 {
                     throw new ArgumentException(result.Message);
                 }
-                await _publishEndpoint.Publish(new ShopRegistered
-                {
-                    ShopId = shop.Id,
-                    ShopName = shop.ShopName,
-                    AccountId = Guid.Parse( request.CreatedBy),
-                    RegistrationDate = shop.RegistrationDate
-                }, cancellationToken);
+                //await _publishEndpoint.Publish(new ShopRegistered
+                //{
+                //    ShopId = shop.Id,
+                //    ShopName = shop.ShopName,
+                //    AccountId = Guid.Parse( request.CreatedBy),
+                //    RegistrationDate = shop.RegistrationDate
+                //}, cancellationToken);
                 return new ShopDto
                 {
                     Id = shop.Id,
