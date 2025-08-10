@@ -212,7 +212,7 @@ namespace OrderService.Domain.Entities
             OrderCode = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(100000, 999999)}";
             OrderDate = DateTime.UtcNow;
             OrderStatus = OrderStatus.Waiting;
-            PaymentStatus = PaymentStatus.pending;
+            PaymentStatus = PaymentStatus.Pending;
 
             AccountId = accountId;
             ShopId = shopId;
@@ -378,12 +378,12 @@ namespace OrderService.Domain.Entities
         /// </summary>
         public void MarkAsPaid(string modifiedBy)
         {
-            if (PaymentStatus != PaymentStatus.pending)
+            if (PaymentStatus != PaymentStatus.Pending)
             {
                 throw new InvalidOperationException("Can only mark pending payments as paid");
             }
             
-            PaymentStatus = PaymentStatus.paid;
+            PaymentStatus = PaymentStatus.Paid;
             SetModifier(modifiedBy);
         }
 

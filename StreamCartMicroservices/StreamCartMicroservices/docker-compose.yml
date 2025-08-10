@@ -33,6 +33,9 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - app-network
+
       
   account-service:
     build: 
