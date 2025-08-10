@@ -574,7 +574,7 @@ namespace OrderService.Infrastructure.Services
                             Items = deliveryItemList,
 
                         };
-                        if ((order.PaymentStatus == PaymentStatus.paid))
+                        if ((order.PaymentStatus == PaymentStatus.Paid))
                         {
                             ghnRequest.CodAmount = 0;
                         }
