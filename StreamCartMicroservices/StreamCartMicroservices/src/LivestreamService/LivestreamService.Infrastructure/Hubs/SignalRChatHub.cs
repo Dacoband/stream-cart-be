@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using LivestreamService.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Services.User;
@@ -15,14 +16,154 @@ namespace LivestreamService.Infrastructure.Hubs
         private readonly ILogger<SignalRChatHub> _logger;
         private static readonly ConcurrentDictionary<string, string> _userConnectionMap = new();
         private readonly ICurrentUserService _currentUserService;
+        private readonly IStreamViewRepository _streamViewRepository;
+        private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId)> _activeViewers = new();
 
-        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService)
+        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository)
         {
             _logger = logger;
             _currentUserService = currentUserService;
+            _streamViewRepository = streamViewRepository;
         }
-        // ✅ CRITICAL: Override OnConnectedAsync for Docker compatibility
-        // ✅ CRITICAL: Override OnConnectedAsync for Docker compatibility
+        public async Task StartViewingLivestream(string livestreamId)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+                var livestreamGuid = Guid.Parse(livestreamId);
+
+                // Store the connection mapping
+                _activeViewers[Context.ConnectionId] = (livestreamGuid, userGuid);
+
+                // Get user roles for statistics
+                var userRoles = GetUserRoles();
+
+                _logger.LogInformation("User {UserId} with roles {Roles} started viewing livestream {LivestreamId}",
+                    userId, string.Join(",", userRoles), livestreamId);
+
+                // Add to the livestream group for targeted updates
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
+
+                // Broadcast updated viewer stats
+                await BroadcastViewerStats(livestreamGuid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting to view livestream {LivestreamId}", livestreamId);
+                await Clients.Caller.SendAsync("Error", "Failed to start viewing livestream");
+            }
+        }
+        public async Task StopViewingLivestream(string livestreamId)
+        {
+            if (!IsUserAuthenticated())
+                return;
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                var livestreamGuid = Guid.Parse(livestreamId);
+
+                // Remove the connection mapping
+                if (_activeViewers.TryRemove(Context.ConnectionId, out _))
+                {
+                    _logger.LogInformation("User {UserId} stopped viewing livestream {LivestreamId}", userId, livestreamId);
+                }
+
+                // Remove from the livestream group
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
+
+                // Broadcast updated viewer stats
+                await BroadcastViewerStats(livestreamGuid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping viewing livestream {LivestreamId}", livestreamId);
+            }
+        }
+        private async Task BroadcastViewerStats(Guid livestreamId)
+        {
+            try
+            {
+                // Count active viewers by role
+                var roleCounts = new Dictionary<string, int>();
+                var viewerConnections = _activeViewers
+                    .Where(kv => kv.Value.livestreamId == livestreamId)
+                    .ToList();
+
+                foreach (var connection in viewerConnections)
+                {
+                    var connectionId = connection.Key;
+                    var userId = connection.Value.userId;
+
+                    try
+                    {
+                        // Get user's role
+                        var context = Context.ConnectionId == connectionId ?
+                            Context : // Use current context if it's the same connection
+                            null; // Otherwise we'd need to look up the connection context
+
+                        string role = "Unknown";
+
+                        if (context != null)
+                        {
+                            var claims = context.User?.Claims;
+                            role = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "Viewer";
+                        }
+
+                        // Update role counts
+                        if (roleCounts.ContainsKey(role))
+                            roleCounts[role]++;
+                        else
+                            roleCounts[role] = 1;
+                    }
+                    catch
+                    {
+                        // Count as unknown on error
+                        if (roleCounts.ContainsKey("Unknown"))
+                            roleCounts["Unknown"]++;
+                        else
+                            roleCounts["Unknown"] = 1;
+                    }
+                }
+                // Create statistics object
+                var viewerStats = new
+                {
+                    LivestreamId = livestreamId,
+                    TotalViewers = viewerConnections.Count,
+                    ViewersByRole = roleCounts,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Broadcast to all clients in the livestream
+                await Clients.Group($"livestream_{livestreamId}")
+                    .SendAsync("ReceiveViewerStats", viewerStats);
+
+                // Also broadcast to specific viewer stats group
+                await Clients.Group($"livestream_viewers_{livestreamId}")
+                    .SendAsync("ReceiveViewerStats", viewerStats);
+
+                _logger.LogInformation("Broadcast viewer stats for livestream {LivestreamId}: {TotalViewers} total viewers",
+                    livestreamId, viewerConnections.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting viewer stats for livestream {LivestreamId}", livestreamId);
+            }
+        }
+
         public override async Task OnConnectedAsync()
         {
             var connectionId = Context.ConnectionId;
@@ -120,6 +261,13 @@ namespace LivestreamService.Infrastructure.Hubs
 
             try
             {
+                if (_activeViewers.TryRemove(connectionId, out var viewingInfo))
+                {
+                    _logger.LogInformation("Viewer disconnected from livestream {LivestreamId}", viewingInfo.livestreamId);
+
+                    // Broadcast updated stats
+                    await BroadcastViewerStats(viewingInfo.livestreamId);
+                }
                 _userConnectionMap.TryRemove(connectionId, out var userId);
 
                 _logger.LogInformation("🔧 User {UserId} disconnected from {ConnectionId}. Exception: {Exception}",
@@ -328,7 +476,19 @@ namespace LivestreamService.Infrastructure.Hubs
                 return false;
             }
         }
-
+        private string[] GetUserRoles()
+        {
+            try
+            {
+                var rolesClaims = Context.User?.FindAll("role").Select(c => c.Value).ToArray();
+                return rolesClaims ?? new string[] { "Viewer" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error getting user roles for connection {ConnectionId}", Context.ConnectionId);
+                return new string[] { "Unknown" };
+            }
+        }
         private string? GetCurrentUserId()
         {
             try

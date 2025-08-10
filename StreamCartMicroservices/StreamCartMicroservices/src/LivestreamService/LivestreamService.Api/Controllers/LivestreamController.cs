@@ -181,7 +181,7 @@ namespace LivestreamService.Api.Controllers
         /// Get active livestreams (authenticated users)
         /// </summary>
         [HttpGet("active")]
-        [Authorize]
+       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<LivestreamDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetActiveLivestreams([FromQuery] bool promotedOnly = false)
