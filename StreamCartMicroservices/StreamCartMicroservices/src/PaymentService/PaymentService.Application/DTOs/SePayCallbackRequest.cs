@@ -34,18 +34,15 @@ namespace PaymentService.Application.DTOs
                 // Tìm phần sau ORDER hoặc ORDERS
                 var remainingContent = Content.Substring(orderIndex);
 
-                // Tách các phần bằng dấu chấm hoặc khoảng trắng
-                var parts = remainingContent.Split(new char[] { '.', ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                var nextDash = remainingContent.IndexOf('-', 5); 
 
-                foreach (var part in parts)
+                if (nextDash > 5) // Có dấu gạch ngang phía sau
                 {
-                    if (part.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return part;
-                    }
+                    return remainingContent.Substring(0, nextDash);
                 }
 
-                return null;
+                // Nếu không có dấu gạch ngang, lấy toàn bộ
+                return remainingContent;
             }
         }
         public decimal Amount => TransferAmount;
