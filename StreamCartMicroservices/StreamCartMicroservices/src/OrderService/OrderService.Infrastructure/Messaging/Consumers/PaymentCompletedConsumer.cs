@@ -65,8 +65,8 @@ namespace OrderService.Infrastructure.Messaging.Consumers
                 {
                     OrderId = order.Id,
                     OrderCode = order.OrderCode,
-                    PreviousStatus = PaymentStatus.pending,
-                    NewStatus = PaymentStatus.paid,
+                    PreviousStatus = PaymentStatus.Pending,
+                    NewStatus = PaymentStatus.Paid,
                     ChangedAt = DateTime.UtcNow
                 });
 

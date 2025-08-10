@@ -8,26 +8,26 @@ namespace OrderService.Domain.Enums
         /// <summary>
         /// Payment is pending
         /// </summary>
-        pending = 0,
-        
+        Pending = 0,
+
         /// <summary>
         /// Payment has been successfully processed
         /// </summary>
-        paid = 1,
-        
+        Paid = 1,
+
         /// <summary>
         /// Payment has failed
         /// </summary>
-        failed = 2,
-        
+        Failed = 2,
+
         /// <summary>
         /// Payment has been refunded
         /// </summary>
-        refunded = 3,
-        
+        Refunded = 3,
+
         /// <summary>
         /// Payment has been partially refunded
         /// </summary>
-        partiallyRefunded = 4
+        PartiallyRefunded = 4
     }
 }
