@@ -477,5 +477,148 @@ namespace PaymentService.Api.Controllers
                 return Redirect($"{errorRedirectUrl.TrimEnd('/')}/error");
             }
         }
+        /// <summary>
+        /// Xử lý callback từ SePay (phiên bản API trả về JSON thay vì redirect)
+        /// </summary>
+        [HttpPost("callback/sepay-api")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ProcessSePayCallbackApi([FromBody] SePayCallbackRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Received SePay callback API request: {@Request}", request);
+
+                // Trích xuất thông tin từ request của SePay
+                var transactionId = request.TransactionId;
+                var orderCode = request.OrderCode;
+                var amount = request.Amount;
+                var status = request.Status;
+
+                _logger.LogInformation("Extracted - TransactionId: {TransactionId}, OrderCode: {OrderCode}, Amount: {Amount}, Status: {Status}",
+                    transactionId, orderCode, amount, status);
+
+                // Tìm payment dựa trên mã đơn hàng
+                if (string.IsNullOrEmpty(orderCode))
+                {
+                    _logger.LogWarning("Could not extract order code from content: {Content}", request.Content);
+                    return BadRequest(new { success = false, error = "Order code could not be extracted from payment content" });
+                }
+
+                // Handle both single and bulk orders
+                List<Guid> orderIds = new List<Guid>();
+
+                try
+                {
+                    if (orderCode.StartsWith("ORDERS_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Multiple orders format: ORDERS_id1,id2,id3
+                        var orderIdsString = orderCode.Substring(7); // Remove "ORDERS_"
+                        orderIds = orderIdsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(id => Guid.Parse(id.Trim()))
+                            .ToList();
+                    }
+                    else if (orderCode.StartsWith("ORDER_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Single order format: ORDER_id
+                        var orderIdString = orderCode.Substring(6); // Remove "ORDER_"
+                        orderIds.Add(Guid.Parse(orderIdString));
+                    }
+                    else if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Handle case without underscore: ORDERxxxxx
+                        var orderIdString = orderCode.Substring(5); // Remove "ORDER"
+
+                        // Tìm đoạn GUID hợp lệ trong chuỗi
+                        var guidPattern = @"[0-9a-fA-F]{32}";
+                        var match = System.Text.RegularExpressions.Regex.Match(orderIdString, guidPattern);
+
+                        if (match.Success)
+                        {
+                            var guidString = match.Value;
+                            // Chuyển đổi từ 32 ký tự thành GUID format
+                            var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                            orderIds.Add(Guid.Parse(formattedGuid));
+                        }
+                        else
+                        {
+                            throw new FormatException($"Could not extract valid GUID from order code: {orderCode}");
+                        }
+                    }
+                    else
+                    {
+                        throw new FormatException($"Invalid order code format: {orderCode}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error parsing order code: {OrderCode}", orderCode);
+                    return BadRequest(new { success = false, error = $"Invalid order code format: {orderCode}" });
+                }
+
+                if (!orderIds.Any())
+                {
+                    _logger.LogWarning("No valid order IDs extracted from order code: {OrderCode}", orderCode);
+                    return BadRequest(new { success = false, error = "No valid order IDs found" });
+                }
+
+                _logger.LogInformation("Extracted order IDs: {OrderIds}", string.Join(", ", orderIds));
+
+                // Find payment by first order ID (primary order)
+                var payments = await _paymentService.GetPaymentsByOrderIdAsync(orderIds.First());
+
+                if (payments == null || !payments.Any())
+                {
+                    _logger.LogWarning("Payment not found for order ID: {OrderId}", orderIds.First());
+                    return BadRequest(new { success = false, error = "Payment not found" });
+                }
+
+                var payment = payments.FirstOrDefault();
+
+                // Ensure payment.QrCode is not null before accessing it
+                if (payment?.QrCode == null)
+                {
+                    _logger.LogWarning("QR Code not found for payment: {PaymentId}", payment?.Id);
+                    return BadRequest(new { success = false, error = "QR Code not found for the payment" });
+                }
+
+                // Tạo callback dto từ dữ liệu của SePay
+                var callbackDto = new PaymentCallbackDto
+                {
+                    IsSuccessful = status == "success",
+                    QrCode = payment.QrCode,
+                    RawResponse = System.Text.Json.JsonSerializer.Serialize(request)
+                };
+
+                _logger.LogInformation("Processing payment callback - PaymentId: {PaymentId}, IsSuccessful: {IsSuccessful}",
+                    payment.Id, callbackDto.IsSuccessful);
+
+                // Xử lý callback
+                var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
+
+                // Trả về JSON response thay vì redirect
+                return Ok(new
+                {
+                    success = true,
+                    message = "Payment processed successfully",
+                    paymentId = payment.Id,
+                    orderIds = orderIds,
+                    status = status == "success" ? "PAID" : "FAILED",
+                    transactionId = transactionId,
+                    orderCode = orderCode,
+                    amount = amount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing SePay callback: {@Request}", request);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = $"Error processing payment: {ex.Message}"
+                });
+            }
+        }
     }
 }
