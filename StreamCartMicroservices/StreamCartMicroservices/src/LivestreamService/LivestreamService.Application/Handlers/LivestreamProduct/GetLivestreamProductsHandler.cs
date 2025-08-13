@@ -34,6 +34,8 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
         {
             try
             {
+                _logger.LogInformation("Getting products for livestream {LivestreamId}", request.LivestreamId);
+
                 // Kiểm tra livestream tồn tại
                 var livestream = await _livestreamRepository.GetByIdAsync(request.LivestreamId.ToString());
                 if (livestream == null)
@@ -53,16 +55,58 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     {
                         // Lấy thông tin sản phẩm từ Product Service
                         var productInfo = await _productServiceClient.GetProductByIdAsync(product.ProductId);
-
-                        // Lấy thông tin variant nếu có
-                        ProductVariantDTO variantInfo = null;
-                        var variantDetail = "";
-                        if (!string.IsNullOrEmpty(product.VariantId))
+                        if (productInfo == null)
                         {
-                            variantInfo = await _productServiceClient.GetProductVariantAsync(product.ProductId, product.VariantId);
-                             variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync( Guid.Parse(product.VariantId));
+                            _logger.LogWarning("Product {ProductId} not found in Product Service", product.ProductId);
+                            continue;
                         }
 
+                        // Initialize variables for variant information
+                        ProductVariantDTO variantInfo = null;
+                        string variantName = "";
+                        string sku = ""; // Don't try to get SKU from product entity since it doesn't exist
+                        int actualStock = 0;
+
+                        // Lấy thông tin variant nếu có
+                        if (!string.IsNullOrEmpty(product.VariantId))
+                        {
+                            try
+                            {
+                                variantInfo = await _productServiceClient.GetProductVariantAsync(product.ProductId, product.VariantId);
+
+                                if (variantInfo != null)
+                                {
+                                    // Lấy combination string để hiển thị tên variant
+                                    var variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync(Guid.Parse(product.VariantId));
+
+                                    variantName = !string.IsNullOrEmpty(variantDetail) ?
+                                        $"{productInfo.ProductName}{variantDetail}" :
+                                        $"{productInfo.ProductName} - Variant {product.VariantId}";
+
+                                    sku = variantInfo.SKU ?? "";
+                                    actualStock = variantInfo.Stock; // No null coalescing needed - Stock is int
+                                }
+                                else
+                                {
+                                    variantName = $"{productInfo.ProductName} - Variant {product.VariantId}";
+                                    _logger.LogWarning("Variant {VariantId} details not found for product {ProductId}",
+                                        product.VariantId, product.ProductId);
+                                }
+                            }
+                            catch (Exception variantEx)
+                            {
+                                _logger.LogWarning(variantEx, "Failed to get variant {VariantId} details for product {ProductId}",
+                                    product.VariantId, product.ProductId);
+                                variantName = $"{productInfo.ProductName} - Variant {product.VariantId}";
+                            }
+                        }
+                        else
+                        {
+                            // Đây là sản phẩm gốc không có variant
+                            variantName = productInfo.ProductName ?? "Unknown Product";
+                            actualStock = productInfo.StockQuantity; // No null coalescing needed - StockQuantity is int
+                            sku = productInfo.SKU ?? "";
+                        }
 
                         result.Add(new LivestreamProductDTO
                         {
@@ -72,19 +116,23 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             VariantId = product.VariantId,
                             IsPin = product.IsPin,
                             Price = product.Price,
-                            Stock = product.Stock,
+                            Stock = product.Stock, 
+                            ProductStock = actualStock, 
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,
-                            ProductName = productInfo?.ProductName ?? "Không rõ",
-                            ProductImageUrl = productInfo?.ImageUrl ?? "",
-                            VariantName = productInfo?.ProductName + variantDetail ?? "",
-                            ProductStock = variantInfo?.Stock ?? productInfo.StockQuantity, 
-                            SKU = variantInfo?.SKU ?? productInfo.SKU,
+                            SKU = sku,
+                            ProductName = productInfo.ProductName ?? "Unknown Product",
+                            ProductImageUrl = productInfo.ImageUrl ?? "",
+                            VariantName = variantName
                         });
+
+                        _logger.LogDebug("Successfully processed product {ProductId} with variant {VariantId}",
+                            product.ProductId, product.VariantId ?? "none");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Không thể lấy thông tin chi tiết cho sản phẩm {ProductId}", product.ProductId);
+                        _logger.LogWarning(ex, "Failed to get complete details for product {ProductId} in livestream {LivestreamId}",
+                            product.ProductId, request.LivestreamId);
 
                         // Vẫn trả về thông tin cơ bản nếu không thể lấy thông tin chi tiết
                         result.Add(new LivestreamProductDTO
@@ -96,22 +144,31 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             IsPin = product.IsPin,
                             Price = product.Price,
                             Stock = product.Stock,
+                            ProductStock = 0, // Set to 0 if we can't get actual stock
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,
-                            ProductName = "Không thể lấy thông tin",
+                            SKU = "", // Empty string for fallback
+                            ProductName = "Unable to load product details",
                             ProductImageUrl = "",
-                            VariantName = "",
-                            ProductStock = 0,
-                            SKU = "",
+                            VariantName = ""
                         });
                     }
                 }
 
-                return result;
+                // Sort results: pinned products first, then by creation time
+                var sortedResult = result
+                    .OrderByDescending(p => p.IsPin)
+                    .ThenByDescending(p => p.CreatedAt)
+                    .ToList();
+
+                _logger.LogInformation("Successfully retrieved {ProductCount} products for livestream {LivestreamId}",
+                    sortedResult.Count, request.LivestreamId);
+
+                return sortedResult;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi lấy danh sách sản phẩm của livestream {LivestreamId}", request.LivestreamId);
+                _logger.LogError(ex, "Error getting products for livestream {LivestreamId}", request.LivestreamId);
                 throw;
             }
         }

@@ -229,5 +229,78 @@ namespace LivestreamService.Infrastructure.Repositories
         {
             throw new NotImplementedException("Search not implemented for LivestreamProduct");
         }
+        public async Task<LivestreamProduct?> GetByCompositeKeyAsync(Guid livestreamId, string productId, string variantId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .FirstOrDefaultAsync(p => p.LivestreamId == livestreamId &&
+                                           p.ProductId == productId &&
+                                           p.VariantId == variantId &&
+                                           !p.IsDeleted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream product for LivestreamId: {LivestreamId}, ProductId: {ProductId}, VariantId: {VariantId}",
+                    livestreamId, productId, variantId);
+                throw;
+            }
+        }
+        public async Task<LivestreamProduct?> GetCurrentPinnedProductAsync(Guid livestreamId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .FirstOrDefaultAsync(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current pinned product for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+
+        // ✅ NEW METHOD: Get all pinned products in a livestream
+        public async Task<IEnumerable<LivestreamProduct>> GetAllPinnedProductsByLivestreamAsync(Guid livestreamId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .Where(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all pinned products for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+        public async Task UnpinAllProductsInLivestreamAsync(Guid livestreamId, string modifiedBy)
+        {
+            try
+            {
+                var pinnedProducts = await _context.LivestreamProducts
+                    .Where(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var product in pinnedProducts)
+                {
+                    product.SetPin(false, modifiedBy);
+                }
+
+                if (pinnedProducts.Any())
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Unpinned {Count} products in livestream {LivestreamId}",
+                        pinnedProducts.Count, livestreamId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unpinning all products for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+
     }
 }
