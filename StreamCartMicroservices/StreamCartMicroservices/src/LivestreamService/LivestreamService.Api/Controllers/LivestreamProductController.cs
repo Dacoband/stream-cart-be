@@ -393,5 +393,89 @@ namespace LivestreamService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Lấy sản phẩm trong livestream theo SKU
+        /// </summary>
+        [HttpGet("livestream/{livestreamId}/sku/{sku}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetLivestreamProductBySku(Guid livestreamId, string sku)
+        {
+            try
+            {
+                _logger.LogInformation("Getting product with SKU {Sku} for livestream {LivestreamId}", sku, livestreamId);
+
+                var query = new GetLivestreamProductBySkuQuery
+                {
+                    LivestreamId = livestreamId,
+                    Sku = sku
+                };
+
+                var result = await _mediator.Send(query);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Không tìm thấy sản phẩm có SKU '{sku}' trong livestream này"));
+                }
+
+                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, "Lấy thông tin sản phẩm thành công"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm theo SKU {Sku} trong livestream {LivestreamId}", sku, livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy nhiều sản phẩm trong livestream theo danh sách SKU
+        /// </summary>
+        [HttpPost("livestream/{livestreamId}/skus")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetLivestreamProductsBySkus(Guid livestreamId, [FromBody] GetProductsBySkusRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+                }
+
+                if (request.Skus == null || !request.Skus.Any())
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Danh sách SKU không được rỗng"));
+                }
+
+                _logger.LogInformation("Getting products with SKUs [{Skus}] for livestream {LivestreamId}",
+                    string.Join(", ", request.Skus), livestreamId);
+
+                var query = new GetLivestreamProductsBySkusQuery
+                {
+                    LivestreamId = livestreamId,
+                    Skus = request.Skus
+                };
+
+                var results = await _mediator.Send(query);
+
+                return Ok(ApiResponse<IEnumerable<LivestreamProductDTO>>.SuccessResult(results,
+                    $"Tìm thấy {results.Count()} sản phẩm trong tổng số {request.Skus.Count()} SKU"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm theo danh sách SKU trong livestream {LivestreamId}", livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
     }
 }

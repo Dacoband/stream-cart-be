@@ -219,8 +219,26 @@ namespace ChatBoxService.Api.Controllers
                 _logger.LogInformation("Processing AI chat request for user {UserId}: {Message}",
                     userId, request.Message);
 
+
+                var chatHistoryService = HttpContext.RequestServices.GetRequiredService<IChatHistoryService>();
+
+                // ✅ 2. Tạo/lấy conversation với "AI Shop" (sử dụng Guid.Empty cho AI)
+                var aiShopId = Guid.Empty; // Dùng Empty GUID để đại diện cho AI chatbot
+
+                var conversation = await chatHistoryService.GetOrCreateConversationAsync(Guid.Parse( userId), aiShopId);
+                await chatHistoryService.AddMessageToConversationAsync(
+                        conversation.ConversationId,
+                        request.Message,
+                        "User",
+                        "ai_chat_request");
+
                 var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
                 var response = await aiChatService.SendMessageAsync(request.Message, userId);
+                await chatHistoryService.AddMessageToConversationAsync(
+                     conversation.ConversationId,
+                     response.Response,
+                     "Bot",
+                     "ai_chat_response");
 
                 return Ok(ApiResponse<AIChatResponse>.SuccessResult(
                     response,
@@ -234,7 +252,7 @@ namespace ChatBoxService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy lịch sử chat từ dịch vụ AI
+        /// Lấy lịch sử chat từ Redis (thay vì AI service)
         /// </summary>
         [HttpGet("chat/history")]
         [Authorize]
@@ -243,14 +261,59 @@ namespace ChatBoxService.Api.Controllers
         {
             try
             {
-                var userId = _currentUserService.GetUserId().ToString();
-                _logger.LogInformation("Getting AI chat history for user {UserId}", userId);
+                var userId = _currentUserService.GetUserId();
+                var userIdString = userId.ToString();
 
-                var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
-                var history = await aiChatService.GetChatHistoryAsync(userId);
+                _logger.LogInformation("Getting AI chat history for user {UserId}", userIdString);
+
+                // ✅ Lấy từ Redis thay vì AI service
+                var chatHistoryService = HttpContext.RequestServices.GetRequiredService<IChatHistoryService>();
+                var aiShopId = Guid.Empty; // AI chatbot shop ID
+
+                // ✅ Lấy lịch sử chat với AI
+                var historyRequest = new GetChatHistoryRequest
+                {
+                    UserId = userId,
+                    ShopId = aiShopId,
+                    PageNumber = 1,
+                    PageSize = 50
+                };
+
+                var chatHistory = await chatHistoryService.GetChatHistoryAsync(historyRequest);
+
+                // ✅ Convert từ ChatHistoryResponse sang AIChatHistoryResponse
+                var aiHistory = new AIChatHistoryResponse
+                {
+                    UserId = userIdString,
+                    History = new List<AIChatHistoryEntry>()
+                };
+
+                if (chatHistory.Conversations.Any())
+                {
+                    var conversation = chatHistory.Conversations.First();
+                    // ✅ FIX: Sử dụng Timestamp thay vì CreatedAt
+                    foreach (var message in conversation.Messages.OrderBy(m => m.Timestamp))
+                    {
+                        if (message.Sender == "User")
+                        {
+                            // Tìm phản hồi tương ứng
+                            var botResponse = conversation.Messages
+                                .Where(m => m.Sender == "Bot" && m.Timestamp > message.Timestamp)
+                                .OrderBy(m => m.Timestamp)
+                                .FirstOrDefault();
+
+                            aiHistory.History.Add(new AIChatHistoryEntry
+                            {
+                                Timestamp = message.Timestamp, // ✅ FIX: Sử dụng Timestamp
+                                UserMessage = message.Content,
+                                AIResponse = botResponse?.Content ?? "Không có phản hồi"
+                            });
+                        }
+                    }
+                }
 
                 return Ok(ApiResponse<AIChatHistoryResponse>.SuccessResult(
-                    history,
+                    aiHistory,
                     "Lấy lịch sử chat AI thành công"));
             }
             catch (Exception ex)

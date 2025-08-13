@@ -24,5 +24,9 @@ namespace LivestreamService.Application.Interfaces
         Task<IEnumerable<LivestreamProduct>> GetAllPinnedProductsByLivestreamAsync(Guid livestreamId);
         Task UnpinAllProductsInLivestreamAsync(Guid livestreamId, string modifiedBy);
         Task<LivestreamProduct?> GetCurrentPinnedProductAsync(Guid livestreamId);
+
+        Task<LivestreamProduct?> GetBySkuInLivestreamAsync(Guid livestreamId, string sku);
+        Task<IEnumerable<LivestreamProduct>> GetBySkusInLivestreamAsync(Guid livestreamId, IEnumerable<string> skus);
+
     }
 }
