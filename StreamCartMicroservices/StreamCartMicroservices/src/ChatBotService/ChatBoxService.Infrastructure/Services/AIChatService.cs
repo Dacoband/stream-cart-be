@@ -24,7 +24,7 @@ namespace ChatBoxService.Infrastructure.Services
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
-            _aiServiceUrl = configuration["AI_SERVICE_URL"] ?? "http://localhost:8000";
+            _aiServiceUrl = configuration["AI_SERVICE_URL"] ?? "https://ai.dacoban.studio";
         }
 
         public async Task<AIChatResponse> SendMessageAsync(string message, string userId)
