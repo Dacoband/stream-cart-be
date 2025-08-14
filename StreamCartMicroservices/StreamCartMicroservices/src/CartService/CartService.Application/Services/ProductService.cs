@@ -64,7 +64,7 @@ namespace CartService.Application.Services
                     ShopName = product.ShopName,
                     ShopId = product.ShopId,
                     PriceOriginal = product.BasePrice,
-                    PriceCurrent = product.BasePrice,
+                    PriceCurrent = product.FinalPrice,
                     Stock = product.StockQuantity,
                     PrimaryImage = product.PrimaryImage?.FirstOrDefault() ?? "",
                     Length = product.Length,
@@ -80,7 +80,10 @@ namespace CartService.Application.Services
                 if (!variantId.IsNullOrEmpty() && !variantId.IsNullOrWhiteSpace())
                 {
                     var variant = product.Variants.Where(x => x.VariantId.ToString() == variantId).FirstOrDefault();
-                    productSnapshot.PriceCurrent = variant.Price;
+                    productSnapshot.PriceCurrent =
+                        (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
+                        ? variant.FlashSalePrice.Value
+                        : variant.Price;
                     productSnapshot.PriceOriginal = variant.Price;
                     productSnapshot.Stock = variant.Stock;
                     productSnapshot.Attributes = variant.AttributeValues;

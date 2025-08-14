@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace ProductService.Application.Commands.ProductComands
 {
-    public class DeleteProductCommand : IRequest<bool>
+    public class AcctivateProductCommand : IRequest<bool>
     {
         public Guid Id { get; set; }
-        public string? DeletedBy { get; set; }
-        public string? Reason { get; set; }
+        public string? ModifiedBy { get; set; }
     }
 }

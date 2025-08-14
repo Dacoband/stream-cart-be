@@ -68,12 +68,22 @@ namespace ProductService.Application.Services
             return await _mediator.Send(command);
         }
 
-        public async Task<bool> DeleteProductAsync(Guid id, string deletedBy)
+        public async Task<bool> DeleteProductAsync(Guid id, string deletedBy, string? reason)
         {
             var command = new DeleteProductCommand
             {
                 Id = id,
-                DeletedBy = deletedBy
+                DeletedBy = deletedBy,
+                Reason = reason
+            };
+            return await _mediator.Send(command);
+        }
+        public async Task<bool> ActivateProductAsync(Guid id, string deletedBy)
+        {
+            var command = new AcctivateProductCommand
+            {
+                Id = id,
+                ModifiedBy = deletedBy,
             };
             return await _mediator.Send(command);
         }

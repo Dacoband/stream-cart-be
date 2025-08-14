@@ -39,7 +39,7 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting product details for ID: {ProductId}", productId);
                 
-                var response = await _httpClient.GetAsync($"/api/products/{productId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/products/{productId}");
                 
                 if (!response.IsSuccessStatusCode)
                 {

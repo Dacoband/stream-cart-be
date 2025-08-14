@@ -136,7 +136,7 @@ namespace ProductService.Api.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-        public async Task<IActionResult> DeleteProduct(Guid id)
+        public async Task<IActionResult> DeleteProduct(Guid id, [FromBody]string? reason)
         {
             try
             {
@@ -144,7 +144,30 @@ namespace ProductService.Api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
 
-                var result = await _productService.DeleteProductAsync(id, userId);
+                var result = await _productService.DeleteProductAsync(id, userId, reason);
+
+                if (!result)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));
+
+                return Ok(ApiResponse<bool>.SuccessResult(true, "Product deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error deleting product: {ex.Message}"));
+            }
+        }
+        [HttpPatch("activate/{id}")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> ActivateProduct(Guid id)
+        {
+            try
+            {
+                string? userId = _currentUserService.GetUserId().ToString();
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+
+                var result = await _productService.ActivateProductAsync(id, userId);
 
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));

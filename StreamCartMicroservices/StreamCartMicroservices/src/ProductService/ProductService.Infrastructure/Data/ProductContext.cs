@@ -33,9 +33,9 @@ namespace ProductService.Infrastructure.Data
                 entity.ToTable("products");
 
                 entity.HasKey(e => e.Id);
-
                 entity.Property(e => e.Id)
                     .HasColumnName("id");
+                entity.Property(e => e.RatingAverage).HasColumnName("rating_average");
 
                 entity.Property(e => e.ProductName)
                     .HasColumnName("product_name")

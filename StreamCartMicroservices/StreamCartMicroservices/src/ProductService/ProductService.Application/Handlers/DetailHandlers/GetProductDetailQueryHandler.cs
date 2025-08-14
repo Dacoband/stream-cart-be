@@ -1,8 +1,10 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Common.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +22,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
         private readonly IAttributeValueRepository _attributeValueRepository;
         private readonly IProductCombinationRepository _combinationRepository;
         private readonly IShopServiceClient _shopServiceClient;
-
+        private readonly IAccountCLientService _accountCLientService;
         public GetProductDetailQueryHandler(
             IProductRepository productRepository,
             IProductVariantRepository variantRepository,
@@ -28,7 +30,8 @@ namespace ProductService.Application.Handlers.DetailHandlers
             IProductAttributeRepository attributeRepository,
             IAttributeValueRepository attributeValueRepository,
             IProductCombinationRepository combinationRepository,
-            IShopServiceClient shopServiceClient)
+            IShopServiceClient shopServiceClient,
+            IAccountCLientService accountCLientService)
         {
             _productRepository = productRepository;
             _variantRepository = variantRepository;
@@ -37,6 +40,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
             _attributeValueRepository = attributeValueRepository;
             _combinationRepository = combinationRepository;
             _shopServiceClient = shopServiceClient;
+            _accountCLientService = accountCLientService;
         }
 
         public async Task<ProductDetailDto?> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
@@ -195,7 +199,12 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     LogoURL = string.Empty,
                     TotalProduct = 0
                 };
-
+            var createdName = await _accountCLientService.GetAccountById(product.CreatedBy);
+            var modifideName =new DTOs.AccountDto();
+            if(!product.LastModifiedBy.IsNullOrEmpty())
+            {
+                modifideName = await _accountCLientService.GetAccountById(product.LastModifiedBy);
+            }
             // Build final response
             return new ProductDetailDto
             {
@@ -225,7 +234,13 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 ShopTotalProduct = shopInfo.TotalProduct,
 
                 Attributes = attributeDtos,
-                Variants = variantDtos
+                Variants = variantDtos,
+                isActive = product.IsActive,
+                CreatedAt = product.CreatedAt,
+                CreatedBy = createdName.Fullname ?? product.CreatedBy,
+                ModifiedAt = product.LastModifiedAt,
+                ModifiedBy = modifideName.Fullname ?? product.LastModifiedBy,
+                
             };
         }
 
