@@ -31,6 +31,7 @@ using ProductService.Application.Queries.ImageQueries;
 using ProductService.Application.Services;
 using ProductService.Domain.Entities;
 using Shared.Common.Models;
+using Shared.Common.Services.Email;
 using System.Reflection;
 
 namespace ProductService.Application.Extensions
@@ -90,7 +91,8 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IProductCombinationService, CombinationService>();
             services.AddScoped<IProductVariantService, ProductVariantService>();
             services.AddScoped<IProductImageService, ProductImageService>();
-
+            services.AddScoped<IAccountCLientService,AccountClientService>();
+            services.AddScoped<IEmailService, MailJetEmailService>();
             //Category 
             services.AddScoped<ICategoryService,CategoryService>();
             services.AddScoped<IRequestHandler<CreateCategoryCommand, ApiResponse<Category>>,CreateCategoryHandler>();

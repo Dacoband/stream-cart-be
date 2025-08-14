@@ -48,6 +48,7 @@ namespace ProductService.Domain.Entities
 
         public int QuantitySold { get; private set; }
 
+        public decimal? RatingAverage { get;set; }
         public Guid? ShopId { get; private set; }
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }

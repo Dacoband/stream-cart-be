@@ -266,7 +266,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             OrderCode = order.OrderCode,
                             Message = "đã được tạo thành công. Vui lòng chuẩn bị đơn hàng",
                             UserId = shopAccounts.Select(x => x.Id.ToString()).ToList(),
-                            OrderStatus = OrderStatus.Pending.ToString(),
+                            OrderStatus = "Pending",
                             OrderItems = orderItemEvent,
                             ShopId = order.ShopId.ToString(),
                             CreatedBy = order.CreatedBy,
@@ -281,10 +281,11 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     OrderCode = order.OrderCode,
                     Message = "đã được tạo thành công",
                     UserId = new List<string> { userId.ToString() },
-                    OrderStatus = OrderStatus.Waiting.ToString(),
+                    OrderStatus = "Waiting",
                     OrderItems = orderItemEvent,
                     ShopId = order.ShopId.ToString(),
                     CreatedBy = order.CreatedBy,
+
                 });
             }
         }

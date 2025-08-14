@@ -15,7 +15,7 @@ namespace ProductService.Application.Interfaces
     {
         Task<ProductDto> CreateProductAsync(CreateProductDto createProductDto, string createdBy);
         Task<ProductDto> UpdateProductAsync(Guid id, UpdateProductDto updateProductDto, string updatedBy);
-        Task<bool> DeleteProductAsync(Guid id, string deletedBy);
+        Task<bool> DeleteProductAsync(Guid id, string deletedBy, string reason);
         Task<ProductDto?> GetProductByIdAsync(Guid id);
         Task<IEnumerable<ProductDto>> GetAllProductsAsync(bool activeOnly = false);
         Task<PagedResult<ProductDto>> GetPagedProductsAsync(int pageNumber, int pageSize, ProductSortOption sortOption, bool activeOnly, Guid? shopId, Guid? categoryId, bool? InStockOnly);
@@ -28,6 +28,7 @@ namespace ProductService.Application.Interfaces
         Task<ProductDetailDto?> GetProductDetailAsync(Guid id);
         Task<ProductDto> CreateCompleteProductAsync(CompleteProductDto completeProductDto, string createdBy);
 
+        Task<bool> ActivateProductAsync(Guid id, string deletedBy);
 
     }
 }

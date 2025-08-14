@@ -21,6 +21,11 @@ namespace ProductService.Application.DTOs.Products
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
         public List<string> PrimaryImage { get; set; } = new();
+        public bool? isActive { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public string? ModifiedBy { get; set; } 
+        public DateTime? ModifiedAt { get; set; }
 
         // Shop information
         public Guid ShopId { get; set; }
