@@ -43,7 +43,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     _logger.LogWarning("Order with ID {OrderId} not found", request.OrderId);
                     throw new ApplicationException($"Order with ID {request.OrderId} not found");
                 }
-                if (request.NewStatus == PaymentStatus.paid)
+                if (request.NewStatus == PaymentStatus.Paid)
                 {
                     order.MarkAsPaid(request.ModifiedBy);
                 }
