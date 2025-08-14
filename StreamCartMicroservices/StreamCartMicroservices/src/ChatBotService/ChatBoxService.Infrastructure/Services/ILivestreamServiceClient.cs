@@ -1,4 +1,5 @@
 ﻿using ChatBoxService.Application.DTOs;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Models;
 using System.Net.Http.Json;
@@ -33,17 +34,35 @@ namespace ChatBoxService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<LivestreamServiceClient> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public LivestreamServiceClient(HttpClient httpClient, ILogger<LivestreamServiceClient> logger)
+        public LivestreamServiceClient(HttpClient httpClient, ILogger<LivestreamServiceClient> logger, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
-
+        private void SetAuthorizationHeader()
+        {
+            try
+            {
+                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authHeader.Replace("Bearer ", ""));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set authorization header");
+            }
+        }
         public async Task<LivestreamProductDTO?> GetProductBySkuAsync(Guid livestreamId, string sku)
         {
             try
             {
+                SetAuthorizationHeader();
                 _logger.LogInformation("Getting product by SKU {Sku} in livestream {LivestreamId}", sku, livestreamId);
 
                 var response = await _httpClient.GetAsync($"/api/livestream-products/livestream/{livestreamId}/sku/{sku}");
@@ -107,14 +126,14 @@ namespace ChatBoxService.Infrastructure.Services
         {
             try
             {
+                SetAuthorizationHeader();
                 var createEventRequest = new
                 {
                     LivestreamId = livestreamId,
-                    UserId = userId,
-                    EventType = "ORDER_COMMENT",
-                    EventData = message,
+                   // UserId = userId,
                     LivestreamProductId = livestreamProductId,
-                    Timestamp = DateTime.UtcNow
+                    EventType = "ORDER_COMMENT",
+                    EvePayloadnt = message,                 
                 };
                 var response = await _httpClient.PostAsJsonAsync("/api/stream-events", createEventRequest);
 

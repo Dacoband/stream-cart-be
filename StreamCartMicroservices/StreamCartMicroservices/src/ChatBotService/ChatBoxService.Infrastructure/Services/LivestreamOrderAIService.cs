@@ -264,12 +264,12 @@ Tin nhắn cần phân tích: """ + message + @"""";
         }
 
         private OrderIntentResult AnalyzeOrderIntentFallback(string message)
-        {
-            var lowerMessage = message.ToLower();
+{
+    var lowerMessage = message.ToLower();
 
-            // ✅ ENHANCED Regex patterns for order detection - hỗ trợ nhiều format SKU hơn
-            var orderPatterns = new[]
-            {
+    // ✅ ENHANCED Regex patterns for order detection - hỗ trợ nhiều format SKU hơn
+    var orderPatterns = new[]
+    {
         // ✅ Basic patterns with improved SKU matching
         @"đặt\s+([a-zA-Z0-9\-_*]+)\s*[x*]?\s*(\d+)?", // đặt LTBX*2, đặt ABC123 x2
         @"mua\s+(\d+)?\s*[^\s]*\s*([a-zA-Z0-9\-_*]+)", // mua 2 cái LTBX
@@ -287,66 +287,66 @@ Tin nhắn cần phân tích: """ + message + @"""";
         @"(\d+)\s*([a-zA-Z0-9\-_*]+)", // 2 LTBX
     };
 
-            foreach (var pattern in orderPatterns)
+    foreach (var pattern in orderPatterns)
+    {
+        var match = Regex.Match(lowerMessage, pattern, RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            string sku;
+            int quantity;
+            
+            // ✅ Special handling for different pattern groups
+            if (pattern.Contains(@"(\d+)\s*([a-zA-Z0-9\-_*]+)")) // Pattern: 2 LTBX
             {
-                var match = Regex.Match(lowerMessage, pattern, RegexOptions.IgnoreCase);
-                if (match.Success)
-                {
-                    string sku;
-                    int quantity;
-
-                    // ✅ Special handling for different pattern groups
-                    if (pattern.Contains(@"(\d+)\s*([a-zA-Z0-9\-_*]+)")) // Pattern: 2 LTBX
-                    {
-                        quantity = int.Parse(match.Groups[1].Value);
-                        sku = match.Groups[2].Value;
-                    }
-                    else if (pattern.Contains(@"mua\s+(\d+)?")) // Pattern: mua 2 cái LTBX
-                    {
-                        var quantityStr = match.Groups[1].Value;
-                        sku = match.Groups[2].Value;
-                        quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
-                    }
-                    else // Default pattern: SKU then quantity
-                    {
-                        sku = match.Groups[1].Value;
-                        var quantityStr = match.Groups[2].Value;
-                        quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
-                    }
-
-                    // ✅ Clean up SKU - remove * if it's not part of actual SKU
-                    if (sku.EndsWith("*") && !string.IsNullOrEmpty(match.Groups[2].Value))
-                    {
-                        sku = sku.TrimEnd('*');
-                    }
-
-                    _logger.LogInformation("✅ Fallback pattern matched - SKU: {SKU}, Quantity: {Quantity}, Pattern: {Pattern}",
-                        sku, quantity, pattern);
-
-                    return new OrderIntentResult
-                    {
-                        IsOrderIntent = true,
-                        ExtractedData = new OrderExtractedData
-                        {
-                            Sku = sku.ToUpper(),
-                            Quantity = quantity
-                        },
-                        Confidence = 0.8f,
-                        OrderType = "direct_sku",
-                        OriginalMessage = message
-                    };
-                }
+                quantity = int.Parse(match.Groups[1].Value);
+                sku = match.Groups[2].Value;
+            }
+            else if (pattern.Contains(@"mua\s+(\d+)?")) // Pattern: mua 2 cái LTBX
+            {
+                var quantityStr = match.Groups[1].Value;
+                sku = match.Groups[2].Value;
+                quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
+            }
+            else // Default pattern: SKU then quantity
+            {
+                sku = match.Groups[1].Value;
+                var quantityStr = match.Groups[2].Value;
+                quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
             }
 
-            _logger.LogWarning("❌ No pattern matched for message: {Message}", message);
+            // ✅ Clean up SKU - remove * if it's not part of actual SKU
+            if (sku.EndsWith("*") && !string.IsNullOrEmpty(match.Groups[2].Value))
+            {
+                sku = sku.TrimEnd('*');
+            }
+
+            _logger.LogInformation("✅ Fallback pattern matched - SKU: {SKU}, Quantity: {Quantity}, Pattern: {Pattern}", 
+                sku, quantity, pattern);
 
             return new OrderIntentResult
             {
-                IsOrderIntent = false,
-                Confidence = 0.0f,
+                IsOrderIntent = true,
+                ExtractedData = new OrderExtractedData
+                {
+                    Sku = sku.ToUpper(),
+                    Quantity = quantity
+                },
+                Confidence = 0.8f,
+                OrderType = "direct_sku",
                 OriginalMessage = message
             };
         }
+    }
+
+    _logger.LogWarning("❌ No pattern matched for message: {Message}", message);
+    
+    return new OrderIntentResult
+    {
+        IsOrderIntent = false,
+        Confidence = 0.0f,
+        OriginalMessage = message
+    };
+}
 
         private async Task<StreamEventResult> CreateStreamEventAsync(Guid livestreamId, Guid userId, string message, Guid livestreamProductId)
         {
@@ -357,69 +357,76 @@ Tin nhắn cần phân tích: """ + message + @"""";
 
         private async Task<CreateMultiOrderResult> CreateOrderAsync(Guid livestreamId, Guid userId, LivestreamProductDTO product, int quantity, Guid streamEventId)
         {
-            var userToken = GetCurrentUserToken();
-            // ✅ FIX: Sử dụng AddressServiceClient
-            var userAddress = await _addressServiceClient.GetUserDefaultAddressAsync(userId);
-            if (userAddress == null)
+            try
             {
-                return new CreateMultiOrderResult
-                {
-                    Success = false,
-                    Message = "Bạn cần cập nhật địa chỉ giao hàng trước khi đặt hàng."
-                };
-            }
+                _logger.LogInformation("Creating order for user {UserId}, product {ProductId}, quantity {Quantity}",
+                    userId, product.ProductId, quantity);
 
-            // ✅ FIX: Lấy thông tin shop từ ShopId trong livestream product
-            var shopInfo = await _shopServiceClient.GetShopByIdAsync(product.ShopId);
-            if (shopInfo == null)
-            {
-                return new CreateMultiOrderResult
+                // ✅ FIX: Lấy địa chỉ mặc định của user
+                var userAddress = await _addressServiceClient.GetUserDefaultAddressAsync(userId);
+                if (userAddress == null)
                 {
-                    Success = false,
-                    Message = "Không tìm thấy thông tin shop."
-                };
-            }
-
-            // ✅ FIX: Lấy địa chỉ shop để làm FROM address
-            var shopAddress = await _addressServiceClient.GetShopAddressAsync(product.ShopId);
-            if (shopAddress == null)
-            {
-                return new CreateMultiOrderResult
-                {
-                    Success = false,
-                    Message = "Không tìm thấy địa chỉ shop."
-                };
-            }
-            var createOrderRequest = new CreateMultiOrderRequest
-            {
-                AccountId = userId,
-                LivestreamId = livestreamId,
-                CreatedFromCommentId = streamEventId, 
-                PaymentMethod = "COD", 
-                AddressId = userAddress.Id,
-                OrdersByShop = new List<CreateOrderByShopDto>
-                {
-                    new CreateOrderByShopDto
+                    return new CreateMultiOrderResult
                     {
-                        ShopId = product.ShopId,
-                        Items = new List<CreateOrderItemDto>
-                        {
-                            new CreateOrderItemDto
-                            {
-                                ProductId = Guid.Parse(product.ProductId),
-                                VariantId = string.IsNullOrEmpty(product.VariantId) ? null : Guid.Parse(product.VariantId),
-                                Quantity = quantity
-                            }
-                        },
-                        ShippingFee = 0m, 
-                        ShippingProviderId = Guid.NewGuid(), 
-                        CustomerNotes = $"Đặt hàng từ livestream - SKU: {product.SKU} - Shop: {shopInfo.ShopName}"
-                    }
+                        Success = false,
+                        Message = "Bạn cần cập nhật địa chỉ giao hàng trước khi đặt hàng."
+                    };
                 }
-            };
 
-            var orderResult = await _orderServiceClient.CreateMultiOrderAsync(createOrderRequest);
-            return orderResult;
+                // ✅ FIX: Lấy thông tin shop
+                var shopInfo = await _shopServiceClient.GetShopByIdAsync(product.ShopId);
+                if (shopInfo == null)
+                {
+                    return new CreateMultiOrderResult
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy thông tin shop."
+                    };
+                }
+
+                // ✅ FIX: Tạo đúng cấu trúc data cho Multi Order API
+                var createOrderRequest = new CreateMultiOrderRequest
+                {
+                    AccountId = userId, 
+                    PaymentMethod = "COD",
+                    AddressId = userAddress.Id.ToString(), 
+                    LivestreamId = livestreamId,
+                    CreatedFromCommentId = streamEventId,
+                    OrdersByShop = new List<CreateOrderByShopDto>
+            {
+                new CreateOrderByShopDto
+                {
+                    ShopId = product.ShopId,
+                    ShippingProviderId = Guid.Empty,
+                    ShippingFee = 0m,
+                    ExpectedDeliveryDay = DateTime.UtcNow.AddDays(3),
+                    VoucherCode = null,
+                    Items = new List<CreateOrderItemDto>
+                    {
+                        new CreateOrderItemDto
+                        {
+                            ProductId = Guid.Parse(product.ProductId),
+                            VariantId = string.IsNullOrEmpty(product.VariantId) ? null : Guid.Parse(product.VariantId),
+                            Quantity = quantity
+                        }
+                    },                  
+                    CustomerNotes = $"Đặt hàng từ livestream - SKU: {product.SKU} - Shop: {shopInfo.ShopName}"
+                }
+                    }
+                };
+                var orderResult = await _orderServiceClient.CreateMultiOrderAsync(createOrderRequest);
+
+                return orderResult; // ✅ Return result trực tiếp
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order for livestream {LivestreamId}", livestreamId);
+                return new CreateMultiOrderResult
+                {
+                    Success = false,
+                    Message = "Lỗi hệ thống khi tạo đơn hàng"
+                };
+            }
         }
 
         private async Task CheckAndCancelUnpaidOrderAsync(Guid orderId, LivestreamProductDTO product, int quantity, Guid livestreamId)

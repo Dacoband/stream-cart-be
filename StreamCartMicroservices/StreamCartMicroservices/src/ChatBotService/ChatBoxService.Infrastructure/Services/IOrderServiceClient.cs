@@ -1,4 +1,5 @@
 ﻿using ChatBoxService.Application.DTOs;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Models;
 using System.Net.Http.Json;
@@ -33,27 +34,46 @@ namespace ChatBoxService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<OrderServiceClient> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public OrderServiceClient(HttpClient httpClient, ILogger<OrderServiceClient> logger)
+        public OrderServiceClient(HttpClient httpClient, ILogger<OrderServiceClient> logger, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
-
+        private void SetAuthorizationHeader()
+        {
+            try
+            {
+                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader))
+                {
+                    _httpClient.DefaultRequestHeaders.Clear();
+                    _httpClient.DefaultRequestHeaders.Add("Authorization", authHeader);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set authorization header");
+            }
+        }
         public async Task<CreateMultiOrderResult> CreateMultiOrderAsync(CreateMultiOrderRequest request)
         {
             try
             {
+                SetAuthorizationHeader();
                 _logger.LogInformation("Creating multi order for account {AccountId}", request.AccountId);
 
                 var response = await _httpClient.PostAsJsonAsync("/api/orders/multi", request);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<OrderDto>>>(content, new JsonSerializerOptions
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<OrderDto>>>(responseContent, new JsonSerializerOptions
                     {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        PropertyNameCaseInsensitive = true
                     });
 
                     if (apiResponse?.Success == true && apiResponse.Data?.Any() == true)
@@ -66,10 +86,21 @@ namespace ChatBoxService.Infrastructure.Services
                             Message = "Tạo đơn hàng thành công"
                         };
                     }
+                    else
+                    {
+                        _logger.LogWarning("API returned success status but response indicates failure: {Response}", responseContent);
+                        return new CreateMultiOrderResult
+                        {
+                            Success = false,
+                            Message = apiResponse?.Message ?? "Không thể tạo đơn hàng"
+                        };
+                    }
                 }
-
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to create multi order: {Error}", errorContent);
+                else
+                {
+                    _logger.LogError("Failed to create multi order. Status: {StatusCode}, Error: {Error}",
+                        response.StatusCode, responseContent);
+                }
 
                 return new CreateMultiOrderResult
                 {
@@ -157,7 +188,7 @@ namespace ChatBoxService.Infrastructure.Services
         public Guid? LivestreamId { get; set; }
         public Guid? CreatedFromCommentId { get; set; }
         public string PaymentMethod { get; set; } = "COD";
-        public Guid AddressId { get; set; }
+        public string? AddressId { get; set; }
         public List<CreateOrderByShopDto> OrdersByShop { get; set; } = new();
     }
 

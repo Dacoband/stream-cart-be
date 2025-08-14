@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Shared.Common.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace ChatBoxService.Infrastructure.Services
 {
@@ -25,11 +26,29 @@ namespace ChatBoxService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ShopServiceClient> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public ShopServiceClient(HttpClient httpClient, ILogger<ShopServiceClient> logger)
+        public ShopServiceClient(HttpClient httpClient, ILogger<ShopServiceClient> logger, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
+        }
+        private void SetAuthorizationHeader()
+        {
+            try
+            {
+                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader))
+                {
+                    _httpClient.DefaultRequestHeaders.Clear();
+                    _httpClient.DefaultRequestHeaders.Add("Authorization", authHeader);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set authorization header");
+            }
         }
 
         public async Task<ShopInfoDTO?> GetShopByIdAsync(Guid shopId)

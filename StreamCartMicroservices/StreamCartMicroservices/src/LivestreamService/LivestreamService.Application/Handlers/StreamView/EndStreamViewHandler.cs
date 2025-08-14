@@ -48,6 +48,15 @@ namespace LivestreamService.Application.Handlers.StreamView
                 var user = await _accountServiceClient.GetAccountByIdAsync(request.UserId);
                 var livestream = await _livestreamRepository.GetByIdAsync(streamView.LivestreamId.ToString());
 
+                // ✅ GET COMPREHENSIVE VIEWER STATS INCLUDING MAX CUSTOMER VIEWER
+                var viewersByRole = await _repository.GetViewersByRoleAsync(streamView.LivestreamId);
+                var currentCustomerViewers = viewersByRole.GetValueOrDefault("Customer", 0);
+                var maxCustomerViewer = livestream?.MaxViewer ?? 0;
+
+                // ✅ Log the max customer viewer achieved
+                _logger.LogInformation("🏁 Stream view ended for user {UserId} in livestream {LivestreamId}. Max Customer Viewers achieved: {MaxCustomer}",
+                    request.UserId, streamView.LivestreamId, maxCustomerViewer);
+
                 return new StreamViewDTO
                 {
                     Id = streamView.Id,
@@ -59,7 +68,12 @@ namespace LivestreamService.Application.Handlers.StreamView
                     IsActive = streamView.EndTime == null,
                     CreatedAt = streamView.CreatedAt,
                     UserName = user?.Username,
-                    LivestreamTitle = livestream?.Title
+                    LivestreamTitle = livestream?.Title,
+
+                    // ✅ ADD MAX CUSTOMER VIEWER INFO TO RESPONSE
+                    MaxCustomerViewer = maxCustomerViewer,
+                    ViewersByRole = viewersByRole,
+                    CurrentCustomerViewers = currentCustomerViewers
                 };
             }
             catch (Exception ex)

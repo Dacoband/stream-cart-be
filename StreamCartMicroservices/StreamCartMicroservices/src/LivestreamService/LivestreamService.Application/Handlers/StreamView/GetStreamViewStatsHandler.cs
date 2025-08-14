@@ -39,6 +39,13 @@ namespace LivestreamService.Application.Handlers.StreamView
                 var uniqueViewers = await _repository.CountUniqueViewersAsync(request.LivestreamId);
                 var averageViewDuration = await _repository.GetAverageViewDurationAsync(request.LivestreamId);
 
+                // ✅ GET ROLE-BASED VIEWER COUNTS
+                var viewersByRole = await _repository.GetViewersByRoleAsync(request.LivestreamId);
+                var currentCustomerViewers = viewersByRole.GetValueOrDefault("Customer", 0);
+
+                // ✅ Get max customer viewer from livestream entity
+                var maxCustomerViewer = livestream.MaxViewer ?? 0;
+
                 // Calculate peak viewers (simplified - you might want to do this differently)
                 var allViews = await _repository.GetByLivestreamIdAsync(request.LivestreamId);
                 var peakViewers = allViews.Any() ? currentViewers : 0; // Simplified calculation
@@ -51,7 +58,16 @@ namespace LivestreamService.Application.Handlers.StreamView
                     UniqueViewers = uniqueViewers,
                     AverageViewDuration = averageViewDuration,
                     PeakViewers = peakViewers,
-                    PeakTime = DateTime.UtcNow // Simplified
+                    PeakTime = DateTime.UtcNow, // Simplified
+
+                    // ✅ CUSTOMER-SPECIFIC STATS
+                    CurrentCustomerViewers = currentCustomerViewers,
+                    MaxCustomerViewer = maxCustomerViewer, // This is the historical max customer count
+                    ViewersByRole = viewersByRole,
+
+                    // ✅ ADDITIONAL INSIGHTS
+                    IsCurrentlyAtMaxRecord = currentCustomerViewers == maxCustomerViewer && maxCustomerViewer > 0,
+                    MaxViewerAchievedAt = livestream.LastModifiedAt // Approximation
                 };
             }
             catch (Exception ex)

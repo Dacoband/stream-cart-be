@@ -1,4 +1,5 @@
 ﻿using LivestreamService.Application.Interfaces;
+using LivestreamService.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -17,14 +18,20 @@ namespace LivestreamService.Infrastructure.Hubs
         private static readonly ConcurrentDictionary<string, string> _userConnectionMap = new();
         private readonly ICurrentUserService _currentUserService;
         private readonly IStreamViewRepository _streamViewRepository;
-        private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId)> _activeViewers = new();
+        private readonly ILivestreamRepository _livestreamRepository;
 
-        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository)
+        private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId, string role, DateTime startTime)> _activeViewers = new();
+        private readonly IAccountServiceClient _accountServiceClient;
+
+        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository, ILivestreamRepository livestreamRepository, IAccountServiceClient accountServiceClient)
         {
             _logger = logger;
             _currentUserService = currentUserService;
             _streamViewRepository = streamViewRepository;
+            _livestreamRepository = livestreamRepository;
+            _accountServiceClient = accountServiceClient;
         }
+
         public async Task StartViewingLivestream(string livestreamId)
         {
             if (!IsUserAuthenticated())
@@ -45,17 +52,21 @@ namespace LivestreamService.Infrastructure.Hubs
                 var userGuid = Guid.Parse(userId);
                 var livestreamGuid = Guid.Parse(livestreamId);
 
-                // Store the connection mapping
-                _activeViewers[Context.ConnectionId] = (livestreamGuid, userGuid);
+                // ✅ GET USER ROLE FIRST
+                var userRole = await GetUserRoleAsync(userGuid);
+                var startTime = DateTime.UtcNow;
+                // ✅ FIX: Store the connection mapping WITH role information
+                _activeViewers[Context.ConnectionId] = (livestreamGuid, userGuid, userRole,startTime);
+                await CreateStreamViewRecordAsync(livestreamGuid, userGuid);
 
-                // Get user roles for statistics
-                var userRoles = GetUserRoles();
-
-                _logger.LogInformation("User {UserId} with roles {Roles} started viewing livestream {LivestreamId}",
-                    userId, string.Join(",", userRoles), livestreamId);
+                _logger.LogInformation("User {UserId} with role {Role} started viewing livestream {LivestreamId}",
+                    userId, userRole, livestreamId);
 
                 // Add to the livestream group for targeted updates
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
+
+                // ✅ Update max customer viewer count
+                await UpdateMaxCustomerViewerCount(livestreamGuid);
 
                 // Broadcast updated viewer stats
                 await BroadcastViewerStats(livestreamGuid);
@@ -66,6 +77,7 @@ namespace LivestreamService.Infrastructure.Hubs
                 await Clients.Caller.SendAsync("Error", "Failed to start viewing livestream");
             }
         }
+
         public async Task StopViewingLivestream(string livestreamId)
         {
             if (!IsUserAuthenticated())
@@ -76,10 +88,15 @@ namespace LivestreamService.Infrastructure.Hubs
                 var userId = GetCurrentUserId();
                 var livestreamGuid = Guid.Parse(livestreamId);
 
-                // Remove the connection mapping
-                if (_activeViewers.TryRemove(Context.ConnectionId, out _))
+                // ✅ FIX: Remove the connection mapping and get the viewer info
+                if (_activeViewers.TryRemove(Context.ConnectionId, out var viewerInfo))
                 {
-                    _logger.LogInformation("User {UserId} stopped viewing livestream {LivestreamId}", userId, livestreamId);
+                    // ✅ End the StreamView record in database
+                    await EndStreamViewRecordAsync(livestreamGuid, viewerInfo.userId);
+
+                    var duration = DateTime.UtcNow - viewerInfo.startTime;
+                    _logger.LogInformation("User {UserId} with role {Role} stopped viewing livestream {LivestreamId} after {Duration}",
+                        userId, viewerInfo.role, livestreamId, duration);
                 }
 
                 // Remove from the livestream group
@@ -93,6 +110,98 @@ namespace LivestreamService.Infrastructure.Hubs
                 _logger.LogError(ex, "Error stopping viewing livestream {LivestreamId}", livestreamId);
             }
         }
+
+        private async Task UpdateMaxCustomerViewerCount(Guid livestreamId)
+        {
+            try
+            {
+                // ✅ FIX: Now we can access the role property correctly
+                var currentCustomerViewerCount = _activeViewers
+                    .Count(kv => kv.Value.livestreamId == livestreamId &&
+                                kv.Value.role.Equals("Customer", StringComparison.OrdinalIgnoreCase));
+
+                // Get the livestream entity
+                var livestream = await _livestreamRepository.GetByIdAsync(livestreamId.ToString());
+                if (livestream == null)
+                {
+                    _logger.LogWarning("Livestream {LivestreamId} not found when updating max customer viewer count", livestreamId);
+                    return;
+                }
+
+                // Check if current customer count exceeds the previous maximum
+                var currentMaxViewer = livestream.MaxViewer ?? 0;
+                if (currentCustomerViewerCount > currentMaxViewer)
+                {
+                    // Update the max viewer count with customer count
+                    livestream.SetMaxViewer(currentCustomerViewerCount, "system");
+                    await _livestreamRepository.ReplaceAsync(livestreamId.ToString(), livestream);
+
+                    _logger.LogInformation("Updated MaxViewer for livestream {LivestreamId} from {OldMax} to {NewMax} (Customer viewers only)",
+                        livestreamId, currentMaxViewer, currentCustomerViewerCount);
+
+                    // Notify about new customer viewer record
+                    await Clients.Group($"livestream_{livestreamId}")
+                        .SendAsync("MaxCustomerViewerUpdated", new
+                        {
+                            LivestreamId = livestreamId,
+                            NewMaxCustomerViewer = currentCustomerViewerCount,
+                            PreviousMax = currentMaxViewer,
+                            ViewerType = "Customer",
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"🎉 Kỷ lục mới! Có {currentCustomerViewerCount} khách hàng đang xem cùng lúc!"
+                        });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating max customer viewer count for livestream {LivestreamId}", livestreamId);
+            }
+        }
+
+        private async Task UpdateMaxViewerCount(Guid livestreamId)
+        {
+            try
+            {
+                // Count current active viewers for this livestream
+                var currentViewerCount = _activeViewers
+                    .Count(kv => kv.Value.livestreamId == livestreamId);
+
+                // Get the livestream entity
+                var livestream = await _livestreamRepository.GetByIdAsync(livestreamId.ToString());
+                if (livestream == null)
+                {
+                    _logger.LogWarning("Livestream {LivestreamId} not found when updating max viewer count", livestreamId);
+                    return;
+                }
+
+                // Check if current count exceeds the previous maximum
+                var currentMaxViewer = livestream.MaxViewer ?? 0;
+                if (currentViewerCount > currentMaxViewer)
+                {
+                    // Update the max viewer count
+                    livestream.SetMaxViewer(currentViewerCount, "system");
+                    await _livestreamRepository.ReplaceAsync(livestreamId.ToString(), livestream);
+
+                    _logger.LogInformation("Updated MaxViewer for livestream {LivestreamId} from {OldMax} to {NewMax}",
+                        livestreamId, currentMaxViewer, currentViewerCount);
+
+                    // Notify about new record
+                    await Clients.Group($"livestream_{livestreamId}")
+                        .SendAsync("MaxViewerUpdated", new
+                        {
+                            LivestreamId = livestreamId,
+                            NewMaxViewer = currentViewerCount,
+                            PreviousMax = currentMaxViewer,
+                            Timestamp = DateTime.UtcNow
+                        });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating max viewer count for livestream {LivestreamId}", livestreamId);
+            }
+        }
+
         private async Task BroadcastViewerStats(Guid livestreamId)
         {
             try
@@ -105,45 +214,32 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 foreach (var connection in viewerConnections)
                 {
-                    var connectionId = connection.Key;
-                    var userId = connection.Value.userId;
+                    // ✅ FIX: Now we can access the role property correctly
+                    var role = connection.Value.role;
 
-                    try
-                    {
-                        // Get user's role
-                        var context = Context.ConnectionId == connectionId ?
-                            Context : // Use current context if it's the same connection
-                            null; // Otherwise we'd need to look up the connection context
-
-                        string role = "Unknown";
-
-                        if (context != null)
-                        {
-                            var claims = context.User?.Claims;
-                            role = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "Viewer";
-                        }
-
-                        // Update role counts
-                        if (roleCounts.ContainsKey(role))
-                            roleCounts[role]++;
-                        else
-                            roleCounts[role] = 1;
-                    }
-                    catch
-                    {
-                        // Count as unknown on error
-                        if (roleCounts.ContainsKey("Unknown"))
-                            roleCounts["Unknown"]++;
-                        else
-                            roleCounts["Unknown"] = 1;
-                    }
+                    // Update role counts
+                    if (roleCounts.ContainsKey(role))
+                        roleCounts[role]++;
+                    else
+                        roleCounts[role] = 1;
                 }
-                // Create statistics object
+
+                // ✅ GET MAX VIEWER FROM DATABASE (Customer focused)
+                var livestream = await _livestreamRepository.GetByIdAsync(livestreamId.ToString());
+                var maxCustomerViewer = livestream?.MaxViewer ?? 0;
+
+                // ✅ Count current customer viewers specifically
+                var currentCustomerViewers = roleCounts.GetValueOrDefault("Customer", 0);
+
+                // Create enhanced statistics object
                 var viewerStats = new
                 {
                     LivestreamId = livestreamId,
                     TotalViewers = viewerConnections.Count,
+                    CustomerViewers = currentCustomerViewers, // ✅ Current customer count
+                    MaxCustomerViewer = maxCustomerViewer, // ✅ Historical max customer viewers
                     ViewersByRole = roleCounts,
+                    IsNewRecord = currentCustomerViewers == maxCustomerViewer && maxCustomerViewer > 0,
                     Timestamp = DateTime.UtcNow
                 };
 
@@ -155,12 +251,88 @@ namespace LivestreamService.Infrastructure.Hubs
                 await Clients.Group($"livestream_viewers_{livestreamId}")
                     .SendAsync("ReceiveViewerStats", viewerStats);
 
-                _logger.LogInformation("Broadcast viewer stats for livestream {LivestreamId}: {TotalViewers} total viewers",
-                    livestreamId, viewerConnections.Count);
+                _logger.LogInformation("📊 Viewer stats for livestream {LivestreamId}: {TotalViewers} total, {CustomerViewers} customers, {MaxCustomer} max customers (record)",
+                    livestreamId, viewerConnections.Count, currentCustomerViewers, maxCustomerViewer);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error broadcasting viewer stats for livestream {LivestreamId}", livestreamId);
+            }
+        }
+        private async Task CreateStreamViewRecordAsync(Guid livestreamId, Guid userId)
+        {
+            try
+            {
+                // Check if user already has an active view
+                var existingView = await _streamViewRepository.GetActiveViewByUserAsync(livestreamId, userId);
+                if (existingView != null)
+                {
+                    _logger.LogInformation("User {UserId} already has active view for livestream {LivestreamId}", userId, livestreamId);
+                    return;
+                }
+
+                // Create new StreamView record
+                var streamView = new StreamView(livestreamId, userId, DateTime.UtcNow, "signalr-hub");
+                await _streamViewRepository.InsertAsync(streamView);
+
+                _logger.LogInformation("✅ Created StreamView record for user {UserId} in livestream {LivestreamId}", userId, livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating StreamView record for user {UserId} in livestream {LivestreamId}", userId, livestreamId);
+            }
+        }
+        private async Task EndStreamViewRecordAsync(Guid livestreamId, Guid userId)
+        {
+            try
+            {
+                var activeView = await _streamViewRepository.GetActiveViewByUserAsync(livestreamId, userId);
+                if (activeView != null)
+                {
+                    activeView.EndView(DateTime.UtcNow, "signalr-hub");
+                    await _streamViewRepository.ReplaceAsync(activeView.Id.ToString(), activeView);
+
+                    var duration = DateTime.UtcNow - activeView.StartTime;
+                    _logger.LogInformation("✅ Ended StreamView record for user {UserId} in livestream {LivestreamId}, duration: {Duration}",
+                        userId, livestreamId, duration);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error ending StreamView record for user {UserId} in livestream {LivestreamId}", userId, livestreamId);
+            }
+        }
+
+        private async Task<string> GetUserRoleAsync(Guid userId)
+        {
+            try
+            {
+                var userAccount = await _accountServiceClient.GetAccountByIdAsync(userId);
+                if (userAccount != null)
+                {
+                    if (userAccount.Role is int roleInt)
+                    {
+                        // Convert int role to string (assuming 1=Admin, 2=Seller, 3=Customer)
+                        return roleInt switch
+                        {
+                            1 => "Admin",
+                            2 => "Seller",
+                            3 => "Customer",
+                            _ => "Unknown"
+                        };
+                    }
+                    else
+                    {
+                        // Role is enum, convert to string
+                        return userAccount.Role.ToString();
+                    }
+                }
+                return "Unknown";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not determine role for user {UserId}", userId);
+                return "Unknown";
             }
         }
 
@@ -261,9 +433,14 @@ namespace LivestreamService.Infrastructure.Hubs
 
             try
             {
+                // ✅ FIX: Now we can access viewingInfo with role information
                 if (_activeViewers.TryRemove(connectionId, out var viewingInfo))
                 {
-                    _logger.LogInformation("Viewer disconnected from livestream {LivestreamId}", viewingInfo.livestreamId);
+                    await EndStreamViewRecordAsync(viewingInfo.livestreamId, viewingInfo.userId);
+                    var duration = DateTime.UtcNow - viewingInfo.startTime;
+
+                    _logger.LogInformation("User {UserId} with role {Role} disconnected from livestream {LivestreamId} after {Duration}",
+                        viewingInfo.userId, viewingInfo.role, viewingInfo.livestreamId, duration);
 
                     // Broadcast updated stats
                     await BroadcastViewerStats(viewingInfo.livestreamId);

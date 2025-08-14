@@ -179,7 +179,7 @@ namespace ChatBoxService.Infrastructure.Services
                 LivestreamId = livestreamId,
                 CreatedFromCommentId = streamEventId,
                 PaymentMethod = "COD",
-                AddressId = Guid.NewGuid(), // Default address - should be retrieved from user service
+                AddressId = (Guid.NewGuid()).ToString(), // Default address - should be retrieved from user service
                 OrdersByShop = new List<CreateOrderByShopDto>
                 {
                     new CreateOrderByShopDto

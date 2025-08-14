@@ -16,5 +16,8 @@ namespace LivestreamService.Application.DTOs.StreamView
         // Additional info
         public string? UserName { get; set; }
         public string? LivestreamTitle { get; set; }
+        public int MaxCustomerViewer { get; set; }
+        public Dictionary<string, int> ViewersByRole { get; set; } = new();
+        public int CurrentCustomerViewers { get; set; }
     }
 }
