@@ -224,7 +224,7 @@ namespace OrderService.Infrastructure.Repositories
                 var totalCount = await query.CountAsync();
 
                 // Apply pagination with ordering
-                var orders = await query
+                var orders = await query.Include(x => x.Items)
                     .OrderByDescending(o => o.OrderDate)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
