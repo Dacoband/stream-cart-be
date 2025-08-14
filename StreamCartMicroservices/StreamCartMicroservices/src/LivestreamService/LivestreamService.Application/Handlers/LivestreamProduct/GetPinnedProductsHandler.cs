@@ -58,7 +58,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             CreatedAt = lp.CreatedAt,
                             LastModifiedAt = lp.LastModifiedAt,
                             ProductName = product.ProductName,
-                            ProductImageUrl = product.ImageUrl,
+                            ProductImageUrl = product?.PrimaryImageUrl ?? string.Empty,
                             VariantName = variant?.Name
                         });
                     }

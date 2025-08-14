@@ -9,18 +9,18 @@ using System.Threading.Tasks;
 
 namespace LivestreamService.Application.Handlers.LivestreamProduct
 {
-    public class UpdateStockHandler : IRequestHandler<UpdateStockCommand, LivestreamProductDTO>
+    public class PinProductByIdHandler : IRequestHandler<PinProductByIdCommand, LivestreamProductDTO>
     {
         private readonly ILivestreamProductRepository _livestreamProductRepository;
         private readonly ILivestreamRepository _livestreamRepository;
         private readonly IProductServiceClient _productServiceClient;
-        private readonly ILogger<UpdateStockHandler> _logger;
+        private readonly ILogger<PinProductByIdHandler> _logger;
 
-        public UpdateStockHandler(
+        public PinProductByIdHandler(
             ILivestreamProductRepository livestreamProductRepository,
             ILivestreamRepository livestreamRepository,
             IProductServiceClient productServiceClient,
-            ILogger<UpdateStockHandler> logger)
+            ILogger<PinProductByIdHandler> logger)
         {
             _livestreamProductRepository = livestreamProductRepository;
             _livestreamRepository = livestreamRepository;
@@ -28,17 +28,14 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
             _logger = logger;
         }
 
-        public async Task<LivestreamProductDTO> Handle(UpdateStockCommand request, CancellationToken cancellationToken)
+        public async Task<LivestreamProductDTO> Handle(PinProductByIdCommand request, CancellationToken cancellationToken)
         {
             try
             {
-                // ✅ SỬ DỤNG COMPOSITE KEY
-                var livestreamProduct = await _livestreamProductRepository.GetByCompositeKeyAsync(
-                    request.LivestreamId, request.ProductId, request.VariantId);
-
+                var livestreamProduct = await _livestreamProductRepository.GetByIdAsync(request.Id.ToString());
                 if (livestreamProduct == null)
                 {
-                    throw new KeyNotFoundException($"Không tìm thấy sản phẩm trong livestream {request.LivestreamId}, ProductId: {request.ProductId}, VariantId: {request.VariantId}");
+                    throw new KeyNotFoundException($"Không tìm thấy sản phẩm với ID {request.Id}");
                 }
 
                 // Verify seller owns the livestream
@@ -48,10 +45,26 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                // Update stock
-                livestreamProduct.UpdateStock(request.Stock, request.SellerId.ToString());
+                if (livestream.SellerId != request.SellerId)
+                {
+                    throw new UnauthorizedAccessException("You can only pin products in your own livestream");
+                }
 
-                // Save changes
+                // Handle pinning logic
+                if (request.IsPin)
+                {
+                    // Check if there's already a pinned product
+                    var currentPinnedProduct = await _livestreamProductRepository.GetCurrentPinnedProductAsync(livestreamProduct.LivestreamId);
+                    if (currentPinnedProduct != null && currentPinnedProduct.Id != livestreamProduct.Id)
+                    {
+                        // Unpin the current pinned product
+                        currentPinnedProduct.SetPin(false, request.SellerId.ToString());
+                        await _livestreamProductRepository.ReplaceAsync(currentPinnedProduct.Id.ToString(), currentPinnedProduct);
+                    }
+                }
+
+                // Update pin status
+                livestreamProduct.SetPin(request.IsPin, request.SellerId.ToString());
                 await _livestreamProductRepository.ReplaceAsync(livestreamProduct.Id.ToString(), livestreamProduct);
 
                 // Get product details for response
@@ -70,20 +83,22 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    IsPin = livestreamProduct.IsPin,
+                    SKU = variant?.SKU ?? product?.SKU ?? string.Empty,
+                    ProductName = product?.ProductName ?? "Unknown Product",
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,
+                    ProductStock = product?.StockQuantity ?? 0,
+                    IsPin = livestreamProduct.IsPin,
                     CreatedAt = livestreamProduct.CreatedAt,
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
-                    ProductName = product?.ProductName,
-                    ProductImageUrl = product?.PrimaryImageUrl ?? product?.ImageUrl ?? string.Empty,
-                    VariantName = variant?.Name
+                    // ✅ Fix: Correct property mapping
+                    ProductImageUrl = product?.PrimaryImageUrl ?? string.Empty,
+                    VariantName = variant?.Name ?? string.Empty
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating stock for livestream product for LivestreamId: {LivestreamId}, ProductId: {ProductId}, VariantId: {VariantId}",
-                    request.LivestreamId, request.ProductId, request.VariantId);
+                _logger.LogError(ex, "Error pinning product by ID {Id}", request.Id);
                 throw;
             }
         }

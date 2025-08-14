@@ -125,7 +125,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
                     SKU = sku,
                     ProductName = productInfo.ProductName ?? "Unknown Product",
-                    ProductImageUrl = productInfo.ImageUrl ?? "",
+                    ProductImageUrl = productInfo.PrimaryImageUrl ?? "",
                     VariantName = variantName
                 };
 

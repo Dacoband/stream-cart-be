@@ -79,9 +79,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                                     // Lấy combination string để hiển thị tên variant
                                     var variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync(Guid.Parse(product.VariantId));
 
-                                    variantName = !string.IsNullOrEmpty(variantDetail) ?
-                                        $"{productInfo.ProductName}{variantDetail}" :
-                                        $"{productInfo.ProductName} - Variant {product.VariantId}";
+                                    variantName = variantInfo.Name ?? string.Empty;
 
                                     sku = variantInfo.SKU ?? "";
                                     actualStock = variantInfo.Stock; // No null coalescing needed - Stock is int
@@ -122,7 +120,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             LastModifiedAt = product.LastModifiedAt,
                             SKU = sku,
                             ProductName = productInfo.ProductName ?? "Unknown Product",
-                            ProductImageUrl = productInfo.ImageUrl ?? "",
+                            ProductImageUrl = productInfo.PrimaryImageUrl ?? productInfo.ImageUrl ?? string.Empty,
                             VariantName = variantName
                         });
 

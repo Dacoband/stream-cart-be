@@ -1,10 +1,11 @@
 ﻿using ChatBoxService.Application.DTOs;
 using ChatBoxService.Application.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace ChatBoxService.Infrastructure.Services
 {
@@ -24,6 +25,8 @@ namespace ChatBoxService.Infrastructure.Services
         private readonly IOrderServiceClient _orderServiceClient;
         private readonly IAddressServiceClient _addressServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
+        private readonly IHttpContextAccessor _httpContextAccessor; 
+
 
         public LivestreamOrderAIService(
             IHttpClientFactory httpClientFactory,
@@ -32,7 +35,7 @@ namespace ChatBoxService.Infrastructure.Services
             ILivestreamServiceClient livestreamServiceClient,
             IOrderServiceClient orderServiceClient,
             IAddressServiceClient addressServiceClient,
-            IShopServiceClient shopServiceClient)
+            IShopServiceClient shopServiceClient,IHttpContextAccessor httpContextAccessor)
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
@@ -42,6 +45,24 @@ namespace ChatBoxService.Infrastructure.Services
             _orderServiceClient = orderServiceClient;
             _addressServiceClient = addressServiceClient;
             _shopServiceClient = shopServiceClient;
+            _httpContextAccessor = httpContextAccessor;
+        }
+        private string? GetCurrentUserToken()
+        {
+            try
+            {
+                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
+                if (authHeader?.StartsWith("Bearer ") == true)
+                {
+                    return authHeader.Substring(7); // Remove "Bearer " prefix
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get current user token");
+                return null;
+            }
         }
 
         public async Task<OrderIntentResult> AnalyzeOrderIntentAsync(string message, Guid livestreamId, Guid userId)
@@ -63,12 +84,16 @@ Bạn là AI chuyên phân tích ý định đặt hàng trên livestream. Phân
   ""originalMessage"": ""tin nhắn gốc""
 }
 
-CÁC PATTERN ĐẶT HÀNG:
-1. ""Đặt ABC123 x2"" - SKU + số lượng
+CÁC PATTERN ĐẶT HÀNG ĐƯỢC HỖ TRỢ:
+1. ""Đặt ABC123 x2"" - SKU + số lượng với x
 2. ""Mua 3 cái iPhone ABC123"" - Số lượng + tên + SKU  
 3. ""Order ABC123 qty 5"" - SKU + quantity
 4. ""Đặt hàng ABC123"" - chỉ SKU (quantity = 1)
-5. ""Mua iPhone 15 SKU: ABC123 2 cái"" - tên + SKU + số lượng
+5. ""ABC123*2"" - SKU + dấu * + số lượng 
+6. ""LTBX*2"" - Format trực tiếp SKU*quantity
+7. ""iPhone15Pro*3"" - Tên sản phẩm*số lượng
+8. ""2 ABC123"" - Số lượng trước SKU
+9. ""ABC1234"" - SKU kết thúc bằng số (cần phân biệt với quantity)
 
 KHÔNG PHẢI ĐẶT HÀNG:
 - Hỏi giá, thông tin sản phẩm
@@ -242,24 +267,61 @@ Tin nhắn cần phân tích: """ + message + @"""";
         {
             var lowerMessage = message.ToLower();
 
-            // Regex patterns for order detection
+            // ✅ ENHANCED Regex patterns for order detection - hỗ trợ nhiều format SKU hơn
             var orderPatterns = new[]
             {
-                @"đặt\s+([a-zA-Z0-9]+)\s*x?(\d+)?", // đặt ABC123 x2
-                @"mua\s+(\d+)?\s*[^\s]*\s*([a-zA-Z0-9]+)", // mua 2 cái ABC123
-                @"order\s+([a-zA-Z0-9]+)\s*qty?\s*(\d+)?", // order ABC123 qty 2
-                @"([a-zA-Z0-9]+)\s*x\s*(\d+)", // ABC123 x 2
-                @"sku:?\s*([a-zA-Z0-9]+)\s*(\d+)?", // SKU: ABC123 2
-            };
+        // ✅ Basic patterns with improved SKU matching
+        @"đặt\s+([a-zA-Z0-9\-_*]+)\s*[x*]?\s*(\d+)?", // đặt LTBX*2, đặt ABC123 x2
+        @"mua\s+(\d+)?\s*[^\s]*\s*([a-zA-Z0-9\-_*]+)", // mua 2 cái LTBX
+        @"order\s+([a-zA-Z0-9\-_*]+)\s*qty?\s*(\d+)?", // order LTBX qty 2
+        
+        // ✅ NEW: Support for * as quantity separator
+        @"([a-zA-Z0-9\-_*]+)\s*[*x]\s*(\d+)", // LTBX*2, ABC123*3, DEF456 x 2
+        @"([a-zA-Z0-9\-_*]+)\*(\d+)", // LTBX*2 (direct format)
+        
+        // ✅ SKU with quantity without separator
+        @"([a-zA-Z0-9\-_*]+)(\d+)$", // LTBX2 (SKU followed by number at end)
+        
+        // ✅ Traditional patterns
+        @"sku:?\s*([a-zA-Z0-9\-_*]+)\s*(\d+)?", // SKU: LTBX 2
+        @"(\d+)\s*([a-zA-Z0-9\-_*]+)", // 2 LTBX
+    };
 
             foreach (var pattern in orderPatterns)
             {
-                var match = Regex.Match(lowerMessage, pattern);
+                var match = Regex.Match(lowerMessage, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
-                    var sku = match.Groups[1].Value;
-                    var quantityStr = match.Groups[2].Value;
-                    var quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
+                    string sku;
+                    int quantity;
+
+                    // ✅ Special handling for different pattern groups
+                    if (pattern.Contains(@"(\d+)\s*([a-zA-Z0-9\-_*]+)")) // Pattern: 2 LTBX
+                    {
+                        quantity = int.Parse(match.Groups[1].Value);
+                        sku = match.Groups[2].Value;
+                    }
+                    else if (pattern.Contains(@"mua\s+(\d+)?")) // Pattern: mua 2 cái LTBX
+                    {
+                        var quantityStr = match.Groups[1].Value;
+                        sku = match.Groups[2].Value;
+                        quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
+                    }
+                    else // Default pattern: SKU then quantity
+                    {
+                        sku = match.Groups[1].Value;
+                        var quantityStr = match.Groups[2].Value;
+                        quantity = string.IsNullOrEmpty(quantityStr) ? 1 : int.Parse(quantityStr);
+                    }
+
+                    // ✅ Clean up SKU - remove * if it's not part of actual SKU
+                    if (sku.EndsWith("*") && !string.IsNullOrEmpty(match.Groups[2].Value))
+                    {
+                        sku = sku.TrimEnd('*');
+                    }
+
+                    _logger.LogInformation("✅ Fallback pattern matched - SKU: {SKU}, Quantity: {Quantity}, Pattern: {Pattern}",
+                        sku, quantity, pattern);
 
                     return new OrderIntentResult
                     {
@@ -275,6 +337,8 @@ Tin nhắn cần phân tích: """ + message + @"""";
                     };
                 }
             }
+
+            _logger.LogWarning("❌ No pattern matched for message: {Message}", message);
 
             return new OrderIntentResult
             {
@@ -293,6 +357,7 @@ Tin nhắn cần phân tích: """ + message + @"""";
 
         private async Task<CreateMultiOrderResult> CreateOrderAsync(Guid livestreamId, Guid userId, LivestreamProductDTO product, int quantity, Guid streamEventId)
         {
+            var userToken = GetCurrentUserToken();
             // ✅ FIX: Sử dụng AddressServiceClient
             var userAddress = await _addressServiceClient.GetUserDefaultAddressAsync(userId);
             if (userAddress == null)

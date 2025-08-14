@@ -88,7 +88,7 @@ namespace LivestreamService.Api.Controllers
         /// Get a livestream by ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize]
+       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetLivestream(Guid id)
@@ -116,7 +116,7 @@ namespace LivestreamService.Api.Controllers
         /// Join a livestream (authenticated users)
         /// </summary>
         [HttpGet("{id}/join")]
-        [Authorize]
+       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -204,7 +204,7 @@ namespace LivestreamService.Api.Controllers
         /// Get upcoming livestreams
         /// </summary>
         [HttpGet("upcoming")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<List<LivestreamDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetUpcomingLivestreams([FromQuery] bool promotedOnly = false)
