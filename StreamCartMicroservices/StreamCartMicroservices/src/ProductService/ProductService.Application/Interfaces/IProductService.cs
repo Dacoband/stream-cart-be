@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using ProductService.Application.DTOs;
+using ProductService.Application.DTOs.Order;
 using ProductService.Application.DTOs.Products;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +31,8 @@ namespace ProductService.Application.Interfaces
         Task<ProductDto> CreateCompleteProductAsync(CompleteProductDto completeProductDto, string createdBy);
 
         Task<bool> ActivateProductAsync(Guid id, string deletedBy);
+        //Task<ApiResponse<PreviewOrderResponseDTO>> PreviewOrder(PreviewOrderRequestDTO request);
+
 
     }
 }

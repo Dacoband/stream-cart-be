@@ -2,12 +2,15 @@
 using MediatR;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.DTOs;
+using ProductService.Application.DTOs.Order;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.DetailQueries;
 using ProductService.Application.Queries.ProductQueries;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Extensions;
+using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -166,5 +169,14 @@ namespace ProductService.Application.Services
 
             return await _mediator.Send(command);
         }
+
+        //public async Task<ApiResponse<PreviewOrderResponseDTO>> PreviewOrder(PreviewOrderRequestDTO request)
+        //{
+        //    var product = await GetProductDetailAsync(Guid.Parse(request.ProductId));
+        //    if (!request.VariantId.IsNullOrEmpty())
+        //    {
+        //        var variant = product.Variants.Where(x => x.VariantId == Guid.Parse( request.VariantId)).FirstOrDefault();
+        //    }
+        //}
     }
 }

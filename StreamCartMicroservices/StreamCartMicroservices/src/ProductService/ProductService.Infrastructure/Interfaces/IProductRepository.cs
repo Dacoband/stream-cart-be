@@ -3,6 +3,7 @@ using ProductService.Domain.Enums;
 using Shared.Common.Data.Interfaces;
 using Shared.Common.Data.Repositories;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

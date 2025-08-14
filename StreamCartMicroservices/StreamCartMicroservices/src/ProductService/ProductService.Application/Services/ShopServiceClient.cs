@@ -58,7 +58,7 @@ namespace ProductService.Application.Services
         {
             try
             {
-                var shop = await _httpClient.GetFromJsonAsync<ShopDetailDto>($"api/shops/{shopId}");
+                var shop = await _httpClient.GetFromJsonAsync<ShopDetailDto>($"https://brightpa.me/api/shops/{shopId}");
                 return shop ?? new ShopDetailDto
                 {
                     Id = shopId,
