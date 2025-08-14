@@ -8,9 +8,31 @@ namespace ProductService.Application.DTOs.Order
 {
     public class PreviewOrderResponseDTO
     {
+        public int TotalItem { get; set; }
         public decimal SubTotal { get; set; }
         public decimal Discount { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
+        public List<ProductInShopCart> ListCartItem { get; set; }
+    }
+    public class CartResponeDTO
+    {
+        public Guid CartId { get; set; }
+        public string CustomerId { get; set; }
+        public int TotalProduct { get; set; }
+        public List<ProductInShopCart> CartItemByShop { get; set; }
+    }
+    public class PriceData
+    {
+        public decimal CurrentPrice { get; set; }
+        public decimal OriginalPrice { get; set; }
+        public decimal Discount { get; set; }
+    }
+    public class ProductCart
+    {
+        public Guid CartItemId { get; set; }
         public Guid ProductId { get; set; }
         public Guid? VariantID { get; set; }
         public string ProductName { get; set; }
@@ -24,14 +46,14 @@ namespace ProductService.Application.DTOs.Order
         public decimal? Length { get; set; }
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
-
-
+        //public string? Weight { get; set; }
     }
-    public class PriceData
+    public class ProductInShopCart
     {
-        public decimal CurrentPrice { get; set; }
-        public decimal OriginalPrice { get; set; }
-        public decimal Discount { get; set; }
+        public Guid ShopId { get; set; }
+        public string ShopName { get; set; }
+        public List<ProductCart> Products { get; set; }
+        public int NumberOfProduct { get; set; }
+        public decimal TotalPriceInShop { get; set; }
     }
-
 }

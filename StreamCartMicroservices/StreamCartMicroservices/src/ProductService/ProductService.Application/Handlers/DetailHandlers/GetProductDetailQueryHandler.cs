@@ -237,9 +237,9 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 Variants = variantDtos,
                 isActive = product.IsActive,
                 CreatedAt = product.CreatedAt,
-                CreatedBy = createdName.Fullname ?? product.CreatedBy,
+                CreatedBy = createdName?.Fullname ?? product.CreatedBy,
                 ModifiedAt = product.LastModifiedAt,
-                ModifiedBy = modifideName.Fullname ?? product.LastModifiedBy,
+                ModifiedBy = modifideName?.Fullname ?? product.LastModifiedBy,
                 
             };
         }

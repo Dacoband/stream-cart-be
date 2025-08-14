@@ -443,8 +443,8 @@ namespace PaymentService.Api.Controllers
                 {
                     // Fallback URL nếu không cấu hình
                     baseRedirectUrl = status == "success"
-                        ? "http://localhost:3000/payment/order/results-success/"
-                        : "http://localhost:3000/payment/order/results-failed/";
+                        ? "https://stream-cart-fe.vercel.app/payment/order/results-success"
+                        : "https://stream-cart-fe.vercel.app/payment/order/results-failed";
                 }
 
                 // Build redirect URL với order IDs
@@ -472,7 +472,7 @@ namespace PaymentService.Api.Controllers
 
                 // Trong trường hợp lỗi, redirect về trang failed với error message
                 string errorRedirectUrl = _configuration["PaymentRedirects:FailureUrl"] ??
-                    "http://localhost:3000/payment/order/results-failed/";
+                    "https://stream-cart-fe.vercel.app/payment/order/results-failed";
 
                 return Redirect($"{errorRedirectUrl.TrimEnd('/')}/error");
             }
