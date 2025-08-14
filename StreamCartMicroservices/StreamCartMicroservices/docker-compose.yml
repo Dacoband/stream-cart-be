@@ -478,9 +478,12 @@ services:
       - REDIS_CONNECTION_STRING=redis:6379,password=${REDIS_PASSWORD}
       
       # ✅ Service URLs (External Services)
-      - PRODUCT_SERVICE_URL=http://product-service
-      - SHOP_SERVICE_URL=http://shop-service
-      
+      - ServiceUrls__ProductService=http://product-service
+      - ServiceUrls__ShopService=http://shop-service
+      - ServiceUrls__AccountService=http://account-service
+      - ServiceUrls__LivestreamService=http://livestream-service
+      - ServiceUrls__OrderService=http://order-service
+
       # ✅ Gemini AI Configuration
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_URL=${GEMINI_API_URL}

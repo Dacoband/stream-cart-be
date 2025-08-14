@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
+using System.ComponentModel.DataAnnotations;
 
 namespace ChatBoxService.Api.Controllers
 {
@@ -321,6 +322,51 @@ namespace ChatBoxService.Api.Controllers
                 _logger.LogError(ex, "Error getting AI chat history");
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi lấy lịch sử chat AI"));
             }
+        }
+        /// <summary>
+        /// 🚀 AI Livestream Order Processing - Đặt hàng thông minh qua chat
+        /// </summary>
+        [HttpPost("livestream/{livestreamId}/process-order")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<OrderProcessingResult>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ProcessLivestreamOrder(Guid livestreamId, [FromBody] LivestreamOrderRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                _logger.LogInformation("Processing livestream order for user {UserId} in livestream {LivestreamId}: {Message}",
+                    userId, livestreamId, request.Message);
+
+                var orderProcessor = HttpContext.RequestServices.GetRequiredService<ILivestreamOrderProcessor>();
+                var result = await orderProcessor.ProcessLivestreamOrderAsync(request.Message, livestreamId, userId);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse<OrderProcessingResult>.SuccessResult(result, "🤖 AI đã xử lý đặt hàng thành công"));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<OrderProcessingResult>.CustomResponse(false, result.Message, result));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AI order processing");
+                return StatusCode(500, ApiResponse<object>.ErrorResult("❌ Lỗi hệ thống AI"));
+            }
+        }
+
+        public class LivestreamOrderRequest
+        {
+            [Required(ErrorMessage = "Tin nhắn là bắt buộc")]
+            public string Message { get; set; } = string.Empty;
         }
         // ✅ THÊM DTO cho test
         public class TestChatbotRequest
