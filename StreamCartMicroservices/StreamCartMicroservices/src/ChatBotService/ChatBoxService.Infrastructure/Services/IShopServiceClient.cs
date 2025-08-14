@@ -10,6 +10,15 @@ namespace ChatBoxService.Infrastructure.Services
         /// Lấy thông tin shop theo ID
         /// </summary>
         Task<ShopInfoDTO?> GetShopByIdAsync(Guid shopId);
+        /// <summary>
+        /// Tìm kiếm shop theo tên
+        /// </summary>
+        Task<List<ShopInfoDTO>> SearchShopsByNameAsync(string shopName);
+
+        /// <summary>
+        /// Lấy danh sách shop theo trạng thái
+        /// </summary>
+        Task<List<ShopInfoDTO>> GetShopsByStatusAsync(bool isActive = true);
     }
 
     public class ShopServiceClient : IShopServiceClient
@@ -70,6 +79,65 @@ namespace ChatBoxService.Infrastructure.Services
                     Email = "shop@streamcart.vn"
                 };
             }
+        }
+        public async Task<List<ShopInfoDTO>> SearchShopsByNameAsync(string shopName)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/shops/search?name={Uri.EscapeDataString(shopName)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<ShopInfoDTO>>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return apiResponse?.Data ?? new List<ShopInfoDTO>();
+                }
+
+                _logger.LogWarning("Shop search returned {StatusCode} for name {ShopName}", response.StatusCode, shopName);
+                return new List<ShopInfoDTO>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching shops by name {ShopName}", shopName);
+                return new List<ShopInfoDTO>();
+            }
+        }
+        public async Task<List<ShopInfoDTO>> GetShopsByStatusAsync(bool isActive = true)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/shops?isActive={isActive}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<ShopInfoDTO>>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return apiResponse?.Data ?? new List<ShopInfoDTO>();
+                }
+
+                _logger.LogWarning("Get shops by status returned {StatusCode} for isActive {IsActive}", response.StatusCode, isActive);
+                return new List<ShopInfoDTO>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting shops by status isActive={IsActive}", isActive);
+                return new List<ShopInfoDTO>();
+            }
+        }
+
+        private class ApiResponse<T>
+        {
+            public bool Success { get; set; }
+            public string? Message { get; set; }
+            public T? Data { get; set; }
         }
     }
 

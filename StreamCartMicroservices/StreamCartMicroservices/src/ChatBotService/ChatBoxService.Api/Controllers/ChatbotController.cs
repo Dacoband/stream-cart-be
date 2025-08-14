@@ -328,7 +328,7 @@ namespace ChatBoxService.Api.Controllers
         /// </summary>
         [HttpPost("livestream/{livestreamId}/process-order")]
         [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<OrderProcessingResult>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<OrderCreationResult>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> ProcessLivestreamOrder(Guid livestreamId, [FromBody] LivestreamOrderRequest request)
         {
@@ -341,19 +341,20 @@ namespace ChatBoxService.Api.Controllers
             {
                 var userId = _currentUserService.GetUserId();
 
-                _logger.LogInformation("Processing livestream order for user {UserId} in livestream {LivestreamId}: {Message}",
+                _logger.LogInformation("Processing AI livestream order for user {UserId} in livestream {LivestreamId}: {Message}",
                     userId, livestreamId, request.Message);
 
-                var orderProcessor = HttpContext.RequestServices.GetRequiredService<ILivestreamOrderProcessor>();
-                var result = await orderProcessor.ProcessLivestreamOrderAsync(request.Message, livestreamId, userId);
+                // ✅ FIX: Sử dụng ILivestreamOrderAIService thay vì ILivestreamOrderProcessor
+                var aiOrderService = HttpContext.RequestServices.GetRequiredService<ILivestreamOrderAIService>();
+                var result = await aiOrderService.ProcessOrderFromMessageAsync(request.Message, livestreamId, userId);
 
                 if (result.Success)
                 {
-                    return Ok(ApiResponse<OrderProcessingResult>.SuccessResult(result, "🤖 AI đã xử lý đặt hàng thành công"));
+                    return Ok(ApiResponse<OrderCreationResult>.SuccessResult(result, "🤖 AI đã xử lý đặt hàng thông minh thành công"));
                 }
                 else
                 {
-                    return BadRequest(ApiResponse<OrderProcessingResult>.CustomResponse(false, result.Message, result));
+                    return BadRequest(ApiResponse<OrderCreationResult>.CustomResponse(false, result.Message, result));
                 }
             }
             catch (Exception ex)
