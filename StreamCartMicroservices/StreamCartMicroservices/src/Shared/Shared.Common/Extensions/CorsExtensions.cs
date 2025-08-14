@@ -24,7 +24,8 @@ namespace Shared.Common.Extensions
                     {
                         if (corsSettings.AllowedOrigins.Contains("*"))
                         {
-                            builder.AllowAnyOrigin();
+                           // builder.AllowAnyOrigin();
+                            builder.SetIsOriginAllowed(_ => true);
                         }
                         else
                         {
@@ -73,6 +74,7 @@ namespace Shared.Common.Extensions
                     {
                         builder.SetPreflightMaxAge(TimeSpan.FromSeconds(corsSettings.MaxAge));
                     }
+                    builder.WithExposedHeaders("*");
                 });
             });
 

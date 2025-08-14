@@ -1018,6 +1018,32 @@
       "SwaggerKey": "livestream"
     },
     {
+      "DownstreamPathTemplate": "/signalrchat/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/signalrchat/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AllowWebSockets": true
+    },
+    {
+      "DownstreamPathTemplate": "/notificationHub/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/notificationHub/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AllowWebSockets": true
+    },
+    {
       "DownstreamPathTemplate": "/api/stream-views/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -1054,7 +1080,8 @@
       ],
       "UpstreamPathTemplate": "/api/chatsignalr/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH" ],
-      "SwaggerKey": "livestream"
+      "SwaggerKey": "livestream",
+      "AllowWebSockets": true
     },
     {
       "DownstreamPathTemplate": "/api/livestream-chat/{everything}",

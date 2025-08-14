@@ -76,7 +76,7 @@ namespace LivestreamService.Application.Handlers
                 string streamKey = Guid.NewGuid().ToString("N");
 
                 // Create livestream entity
-                var livestream = new Livestream(
+                var livestream = new Domain.Entities.Livestream(
                     request.Title,
                     request.Description,
                     request.SellerId,

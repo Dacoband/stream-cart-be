@@ -17,11 +17,13 @@ namespace LivestreamService.Infrastructure.Repositories
     {
         private readonly LivestreamDbContext _context;
         private readonly ILogger<StreamViewRepository> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
 
-        public StreamViewRepository(LivestreamDbContext context, ILogger<StreamViewRepository> logger)
+        public StreamViewRepository(LivestreamDbContext context, ILogger<StreamViewRepository> logger,IAccountServiceClient accountServiceClient)
         {
             _context = context;
             _logger = logger;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<IEnumerable<StreamView>> GetByLivestreamIdAsync(Guid livestreamId)
@@ -253,6 +255,57 @@ namespace LivestreamService.Infrastructure.Repositories
         public Task<PagedResult<StreamView>> SearchAsync(string searchTerm, PaginationParams paginationParams, string[]? searchableFields = null, Expression<Func<StreamView, bool>>? filter = null, bool exactMatch = false)
         {
             throw new NotImplementedException("Search not implemented for StreamView");
+        }
+        public async Task<Dictionary<string, int>> GetViewersByRoleAsync(Guid livestreamId)
+        {
+            try
+            {
+                // Get all active viewers for this livestream
+                var activeViews = await _context.StreamViews
+                    .Where(v => v.LivestreamId == livestreamId &&
+                           v.EndTime == null &&
+                           !v.IsDeleted)
+                    .ToListAsync();
+
+                var viewersByRole = new Dictionary<string, int>();
+
+                // Process each view to get user roles
+                foreach (var view in activeViews)
+                {
+                    try
+                    {
+                        // Get user account info via AccountServiceClient
+                        var userAccount = await _accountServiceClient.GetAccountByIdAsync(view.UserId);
+                        if (userAccount != null)
+                        {
+                            // Get role as string
+                            string role = userAccount.Role.ToString();
+
+                            // Increment counter for this role
+                            if (viewersByRole.ContainsKey(role))
+                                viewersByRole[role]++;
+                            else
+                                viewersByRole[role] = 1;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not determine role for user {UserId}", view.UserId);
+                        // If role is unknown, categorize as "Unknown"
+                        if (viewersByRole.ContainsKey("Unknown"))
+                            viewersByRole["Unknown"]++;
+                        else
+                            viewersByRole["Unknown"] = 1;
+                    }
+                }
+
+                return viewersByRole;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting viewers by role for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
         }
     }
 }

@@ -85,6 +85,7 @@ namespace LivestreamService.Infrastructure.Extensions
                 .AddHubOptions<SignalRChatHub>(options => { options.EnableDetailedErrors = true; })
                 .AddHubOptions<NotificationHub>(options => { options.EnableDetailedErrors = true; });
             services.AddScoped<IChatNotificationServiceSignalR, ChatNotificationServiceSignalR>();
+            services.AddScoped<ISignalRChatService, SignalRChatService>();
             services.AddScoped<IChatNotificationService, ChatNotificationService>();
             return services;
 

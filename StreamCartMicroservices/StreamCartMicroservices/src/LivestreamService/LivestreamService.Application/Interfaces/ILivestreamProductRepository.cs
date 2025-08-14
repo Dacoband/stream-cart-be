@@ -17,7 +17,16 @@ namespace LivestreamService.Application.Interfaces
 
         // New methods
         Task<IEnumerable<LivestreamProduct>> GetFlashSaleProductsAsync(Guid livestreamId);
+
         Task<bool> UpdateDisplayOrderAsync(Guid id, int displayOrder);
         Task<IEnumerable<LivestreamProduct>> GetProductsOrderedByDisplayAsync(Guid livestreamId);
+        Task<LivestreamProduct?> GetByCompositeKeyAsync(Guid livestreamId, string productId, string variantId);
+        Task<IEnumerable<LivestreamProduct>> GetAllPinnedProductsByLivestreamAsync(Guid livestreamId);
+        Task UnpinAllProductsInLivestreamAsync(Guid livestreamId, string modifiedBy);
+        Task<LivestreamProduct?> GetCurrentPinnedProductAsync(Guid livestreamId);
+
+        Task<LivestreamProduct?> GetBySkuInLivestreamAsync(Guid livestreamId, string sku);
+        Task<IEnumerable<LivestreamProduct>> GetBySkusInLivestreamAsync(Guid livestreamId, IEnumerable<string> skus);
+
     }
 }

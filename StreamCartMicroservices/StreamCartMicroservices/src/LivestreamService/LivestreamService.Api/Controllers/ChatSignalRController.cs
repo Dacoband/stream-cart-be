@@ -4,15 +4,20 @@ using LivestreamService.Application.DTOs.Chat;
 using LivestreamService.Application.Interfaces;
 using LivestreamService.Application.Queries.Chat;
 using LivestreamService.Domain.Enums;
+using LivestreamService.Infrastructure.Hubs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Net.WebSockets;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace LivestreamService.Api.Controllers
@@ -913,10 +918,617 @@ namespace LivestreamService.Api.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi kiểm tra kết nối SignalR"));
             }
         }
+        /// <summary>
+        /// Test SignalR connectivity và handshake
+        /// </summary>
+        [HttpGet("test-connectivity")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult TestConnectivity()
+        {
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    SignalRHub = "/signalrchat",
+                    WebSocketUrl = "wss://brightpa.me/signalrchat",
+                    Status = "Available",
+                    HandshakeInstructions = new
+                    {
+                        Step1 = "Connect to WebSocket URL",
+                        Step2 = "Send handshake immediately: {\"protocol\":\"json\",\"version\":1}",
+                        Step3 = "Wait for response: {}",
+                        Step4 = "Then send commands"
+                    },
+                    SupportedMethods = new[]
+                    {
+                "JoinDirectChatRoom",
+                "SendMessageToChatRoom",
+                "SetTypingStatus"
+                    },
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                    Timestamp = DateTime.UtcNow
+                },
+                "SignalR connectivity test"));
+        }
 
+        /// <summary>
+        /// Test authentication với token hiện tại
+        /// </summary>
+        [HttpGet("test-auth")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult TestAuth()
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                var username = _currentUserService.GetUsername();
+                var roles = _currentUserService.GetRoles();
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        UserId = userId,
+                        Username = username,
+                        Roles = roles,
+                        TokenValid = true,
+                        CanUseSignalR = true,
+                        Claims = User.Claims.Select(c => new { c.Type, c.Value }).Take(10),
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Authentication successful for SignalR"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Auth failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Test manual SignalR connection
+        /// </summary>
+        [HttpPost("test-manual-connection")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestManualConnection([FromBody] TestConnectionRequest request)
+        {
+            try
+            {
+                // Simulate một connection tới hub
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+
+                // Test gửi message đến tất cả clients
+                await hubContext.Clients.All.SendAsync("TestMessage", new
+                {
+                    Message = "Test from manual connection",
+                    Timestamp = DateTime.UtcNow,
+                    TestId = request.TestId ?? Guid.NewGuid().ToString()
+                });
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        TestId = request.TestId,
+                        Message = "Manual test sent successfully",
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Manual connection test successful"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Manual test failed: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Debug thời gian server và token
+        /// </summary>
+        [HttpGet("debug/time-info")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult GetTimeInfo()
+        {
+            var currentUtc = DateTime.UtcNow;
+            var currentLocal = DateTime.Now;
+
+            // Nếu có token trong header, decode để xem
+            string tokenInfo = "No token provided";
+            if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var token = authHeader.ToString().Replace("Bearer ", "");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    try
+                    {
+                        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                        var jsonToken = handler.ReadJwtToken(token);
+
+                        var iat = jsonToken.Claims.FirstOrDefault(c => c.Type == "iat")?.Value;
+                        var exp = jsonToken.Claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+                        var nbf = jsonToken.Claims.FirstOrDefault(c => c.Type == "nbf")?.Value;
+
+                        tokenInfo = new
+                        {
+                            IssuedAt = iat != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(iat)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            ExpiresAt = exp != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(exp)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            NotBefore = nbf != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(nbf)).ToString("yyyy-MM-dd HH:mm:ss UTC") : "N/A",
+                            IsExpired = exp != null ? DateTimeOffset.FromUnixTimeSeconds(long.Parse(exp)) < DateTimeOffset.UtcNow : false
+                        }.ToString();
+                    }
+                    catch (Exception ex)
+                    {
+                        tokenInfo = $"Token decode error: {ex.Message}";
+                    }
+                }
+            }
+
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    ServerTimeUTC = currentUtc.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    ServerTimeLocal = currentLocal.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ServerTimezone = TimeZoneInfo.Local.Id,
+                    UnixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    TokenInfo = tokenInfo,
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                },
+                "Server time information"));
+        }
+        /// <summary>
+        /// Test Hub registration and DI container setup
+        /// </summary>
+        [HttpGet("test-hub-registration")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        public IActionResult TestHubRegistration()
+        {
+            try
+            {
+                // Test Hub context injection
+                var signalRHubContext = HttpContext.RequestServices.GetService<IHubContext<SignalRChatHub>>();
+                var notificationHubContext = HttpContext.RequestServices.GetService<IHubContext<NotificationHub>>();
+                var signalRChatService = HttpContext.RequestServices.GetService<ISignalRChatService>();
+                var chatNotificationService = HttpContext.RequestServices.GetService<IChatNotificationServiceSignalR>();
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        SignalRHubContext = signalRHubContext != null ? "✅ Registered" : "❌ Missing",
+                        NotificationHubContext = notificationHubContext != null ? "✅ Registered" : "❌ Missing",
+                        SignalRChatService = signalRChatService != null ? "✅ Registered" : "❌ Missing",
+                        ChatNotificationService = chatNotificationService != null ? "✅ Registered" : "❌ Missing",
+                        HubOptions = new
+                        {
+                            EnableDetailedErrors = true,
+                            HandshakeTimeout = "45 seconds",
+                            ClientTimeout = "90 seconds"
+                        },
+                        Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Hub registration test"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Hub registration test failed: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Test Hub directly to debug handshake issues
+        /// </summary>
+        [HttpPost("test-hub-direct")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestHubDirect([FromBody] TestConnectionRequest request)
+        {
+            try
+            {
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+                var notificationHubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<NotificationHub>>();
+
+                // Test both hubs
+                var testData = new
+                {
+                    Message = "Direct hub test from API",
+                    TestId = request.TestId ?? Guid.NewGuid().ToString(),
+                    Timestamp = DateTime.UtcNow,
+                    HubType = "SignalRChatHub",
+                    Source = "Controller"
+                };
+
+                // Test SignalRChatHub
+                await hubContext.Clients.All.SendAsync("TestDirectMessage", testData);
+
+                // ✅ FIX: Create new anonymous type instead of using spread operator
+                var notificationData = new
+                {
+                    Message = testData.Message,
+                    TestId = testData.TestId,
+                    Timestamp = testData.Timestamp,
+                    HubType = "NotificationHub", // ✅ Override this property
+                    Source = testData.Source
+                };
+                await notificationHubContext.Clients.All.SendAsync("TestDirectMessage", notificationData);
+
+                _logger.LogInformation("✅ Direct hub test completed - Messages sent to all clients");
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        TestId = request.TestId,
+                        Message = "Direct hub test sent to both hubs successfully",
+                        SignalRChatHub = "✅ Message sent to all clients",
+                        NotificationHub = "✅ Message sent to all clients",
+                        ClientsMessage = testData,
+                        Timestamp = DateTime.UtcNow,
+                        HubsAvailable = new
+                        {
+                            SignalRChatHub = hubContext != null,
+                            NotificationHub = notificationHubContext != null
+                        }
+                    },
+                    "Direct hub test successful"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Direct hub test failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Direct hub test failed: {ex.Message}\nStackTrace: {ex.StackTrace}"));
+            }
+        }
+
+        /// <summary>
+        /// Debug SignalR configuration và middleware
+        /// </summary>
+        [HttpGet("debug/signalr-config")]
+        [AllowAnonymous]
+        public IActionResult GetSignalRDebugInfo()
+        {
+            try
+            {
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                        CurrentPath = HttpContext.Request.Path.ToString(),
+                        CurrentScheme = HttpContext.Request.Scheme,
+                        CurrentHost = HttpContext.Request.Host.ToString(),
+                        IsHttps = HttpContext.Request.IsHttps,
+                        Protocol = HttpContext.Request.Protocol,
+                        SignalRUrls = new
+                        {
+                            ChatHub = "/signalrchat",
+                            NotificationHub = "/notificationHub",
+                            ExpectedLocalWS = "ws://localhost:7041/signalrchat",
+                            ExpectedProdWSS = "wss://brightpa.me/signalrchat",
+                            CurrentBaseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}"
+                        },
+                        RequestHeaders = HttpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
+                        ServerInfo = new
+                        {
+                            MachineName = Environment.MachineName,
+                            OSVersion = Environment.OSVersion.ToString(),
+                            ProcessorCount = Environment.ProcessorCount,
+                            Is64BitOS = Environment.Is64BitOperatingSystem,
+                            WorkingSet = Environment.WorkingSet,
+                            AspNetCoreVersion = Environment.Version.ToString()
+                        },
+                        WebSocketSupport = new
+                        {
+                            IsWebSocketRequest = HttpContext.WebSockets?.IsWebSocketRequest ?? false,
+                            WebSocketsSupported = HttpContext.WebSockets != null
+                        },
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "SignalR configuration debug info"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Debug info failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Debug failed: {ex.Message}\nStackTrace: {ex.StackTrace}"));
+            }
+        }
+
+        /// <summary>
+        /// Test WebSocket support directly
+        /// </summary>
+        [HttpGet("debug/websocket-support")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestWebSocketSupport()
+        {
+            try
+            {
+                if (HttpContext.WebSockets.IsWebSocketRequest)
+                {
+                    var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+
+                    // Send a test message
+                    var testMessage = Encoding.UTF8.GetBytes("WebSocket test successful!");
+                    await webSocket.SendAsync(
+                        new ArraySegment<byte>(testMessage),
+                        WebSocketMessageType.Text,
+                        true,
+                        CancellationToken.None);
+
+                    await webSocket.CloseAsync(
+                        WebSocketCloseStatus.NormalClosure,
+                        "Test completed",
+                        CancellationToken.None);
+
+                    return Ok(); // This won't be reached since we're in WebSocket mode
+                }
+                else
+                {
+                    return Ok(ApiResponse<object>.SuccessResult(
+                        new
+                        {
+                            WebSocketSupported = HttpContext.WebSockets != null,
+                            IsWebSocketRequest = false,
+                            RequestScheme = HttpContext.Request.Scheme,
+                            RequestHeaders = HttpContext.Request.Headers
+                                .Where(h => h.Key.Contains("websocket", StringComparison.OrdinalIgnoreCase) ||
+                                           h.Key.Contains("upgrade", StringComparison.OrdinalIgnoreCase) ||
+                                           h.Key.Contains("connection", StringComparison.OrdinalIgnoreCase))
+                                .ToDictionary(h => h.Key, h => h.Value.ToString()),
+                            Instructions = "This endpoint tests WebSocket support. Use a WebSocket client to connect to this URL.",
+                            TestWebSocketUrl = $"{HttpContext.Request.Scheme.Replace("http", "ws")}://{HttpContext.Request.Host}/api/chatsignalr/debug/websocket-support"
+                        },
+                        "WebSocket support information"));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ WebSocket support test failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"WebSocket test failed: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Test WebSocket endpoint accessibility
+        /// </summary>
+        [HttpGet("debug/websocket-test")]
+        [AllowAnonymous]
+        public IActionResult TestWebSocketEndpoint()
+        {
+            try
+            {
+                var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
+                var wsScheme = HttpContext.Request.IsHttps ? "wss" : "ws";
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        BaseUrl = baseUrl,
+                        IsHttps = HttpContext.Request.IsHttps,
+                        WebSocketUrls = new
+                        {
+                            SignalRChat = $"{wsScheme}://{HttpContext.Request.Host}/signalrchat",
+                            NotificationHub = $"{wsScheme}://{HttpContext.Request.Host}/notificationHub",
+                            TestHub = $"{wsScheme}://{HttpContext.Request.Host}/testhub"
+                        },
+                        TestInstructions = new
+                        {
+                            Step1 = "Use the WebSocket URLs above",
+                            Step2 = "Add ?access_token=YOUR_JWT_TOKEN to the URL",
+                            Step3 = "For localhost, use ws:// NOT wss://",
+                            Step4 = "For production, use wss://brightpa.me/signalrchat"
+                        },
+                        Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "WebSocket endpoint test information"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"WebSocket test failed: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Debug handshake sequence và timing
+        /// </summary>
+        [HttpGet("debug/handshake-info")]
+        [AllowAnonymous]
+        public IActionResult GetHandshakeDebugInfo()
+        {
+            return Ok(ApiResponse<object>.SuccessResult(
+                new
+                {
+                    HandshakeSequence = new
+                    {
+                        Step1 = "Client connects to WebSocket URL",
+                        Step2 = "Server sends HTTP 101 Switching Protocols",
+                        Step3 = "Client sends handshake: {\"protocol\":\"json\",\"version\":1}\\u001e",
+                        Step4 = "Server responds: {}\\u001e",
+                        Step5 = "Handshake complete, ready for messages"
+                    },
+                    CommonIssues = new
+                    {
+                        Issue1 = "Missing \\u001e (record separator) at end of messages",
+                        Issue2 = "Incorrect JSON format in handshake",
+                        Issue3 = "Authentication timeout during handshake",
+                        Issue4 = "Server closing connection too early"
+                    },
+                    TestInstructions = new
+                    {
+                        Step1 = "Use WebSocket client (not browser)",
+                        Step2 = "Connect to ws://localhost:7041/signalrchat?access_token=YOUR_TOKEN",
+                        Step3 = "Immediately send: {\"protocol\":\"json\",\"version\":1}\\u001e",
+                        Step4 = "Wait for: {}\\u001e response",
+                        Step5 = "Then send commands"
+                    },
+                    ExpectedHandshakeMessage = "{\"protocol\":\"json\",\"version\":1}\u001e",
+                    ExpectedResponse = "{}\u001e",
+                    Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+                    Timestamp = DateTime.UtcNow
+                },
+                "SignalR handshake debug information"));
+        }
+
+        /// <summary>
+        /// Test endpoint để gửi raw WebSocket message
+        /// </summary>
+        [HttpPost("debug/test-websocket-message")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestWebSocketMessage([FromBody] TestConnectionRequest request)
+        {
+            try
+            {
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+
+                // Send test message với format đúng
+                var testMessage = new
+                {
+                    type = 1, // InvocationMessage
+                    target = "TestMessage",
+                    arguments = new object[]
+                    {
+                        new
+                        {
+                            TestId = request.TestId ?? Guid.NewGuid().ToString(),
+                            Message = request.Message ?? "Test message",
+                            Timestamp = DateTime.UtcNow,
+                            Source = "DebugEndpoint"
+                        }
+                    }
+                };
+
+                await hubContext.Clients.All.SendAsync("TestMessage", testMessage);
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        Success = true,
+                        Message = "Test WebSocket message sent",
+                        TestMessage = testMessage,
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "WebSocket message test completed"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ WebSocket message test failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"WebSocket test failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Test connection state và detailed logging
+        /// </summary>
+        [HttpGet("debug/connection-state")]
+        [AllowAnonymous]
+        public IActionResult GetConnectionState()
+        {
+            try
+            {
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        Server = new
+                        {
+                            IsRunning = true,
+                            MachineName = Environment.MachineName,
+                            ProcessId = Environment.ProcessId,
+                            ThreadId = Environment.CurrentManagedThreadId,
+                            WorkingSet = Environment.WorkingSet
+                        },
+                        SignalR = new
+                        {
+                            HubContextAvailable = hubContext != null,
+                            EnableDetailedErrors = true,
+                            HandshakeTimeout = "45 seconds",
+                            ClientTimeout = "90 seconds",
+                            KeepAliveInterval = "15 seconds"
+                        },
+                        WebSocket = new
+                        {
+                            Supported = HttpContext.WebSockets != null,
+                            KeepAliveInterval = "2 minutes",
+                            ReceiveBufferSize = "4KB"
+                        },
+                        Authentication = new
+                        {
+                            JwtConfigured = true,
+                            AllowAnonymousOnSignalR = true,
+                            TokenFromQuery = "Supported",
+                            TokenFromHeader = "Supported"
+                        },
+                        Middleware = new
+                        {
+                            SignalRDebugMiddleware = "Active",
+                            ForwardedHeaders = "Configured",
+                            WebSockets = "Before Routing",
+                            CORS = "Before Authentication"
+                        },
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Connection state debug information"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Connection state check failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Connection state check failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Force handshake completion test
+        /// </summary>
+        [HttpPost("debug/force-handshake")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForceHandshakeTest([FromBody] TestConnectionRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("🔧 Starting force handshake test");
+
+                var hubContext = HttpContext.RequestServices.GetRequiredService<IHubContext<SignalRChatHub>>();
+
+                // Simulate successful handshake
+                var handshakeData = new
+                {
+                    HandshakeComplete = true,
+                    TestId = request.TestId ?? Guid.NewGuid().ToString(),
+                    Message = "Forced handshake simulation",
+                    ExpectedFlow = new
+                    {
+                        ClientSends = "{\"protocol\":\"json\",\"version\":1}\u001e",
+                        ServerResponds = "{}\u001e",
+                        Status = "Ready for messages"
+                    },
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Send to all connected clients
+                await hubContext.Clients.All.SendAsync("HandshakeTest", handshakeData);
+
+                _logger.LogInformation("✅ Force handshake test completed");
+
+                return Ok(ApiResponse<object>.SuccessResult(
+                    new
+                    {
+                        Success = true,
+                        TestData = handshakeData,
+                        Instructions = new
+                        {
+                            NextStep = "Check if client receives HandshakeTest message",
+                            TroubleshootingTip = "If no message received, handshake is failing",
+                            Solution = "Check client handshake message format"
+                        },
+                        Timestamp = DateTime.UtcNow
+                    },
+                    "Force handshake test completed"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Force handshake test failed");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Force handshake test failed: {ex.Message}"));
+            }
+        }
         #endregion
-    }
 
+    }
+    public class TestConnectionRequest
+    {
+        public string? TestId { get; set; }
+        public string? Message { get; set; }
+    }
     public class TypingStatusDTO
     {
         [Required]

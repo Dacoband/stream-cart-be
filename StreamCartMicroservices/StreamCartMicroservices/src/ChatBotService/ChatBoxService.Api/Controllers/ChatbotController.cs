@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
+using System.ComponentModel.DataAnnotations;
 
 namespace ChatBoxService.Api.Controllers
 {
@@ -219,8 +220,26 @@ namespace ChatBoxService.Api.Controllers
                 _logger.LogInformation("Processing AI chat request for user {UserId}: {Message}",
                     userId, request.Message);
 
+
+                var chatHistoryService = HttpContext.RequestServices.GetRequiredService<IChatHistoryService>();
+
+                // ✅ 2. Tạo/lấy conversation với "AI Shop" (sử dụng Guid.Empty cho AI)
+                var aiShopId = Guid.Empty; // Dùng Empty GUID để đại diện cho AI chatbot
+
+                var conversation = await chatHistoryService.GetOrCreateConversationAsync(Guid.Parse( userId), aiShopId);
+                await chatHistoryService.AddMessageToConversationAsync(
+                        conversation.ConversationId,
+                        request.Message,
+                        "User",
+                        "ai_chat_request");
+
                 var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
                 var response = await aiChatService.SendMessageAsync(request.Message, userId);
+                await chatHistoryService.AddMessageToConversationAsync(
+                     conversation.ConversationId,
+                     response.Response,
+                     "Bot",
+                     "ai_chat_response");
 
                 return Ok(ApiResponse<AIChatResponse>.SuccessResult(
                     response,
@@ -234,7 +253,7 @@ namespace ChatBoxService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy lịch sử chat từ dịch vụ AI
+        /// Lấy lịch sử chat từ Redis (thay vì AI service)
         /// </summary>
         [HttpGet("chat/history")]
         [Authorize]
@@ -243,14 +262,59 @@ namespace ChatBoxService.Api.Controllers
         {
             try
             {
-                var userId = _currentUserService.GetUserId().ToString();
-                _logger.LogInformation("Getting AI chat history for user {UserId}", userId);
+                var userId = _currentUserService.GetUserId();
+                var userIdString = userId.ToString();
 
-                var aiChatService = HttpContext.RequestServices.GetRequiredService<IAIChatService>();
-                var history = await aiChatService.GetChatHistoryAsync(userId);
+                _logger.LogInformation("Getting AI chat history for user {UserId}", userIdString);
+
+                // ✅ Lấy từ Redis thay vì AI service
+                var chatHistoryService = HttpContext.RequestServices.GetRequiredService<IChatHistoryService>();
+                var aiShopId = Guid.Empty; // AI chatbot shop ID
+
+                // ✅ Lấy lịch sử chat với AI
+                var historyRequest = new GetChatHistoryRequest
+                {
+                    UserId = userId,
+                    ShopId = aiShopId,
+                    PageNumber = 1,
+                    PageSize = 50
+                };
+
+                var chatHistory = await chatHistoryService.GetChatHistoryAsync(historyRequest);
+
+                // ✅ Convert từ ChatHistoryResponse sang AIChatHistoryResponse
+                var aiHistory = new AIChatHistoryResponse
+                {
+                    UserId = userIdString,
+                    History = new List<AIChatHistoryEntry>()
+                };
+
+                if (chatHistory.Conversations.Any())
+                {
+                    var conversation = chatHistory.Conversations.First();
+                    // ✅ FIX: Sử dụng Timestamp thay vì CreatedAt
+                    foreach (var message in conversation.Messages.OrderBy(m => m.Timestamp))
+                    {
+                        if (message.Sender == "User")
+                        {
+                            // Tìm phản hồi tương ứng
+                            var botResponse = conversation.Messages
+                                .Where(m => m.Sender == "Bot" && m.Timestamp > message.Timestamp)
+                                .OrderBy(m => m.Timestamp)
+                                .FirstOrDefault();
+
+                            aiHistory.History.Add(new AIChatHistoryEntry
+                            {
+                                Timestamp = message.Timestamp, // ✅ FIX: Sử dụng Timestamp
+                                UserMessage = message.Content,
+                                AIResponse = botResponse?.Content ?? "Không có phản hồi"
+                            });
+                        }
+                    }
+                }
 
                 return Ok(ApiResponse<AIChatHistoryResponse>.SuccessResult(
-                    history,
+                    aiHistory,
                     "Lấy lịch sử chat AI thành công"));
             }
             catch (Exception ex)
@@ -258,6 +322,52 @@ namespace ChatBoxService.Api.Controllers
                 _logger.LogError(ex, "Error getting AI chat history");
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi lấy lịch sử chat AI"));
             }
+        }
+        /// <summary>
+        /// 🚀 AI Livestream Order Processing - Đặt hàng thông minh qua chat
+        /// </summary>
+        [HttpPost("livestream/{livestreamId}/process-order")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<OrderCreationResult>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ProcessLivestreamOrder(Guid livestreamId, [FromBody] LivestreamOrderRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                _logger.LogInformation("Processing AI livestream order for user {UserId} in livestream {LivestreamId}: {Message}",
+                    userId, livestreamId, request.Message);
+
+                // ✅ FIX: Sử dụng ILivestreamOrderAIService thay vì ILivestreamOrderProcessor
+                var aiOrderService = HttpContext.RequestServices.GetRequiredService<ILivestreamOrderAIService>();
+                var result = await aiOrderService.ProcessOrderFromMessageAsync(request.Message, livestreamId, userId);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse<OrderCreationResult>.SuccessResult(result, "🤖 AI đã xử lý đặt hàng thông minh thành công"));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<OrderCreationResult>.CustomResponse(false, result.Message, result));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AI order processing");
+                return StatusCode(500, ApiResponse<object>.ErrorResult("❌ Lỗi hệ thống AI"));
+            }
+        }
+
+        public class LivestreamOrderRequest
+        {
+            [Required(ErrorMessage = "Tin nhắn là bắt buộc")]
+            public string Message { get; set; } = string.Empty;
         }
         // ✅ THÊM DTO cho test
         public class TestChatbotRequest

@@ -103,7 +103,7 @@ namespace AccountService.Application.Handlers
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
-            
+            var now = DateTime.UtcNow;
             var claims = new List<Claim>
             {
                 new Claim("id", account.Id.ToString()),
@@ -112,11 +112,14 @@ namespace AccountService.Application.Handlers
                 new Claim(ClaimTypes.Role, account.Role.ToString()),
                 new Claim("ShopId", account.ShopId.ToString())
             };
+            var expiryTime = now.AddMinutes(_jwtSettings.ExpiryMinutes + 5); // Thêm 5 phút buffer
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
+                IssuedAt = now,
+                Expires = expiryTime,
+                NotBefore = now.AddSeconds(-30), // ✅ Cho phép token hoạt động ngay lập tức
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key), 
                     SecurityAlgorithms.HmacSha256Signature),

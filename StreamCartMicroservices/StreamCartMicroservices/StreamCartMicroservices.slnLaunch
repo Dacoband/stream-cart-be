@@ -3,15 +3,7 @@
     "Name": "New Profile",
     "Projects": [
       {
-        "Path": "src\\ProductService\\ProductService.Api\\ProductService.Api.csproj",
-        "Action": "Start"
-      },
-      {
         "Path": "src\\OrderService\\OrderService.Api\\OrderService.Api.csproj",
-        "Action": "Start"
-      },
-      {
-        "Path": "src\\PaymentService\\PaymentService.Api\\PaymentService.Api.csproj",
         "Action": "Start"
       },
       {
@@ -20,6 +12,18 @@
       },
       {
         "Path": "src\\LivestreamService\\LivestreamService.Api\\LivestreamService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\ProductService\\ProductService.Api\\ProductService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\ChatBotService\\ChatBoxService.Api\\ChatBoxService.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\ShopService\\ShopService.Api\\ShopService.Api.csproj",
         "Action": "Start"
       }
     ]

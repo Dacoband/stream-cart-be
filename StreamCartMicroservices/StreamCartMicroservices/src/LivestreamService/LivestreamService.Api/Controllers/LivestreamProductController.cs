@@ -114,7 +114,7 @@ namespace LivestreamService.Api.Controllers
         /// Lấy danh sách sản phẩm đã ghim trong livestream
         /// </summary>
         [HttpGet("livestream/{livestreamId}/pinned")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductDTO>>), 200)]
         public async Task<IActionResult> GetPinnedProducts(Guid livestreamId, [FromQuery] int limit = 5)
         {
@@ -140,7 +140,7 @@ namespace LivestreamService.Api.Controllers
         /// Lấy danh sách sản phẩm bán chạy trong livestream
         /// </summary>
         [HttpGet("livestream/{livestreamId}/best-selling")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductSummaryDTO>>), 200)]
         public async Task<IActionResult> GetBestSellingProducts(Guid livestreamId, [FromQuery] int limit = 10)
         {
@@ -166,7 +166,7 @@ namespace LivestreamService.Api.Controllers
         /// Lấy chi tiết sản phẩm trong livestream
         /// </summary>
         [HttpGet("{id}/detail")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<LivestreamProductDetailDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetLivestreamProductDetail(Guid id)
@@ -192,10 +192,15 @@ namespace LivestreamService.Api.Controllers
         /// <summary>
         /// Cập nhật sản phẩm trong livestream
         /// </summary>
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Seller")]
+        /// </summary>
+        [HttpPut("livestream/{livestreamId}/product/{productId}/variant/{variantId}")]
+        //[Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
-        public async Task<IActionResult> UpdateLivestreamProduct(Guid id, [FromBody] UpdateLivestreamProductDTO request)
+        public async Task<IActionResult> UpdateLivestreamProduct(
+            Guid livestreamId,
+            string productId,
+            string? variantId,
+            [FromBody] UpdateLivestreamProductDTO request)
         {
             try
             {
@@ -203,11 +208,12 @@ namespace LivestreamService.Api.Controllers
 
                 var command = new UpdateLivestreamProductCommand
                 {
-                    Id = id,
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
                     Price = request.Price,
                     Stock = request.Stock,
                     IsPin = request.IsPin,
-                    //FlashSaleId = request.FlashSaleId,
                     SellerId = userId
                 };
 
@@ -232,10 +238,14 @@ namespace LivestreamService.Api.Controllers
         /// <summary>
         /// Ghim/bỏ ghim sản phẩm
         /// </summary>
-        [HttpPatch("{id}/pin")]
-        [Authorize(Roles = "Seller")]
+        [HttpPatch("livestream/{livestreamId}/product/{productId}/variant/{variantId}/pin")]
+       // [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
-        public async Task<IActionResult> PinProduct(Guid id, [FromBody] PinProductDTO request)
+        public async Task<IActionResult> PinProduct(
+            Guid livestreamId,
+            string productId,
+            string? variantId,
+            [FromBody] PinProductDTO request)
         {
             try
             {
@@ -243,7 +253,9 @@ namespace LivestreamService.Api.Controllers
 
                 var command = new PinProductCommand
                 {
-                    Id = id,
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
                     IsPin = request.IsPin,
                     SellerId = userId
                 };
@@ -269,10 +281,14 @@ namespace LivestreamService.Api.Controllers
         /// <summary>
         /// Cập nhật số lượng tồn kho sản phẩm
         /// </summary>
-        [HttpPatch("{id}/stock")]
-        [Authorize(Roles = "Seller")]
+        [HttpPatch("livestream/{livestreamId}/product/{productId}/variant/{variantId}/stock")]
+       // [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
-        public async Task<IActionResult> UpdateStock(Guid id, [FromBody] UpdateStockDTO request)
+        public async Task<IActionResult> UpdateStock(
+            Guid livestreamId,
+            string productId,
+            string? variantId,
+            [FromBody] UpdateStockDTO request)
         {
             try
             {
@@ -280,7 +296,9 @@ namespace LivestreamService.Api.Controllers
 
                 var command = new UpdateStockCommand
                 {
-                    Id = id,
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
                     Stock = request.Stock,
                     SellerId = userId
                 };
@@ -303,13 +321,17 @@ namespace LivestreamService.Api.Controllers
             }
         }
 
+
         /// <summary>
         /// Xóa sản phẩm khỏi livestream
         /// </summary>
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Seller")]
+        [HttpDelete("livestream/{livestreamId}/product/{productId}/variant/{variantId}")]
+       // [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
-        public async Task<IActionResult> DeleteLivestreamProduct(Guid id)
+        public async Task<IActionResult> DeleteLivestreamProduct(
+            Guid livestreamId,
+            string productId,
+            string variantId)
         {
             try
             {
@@ -317,7 +339,9 @@ namespace LivestreamService.Api.Controllers
 
                 var command = new DeleteLivestreamProductCommand
                 {
-                    Id = id,
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId,
                     SellerId = userId
                 };
 
@@ -335,6 +359,225 @@ namespace LivestreamService.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi xóa sản phẩm khỏi livestream");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Lấy thông tin 1 sản phẩm với tất cả phân loại trong livestream
+        /// </summary>
+        [HttpGet("livestream/{livestreamId}/product/{productId}")]
+       // [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<ProductLiveStreamDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetProductLiveStream(Guid livestreamId, string productId)
+        {
+            try
+            {
+                var query = new GetProductLiveStreamQuery(livestreamId, productId);
+                var result = await _mediator.Send(query);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Sản phẩm {productId} không tồn tại trong livestream {livestreamId}"));
+                }
+
+                return Ok(ApiResponse<ProductLiveStreamDTO>.SuccessResult(result, "Lấy thông tin sản phẩm với các phân loại thành công"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy thông tin sản phẩm {ProductId} trong livestream {LivestreamId}", productId, livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Lấy sản phẩm trong livestream theo SKU
+        /// </summary>
+        [HttpGet("livestream/{livestreamId}/sku/{sku}")]
+        //[Authorize]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetLivestreamProductBySku(Guid livestreamId, string sku)
+        {
+            try
+            {
+                _logger.LogInformation("Getting product with SKU {Sku} for livestream {LivestreamId}", sku, livestreamId);
+
+                var query = new GetLivestreamProductBySkuQuery
+                {
+                    LivestreamId = livestreamId,
+                    Sku = sku
+                };
+
+                var result = await _mediator.Send(query);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Không tìm thấy sản phẩm có SKU '{sku}' trong livestream này"));
+                }
+
+                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, "Lấy thông tin sản phẩm thành công"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm theo SKU {Sku} trong livestream {LivestreamId}", sku, livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy nhiều sản phẩm trong livestream theo danh sách SKU
+        /// </summary>
+        [HttpPost("livestream/{livestreamId}/skus")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetLivestreamProductsBySkus(Guid livestreamId, [FromBody] GetProductsBySkusRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+                }
+
+                if (request.Skus == null || !request.Skus.Any())
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Danh sách SKU không được rỗng"));
+                }
+
+                _logger.LogInformation("Getting products with SKUs [{Skus}] for livestream {LivestreamId}",
+                    string.Join(", ", request.Skus), livestreamId);
+
+                var query = new GetLivestreamProductsBySkusQuery
+                {
+                    LivestreamId = livestreamId,
+                    Skus = request.Skus
+                };
+
+                var results = await _mediator.Send(query);
+
+                return Ok(ApiResponse<IEnumerable<LivestreamProductDTO>>.SuccessResult(results,
+                    $"Tìm thấy {results.Count()} sản phẩm trong tổng số {request.Skus.Count()} SKU"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy sản phẩm theo danh sách SKU trong livestream {LivestreamId}", livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Xóa sản phẩm khỏi livestream bằng ID
+        /// </summary>
+        [HttpDelete("{id}")]
+       // [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> DeleteLivestreamProductById(Guid id)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                var command = new DeleteLivestreamProductByIdCommand
+                {
+                    Id = id,
+                    SellerId = userId
+                };
+
+                var result = await _mediator.Send(command);
+                return Ok(ApiResponse<bool>.SuccessResult(result, "Đã xóa sản phẩm khỏi livestream"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xóa sản phẩm khỏi livestream");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Ghim/bỏ ghim sản phẩm bằng ID
+        /// </summary>
+        [HttpPatch("{id}/pin")]
+        //[Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> PinProductById(
+            Guid id,
+            [FromBody] PinProductDTO request)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                var command = new PinProductByIdCommand
+                {
+                    Id = id,
+                    IsPin = request.IsPin,
+                    SellerId = userId
+                };
+
+                var result = await _mediator.Send(command);
+                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, request.IsPin ? "Đã ghim sản phẩm" : "Đã bỏ ghim sản phẩm"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi ghim/bỏ ghim sản phẩm");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật số lượng tồn kho sản phẩm bằng ID
+        /// </summary>
+        [HttpPatch("{id}/stock")]
+        //[Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateStockById(
+            Guid id,
+            [FromBody] UpdateStockDTO request)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                var command = new UpdateStockByIdCommand
+                {
+                    Id = id,
+                    Stock = request.Stock,
+                    SellerId = userId
+                };
+
+                var result = await _mediator.Send(command);
+                return Ok(ApiResponse<LivestreamProductDTO>.SuccessResult(result, "Đã cập nhật số lượng"));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật số lượng tồn kho");
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }

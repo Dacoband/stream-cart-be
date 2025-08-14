@@ -38,17 +38,75 @@ namespace PaymentService.Application.Handlers
                     _logger.LogWarning("Payment {PaymentId} not found when processing callback", request.PaymentId);
                     return null;
                 }
-
-                var updateCommand = new UpdatePaymentStatusCommand
+                if (request.IsSuccessful && payment.Status == Domain.Enums.PaymentStatus.Paid)
                 {
-                    PaymentId = request.PaymentId,
-                    NewStatus = request.IsSuccessful ? Domain.Enums.PaymentStatus.Paid : Domain.Enums.PaymentStatus.Failed,
-                    QrCode = request.QrCode,
-                    Fee = request.Fee,
-                    UpdatedBy = "PaymentProcessor"
-                };
+                    _logger.LogInformation("Payment {PaymentId} is already marked as Paid, skipping status update but still updating order", request.PaymentId);
 
-                var result = await _mediator.Send(updateCommand, cancellationToken);
+                    // Vẫn cần đảm bảo order được cập nhật
+                    try
+                    {
+                        await _orderServiceClient.UpdateOrderPaymentStatusAsync(
+                            payment.OrderId,
+                            Domain.Enums.PaymentStatus.Paid);
+
+                        _logger.LogInformation("Order {OrderId} payment status updated to Paid (idempotent)", payment.OrderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to update order status for Order {OrderId} (idempotent)", payment.OrderId);
+                    }
+                    return new PaymentDto
+                    {
+                        Id = payment.Id,
+                        OrderId = payment.OrderId,
+                        UserId = payment.UserId,
+                        Amount = payment.Amount,
+                        PaymentMethod = payment.PaymentMethod.ToString(),
+                        Status = payment.Status.ToString(),
+                        QrCode = payment.QrCode,
+                        Fee = payment.Fee,
+                        ProcessedAt = payment.ProcessedAt,
+                        CreatedAt = payment.CreatedAt,
+                        CreatedBy = payment.CreatedBy,
+                        LastModifiedAt = payment.LastModifiedAt,
+                        LastModifiedBy = payment.LastModifiedBy
+                    };
+                }
+
+                PaymentDto? result = null;
+                if (payment.Status != (request.IsSuccessful ? Domain.Enums.PaymentStatus.Paid : Domain.Enums.PaymentStatus.Failed))
+                {
+                    var updateCommand = new UpdatePaymentStatusCommand
+                    {
+                        PaymentId = request.PaymentId,
+                        NewStatus = request.IsSuccessful ? Domain.Enums.PaymentStatus.Paid : Domain.Enums.PaymentStatus.Failed,
+                        QrCode = request.QrCode,
+                        Fee = request.Fee,
+                        UpdatedBy = "PaymentProcessor"
+                    };
+
+                    result = await _mediator.Send(updateCommand, cancellationToken);
+                }
+                else
+                {
+                    // Nếu trạng thái đã đúng, tạo DTO từ payment hiện tại
+                    result = new PaymentDto
+                    {
+                        Id = payment.Id,
+                        OrderId = payment.OrderId,
+                        UserId = payment.UserId,
+                        Amount = payment.Amount,
+                        PaymentMethod = payment.PaymentMethod.ToString(),
+                        Status = payment.Status.ToString(),
+                        QrCode = payment.QrCode,
+                        Fee = payment.Fee,
+                        ProcessedAt = payment.ProcessedAt,
+                        CreatedAt = payment.CreatedAt,
+                        CreatedBy = payment.CreatedBy,
+                        LastModifiedAt = payment.LastModifiedAt,
+                        LastModifiedBy = payment.LastModifiedBy
+                    };
+                }
                 if (request.IsSuccessful && result != null)
                 {
                     try

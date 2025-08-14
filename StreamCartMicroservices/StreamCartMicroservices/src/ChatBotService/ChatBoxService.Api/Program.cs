@@ -102,8 +102,34 @@ builder.Services.AddHealthChecks()
             return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy($"Redis is not responding: {ex.Message}");
         }
     });
+// Add these service registrations
+builder.Services.AddScoped<ILivestreamOrderProcessor, LivestreamOrderProcessor>();
+builder.Services.AddHttpClient<IAddressServiceClient, AddressServiceClient>(client =>
+{
+    var serviceUrl = builder.Configuration["ServiceUrls:AccountService"];
+    if (!string.IsNullOrEmpty(serviceUrl))
+    {
+        client.BaseAddress = new Uri(serviceUrl);
+    }
+});
+builder.Services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>(client =>
+{
+    var serviceUrl = builder.Configuration["ServiceUrls:LivestreamService"];
+    if (!string.IsNullOrEmpty(serviceUrl))
+    {
+        client.BaseAddress = new Uri(serviceUrl);
+    }
+});
 
-
+builder.Services.AddHttpClient<IOrderServiceClient, OrderServiceClient>(client =>
+{
+    var serviceUrl = builder.Configuration["ServiceUrls:OrderService"];
+    if (!string.IsNullOrEmpty(serviceUrl))
+    {
+        client.BaseAddress = new Uri(serviceUrl);
+    }
+});
+builder.Services.AddScoped<ILivestreamOrderAIService, LivestreamOrderAIService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

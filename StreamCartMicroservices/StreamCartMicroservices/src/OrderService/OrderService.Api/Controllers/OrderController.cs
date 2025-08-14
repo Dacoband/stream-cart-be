@@ -21,7 +21,7 @@ namespace OrderService.Api.Controllers
 {
     [Route("api/orders")]
     [ApiController]
-    [Authorize]
+   // [Authorize]
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;

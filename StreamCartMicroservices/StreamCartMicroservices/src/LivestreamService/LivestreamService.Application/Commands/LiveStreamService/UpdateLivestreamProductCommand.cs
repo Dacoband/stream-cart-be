@@ -10,11 +10,12 @@ namespace LivestreamService.Application.Commands.LiveStreamService
 {
     public class UpdateLivestreamProductCommand : IRequest<LivestreamProductDTO>
     {
-        public Guid Id { get; set; }
+        public Guid LivestreamId { get; set; }
+        public string ProductId { get; set; } = string.Empty;
+        public string VariantId { get; set; } = string.Empty;
         public decimal? Price { get; set; }
         public int? Stock { get; set; }
         public bool? IsPin { get; set; }
-       // public Guid? FlashSaleId { get; set; }
         public Guid SellerId { get; set; }
     }
 }

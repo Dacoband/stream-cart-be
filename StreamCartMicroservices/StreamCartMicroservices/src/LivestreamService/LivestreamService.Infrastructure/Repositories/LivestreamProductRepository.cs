@@ -17,13 +17,16 @@ namespace LivestreamService.Infrastructure.Repositories
     {
         private readonly ILogger<LivestreamProductRepository> _logger;
         private readonly LivestreamDbContext _context;
+        private readonly IProductServiceClient _productServiceClient;
 
         public LivestreamProductRepository(
             LivestreamDbContext context,
-            ILogger<LivestreamProductRepository> logger)
+            ILogger<LivestreamProductRepository> logger,
+            IProductServiceClient productServiceClient)
         {
             _logger = logger;
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _productServiceClient = productServiceClient;
         }
 
         public async Task<IEnumerable<LivestreamProduct>> GetByLivestreamIdAsync(Guid livestreamId)
@@ -228,6 +231,181 @@ namespace LivestreamService.Infrastructure.Repositories
         public Task<PagedResult<LivestreamProduct>> SearchAsync(string searchTerm, PaginationParams paginationParams, string[]? searchableFields = null, Expression<Func<LivestreamProduct, bool>>? filter = null, bool exactMatch = false)
         {
             throw new NotImplementedException("Search not implemented for LivestreamProduct");
+        }
+        public async Task<LivestreamProduct?> GetByCompositeKeyAsync(Guid livestreamId, string productId, string variantId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .FirstOrDefaultAsync(p => p.LivestreamId == livestreamId &&
+                                           p.ProductId == productId &&
+                                           p.VariantId == variantId &&
+                                           !p.IsDeleted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream product for LivestreamId: {LivestreamId}, ProductId: {ProductId}, VariantId: {VariantId}",
+                    livestreamId, productId, variantId);
+                throw;
+            }
+        }
+        public async Task<LivestreamProduct?> GetCurrentPinnedProductAsync(Guid livestreamId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .FirstOrDefaultAsync(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current pinned product for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+
+        // ✅ NEW METHOD: Get all pinned products in a livestream
+        public async Task<IEnumerable<LivestreamProduct>> GetAllPinnedProductsByLivestreamAsync(Guid livestreamId)
+        {
+            try
+            {
+                return await _context.LivestreamProducts
+                    .Where(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all pinned products for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+        public async Task UnpinAllProductsInLivestreamAsync(Guid livestreamId, string modifiedBy)
+        {
+            try
+            {
+                var pinnedProducts = await _context.LivestreamProducts
+                    .Where(p => p.LivestreamId == livestreamId && p.IsPin && !p.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var product in pinnedProducts)
+                {
+                    product.SetPin(false, modifiedBy);
+                }
+
+                if (pinnedProducts.Any())
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Unpinned {Count} products in livestream {LivestreamId}",
+                        pinnedProducts.Count, livestreamId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unpinning all products for livestream {LivestreamId}", livestreamId);
+                throw;
+            }
+        }
+        // Thêm các methods này vào class LivestreamProductRepository
+
+        /// <summary>
+        /// Lấy sản phẩm trong livestream theo SKU
+        /// </summary>
+        public async Task<LivestreamProduct?> GetBySkuInLivestreamAsync(Guid livestreamId, string sku)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(sku))
+                    return null;
+
+                _logger.LogInformation("Searching for product with SKU {Sku} in livestream {LivestreamId}", sku, livestreamId);
+
+                // Lấy tất cả sản phẩm trong livestream
+                var livestreamProducts = await GetByLivestreamIdAsync(livestreamId);
+
+                foreach (var lsProduct in livestreamProducts)
+                {
+                    try
+                    {
+                        // Lấy thông tin sản phẩm từ Product Service để check SKU
+                        var productInfo = await _productServiceClient.GetProductByIdAsync(lsProduct.ProductId);
+
+                        if (productInfo?.SKU?.Equals(sku, StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            // Nếu không có variant, return luôn
+                            if (string.IsNullOrEmpty(lsProduct.VariantId))
+                            {
+                                _logger.LogInformation("Found product with SKU {Sku} (base product) in livestream {LivestreamId}", sku, livestreamId);
+                                return lsProduct;
+                            }
+                        }
+
+                        // Kiểm tra SKU của variant nếu có
+                        if (!string.IsNullOrEmpty(lsProduct.VariantId))
+                        {
+                            try
+                            {
+                                var variantInfo = await _productServiceClient.GetProductVariantAsync(lsProduct.ProductId, lsProduct.VariantId);
+                                if (variantInfo?.SKU?.Equals(sku, StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    _logger.LogInformation("Found product with SKU {Sku} (variant) in livestream {LivestreamId}", sku, livestreamId);
+                                    return lsProduct;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to get variant {VariantId} info for SKU search", lsProduct.VariantId);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get product {ProductId} info for SKU search", lsProduct.ProductId);
+                    }
+                }
+
+                _logger.LogInformation("No product found with SKU {Sku} in livestream {LivestreamId}", sku, livestreamId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream product by SKU {Sku} in livestream {LivestreamId}", sku, livestreamId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Lấy nhiều sản phẩm theo danh sách SKU
+        /// </summary>
+        public async Task<IEnumerable<LivestreamProduct>> GetBySkusInLivestreamAsync(Guid livestreamId, IEnumerable<string> skus)
+        {
+            try
+            {
+                if (skus == null || !skus.Any())
+                    return new List<LivestreamProduct>();
+
+                _logger.LogInformation("Searching for products with SKUs [{Skus}] in livestream {LivestreamId}",
+                    string.Join(", ", skus), livestreamId);
+
+                var results = new List<LivestreamProduct>();
+
+                foreach (var sku in skus.Where(s => !string.IsNullOrWhiteSpace(s)))
+                {
+                    var product = await GetBySkuInLivestreamAsync(livestreamId, sku);
+                    if (product != null)
+                    {
+                        results.Add(product);
+                    }
+                }
+
+                _logger.LogInformation("Found {Count} products out of {Total} SKUs in livestream {LivestreamId}",
+                    results.Count, skus.Count(), livestreamId);
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream products by SKUs in livestream {LivestreamId}", livestreamId);
+                throw;
+            }
         }
     }
 }

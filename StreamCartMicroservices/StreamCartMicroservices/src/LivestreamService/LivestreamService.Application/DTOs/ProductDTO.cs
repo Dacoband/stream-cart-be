@@ -20,5 +20,7 @@ namespace LivestreamService.Application.DTOs
         public Guid ShopId { get; set; }
         public string? ShopName { get; set; }
         public string? SKU { get; set; }
+        public string? PrimaryImageUrl { get; set; }  // ✅ Thêm property này để map từ API
+
     }
 }

@@ -228,5 +228,37 @@ namespace LivestreamService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Lấy thống kê người xem theo vai trò
+        /// </summary>
+        [HttpGet("livestream/{livestreamId}/viewers-by-role")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<RoleBasedViewerStatsDTO>), 200)]
+        public async Task<IActionResult> GetViewersByRole(Guid livestreamId)
+        {
+            try
+            {
+                // Get basic stream stats
+                var viewCount = await _streamViewRepository.CountActiveViewersAsync(livestreamId);
+
+                // Get role-based counts
+                var roleBasedCounts = await _streamViewRepository.GetViewersByRoleAsync(livestreamId);
+
+                var result = new RoleBasedViewerStatsDTO
+                {
+                    LivestreamId = livestreamId,
+                    TotalViewers = viewCount,
+                    ViewersByRole = roleBasedCounts,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                return Ok(ApiResponse<RoleBasedViewerStatsDTO>.SuccessResult(result, "Lấy thống kê người xem theo vai trò thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy thống kê người xem theo vai trò");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
     }
 }

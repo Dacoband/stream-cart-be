@@ -16,5 +16,9 @@ namespace LivestreamService.Application.Interfaces
         Task<int> CountUniqueViewersAsync(Guid livestreamId);
         Task<TimeSpan> GetAverageViewDurationAsync(Guid livestreamId);
         Task<IEnumerable<StreamView>> GetViewsWithinTimeRangeAsync(Guid livestreamId, DateTime startTime, DateTime endTime);
+        /// <summary>
+        /// Gets count of active viewers grouped by their roles
+        /// </summary>
+        Task<Dictionary<string, int>> GetViewersByRoleAsync(Guid livestreamId);
     }
 }

@@ -9,7 +9,9 @@ namespace LivestreamService.Application.Commands.LiveStreamService
 {
     public class DeleteLivestreamProductCommand : IRequest<bool>
     {
-        public Guid Id { get; set; }
+        public Guid LivestreamId { get; set; }
+        public string ProductId { get; set; } = string.Empty;
+        public string VariantId { get; set; } = string.Empty;
         public Guid SellerId { get; set; }
     }
 }

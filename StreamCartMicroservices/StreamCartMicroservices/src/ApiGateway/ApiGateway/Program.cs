@@ -125,7 +125,7 @@ app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
 });
-
+app.UseWebSockets();
 app.UseOcelot().Wait();
 app.Run();
 
