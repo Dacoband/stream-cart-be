@@ -78,8 +78,8 @@ namespace OrderService.Infrastructure.Clients
                     return null;
                 }
                 
-                var variant = await response.Content.ReadFromJsonAsync<VariantDto>();
-                return variant;
+                var variant = await response.Content.ReadFromJsonAsync<ApiResponse< VariantDto>>();
+                return variant.Data;
             }
             catch (Exception ex)
             {
