@@ -11,6 +11,7 @@ namespace LivestreamService.Application.DTOs
         public string? SellerName { get; set; }
         public Guid ShopId { get; set; }
         public string? ShopName { get; set; }
+        public Guid LivestreamHostId { get; set; }
         public DateTime ScheduledStartTime { get; set; }
         public DateTime? ActualStartTime { get; set; }
         public DateTime? ActualEndTime { get; set; }

@@ -32,7 +32,7 @@ namespace LivestreamService.Application.DTOs
         public string ProductId { get; set; } = string.Empty;
 
         public string? VariantId { get; set; }
-
+        public decimal? OriginalPrice { get; set; }
         [Range(0, double.MaxValue)]
         public decimal? Price { get; set; } // Null = dùng giá gốc
 

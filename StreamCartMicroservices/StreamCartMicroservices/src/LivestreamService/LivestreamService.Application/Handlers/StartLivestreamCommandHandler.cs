@@ -4,6 +4,7 @@ using LivestreamService.Application.DTOs;
 using LivestreamService.Application.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Common.Services.User;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,15 +16,17 @@ namespace LivestreamService.Application.Handlers
         private readonly ILivestreamRepository _livestreamRepository;
         private readonly ILivekitService _livekitService;
         private readonly ILogger<StartLivestreamCommandHandler> _logger;
-
+        private readonly ICurrentUserService _currentUserService;
         public StartLivestreamCommandHandler(
             ILivestreamRepository livestreamRepository,
             ILivekitService livekitService,
-            ILogger<StartLivestreamCommandHandler> logger)
+            ILogger<StartLivestreamCommandHandler> logger,
+            ICurrentUserService currentUserService)
         {
             _livestreamRepository = livestreamRepository;
             _livekitService = livekitService;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         public async Task<LivestreamDTO> Handle(StartLivestreamCommand request, CancellationToken cancellationToken)
@@ -39,9 +42,9 @@ namespace LivestreamService.Application.Handlers
             {
                 throw new UnauthorizedAccessException("Only the livestream creator can start it");
             }
-
+             var requestingUserId = _currentUserService.GetUserId();
             // Start the livestream
-            livestream.Start(request.SellerId.ToString());
+            livestream.Start(request.SellerId.ToString(),requestingUserId);
             await _livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
 
             // Generate token for the seller

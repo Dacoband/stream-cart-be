@@ -50,6 +50,7 @@ namespace LivestreamService.Application.Handlers
                     SellerId = livestream.SellerId,
                     SellerName = seller?.Fullname ?? seller?.Username ?? "Unknown Seller",
                     ShopId = livestream.ShopId,
+                    LivestreamHostId = livestream.LivestreamHostId,
                     ShopName = shop?.ShopName ?? "Unknown Shop",
                     ScheduledStartTime = livestream.ScheduledStartTime,
                     ActualStartTime = livestream.ActualStartTime,

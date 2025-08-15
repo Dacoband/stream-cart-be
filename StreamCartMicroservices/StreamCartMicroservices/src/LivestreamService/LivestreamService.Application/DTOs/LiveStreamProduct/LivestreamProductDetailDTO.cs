@@ -10,6 +10,7 @@ namespace LivestreamService.Application.DTOs
         public string? VariantId { get; set; }
         public Guid? FlashSaleId { get; set; }
         public bool IsPin { get; set; }
+        public decimal OriginalPrice { get; set; } 
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public int DisplayOrder { get; set; }

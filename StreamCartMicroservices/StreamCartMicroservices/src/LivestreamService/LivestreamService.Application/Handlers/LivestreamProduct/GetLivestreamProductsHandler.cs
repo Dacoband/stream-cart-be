@@ -114,6 +114,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             VariantId = product.VariantId,
                             IsPin = product.IsPin,
                             Price = product.Price,
+                            OriginalPrice = product.OriginalPrice,
                             Stock = product.Stock, 
                             ProductStock = actualStock, 
                             CreatedAt = product.CreatedAt,

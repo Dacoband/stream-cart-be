@@ -1,5 +1,8 @@
-﻿using LivestreamService.Application.Interfaces;
+﻿using LivestreamService.Application.Commands.LiveStreamService;
+using LivestreamService.Application.Interfaces;
+using LivestreamService.Application.Queries;
 using LivestreamService.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -8,10 +11,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using static MassTransit.ValidationResultExtensions;
 
 namespace LivestreamService.Infrastructure.Hubs
 {
-    // ✅ REMOVED [Authorize] for Docker compatibility - handle auth manually
     public class SignalRChatHub : Hub
     {
         private readonly ILogger<SignalRChatHub> _logger;
@@ -22,14 +25,16 @@ namespace LivestreamService.Infrastructure.Hubs
 
         private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId, string role, DateTime startTime)> _activeViewers = new();
         private readonly IAccountServiceClient _accountServiceClient;
+        private readonly IMediator _mediator; // ✅ ADD: For handling commands
 
-        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository, ILivestreamRepository livestreamRepository, IAccountServiceClient accountServiceClient)
+        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository, ILivestreamRepository livestreamRepository, IAccountServiceClient accountServiceClient,IMediator mediator)
         {
             _logger = logger;
             _currentUserService = currentUserService;
             _streamViewRepository = streamViewRepository;
             _livestreamRepository = livestreamRepository;
             _accountServiceClient = accountServiceClient;
+            _mediator = mediator;
         }
 
         public async Task StartViewingLivestream(string livestreamId)
@@ -52,7 +57,6 @@ namespace LivestreamService.Infrastructure.Hubs
                 var userGuid = Guid.Parse(userId);
                 var livestreamGuid = Guid.Parse(livestreamId);
 
-                // ✅ GET USER ROLE FIRST
                 var userRole = await GetUserRoleAsync(userGuid);
                 var startTime = DateTime.UtcNow;
                 // ✅ FIX: Store the connection mapping WITH role information
@@ -155,50 +159,6 @@ namespace LivestreamService.Infrastructure.Hubs
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating max customer viewer count for livestream {LivestreamId}", livestreamId);
-            }
-        }
-
-        private async Task UpdateMaxViewerCount(Guid livestreamId)
-        {
-            try
-            {
-                // Count current active viewers for this livestream
-                var currentViewerCount = _activeViewers
-                    .Count(kv => kv.Value.livestreamId == livestreamId);
-
-                // Get the livestream entity
-                var livestream = await _livestreamRepository.GetByIdAsync(livestreamId.ToString());
-                if (livestream == null)
-                {
-                    _logger.LogWarning("Livestream {LivestreamId} not found when updating max viewer count", livestreamId);
-                    return;
-                }
-
-                // Check if current count exceeds the previous maximum
-                var currentMaxViewer = livestream.MaxViewer ?? 0;
-                if (currentViewerCount > currentMaxViewer)
-                {
-                    // Update the max viewer count
-                    livestream.SetMaxViewer(currentViewerCount, "system");
-                    await _livestreamRepository.ReplaceAsync(livestreamId.ToString(), livestream);
-
-                    _logger.LogInformation("Updated MaxViewer for livestream {LivestreamId} from {OldMax} to {NewMax}",
-                        livestreamId, currentMaxViewer, currentViewerCount);
-
-                    // Notify about new record
-                    await Clients.Group($"livestream_{livestreamId}")
-                        .SendAsync("MaxViewerUpdated", new
-                        {
-                            LivestreamId = livestreamId,
-                            NewMaxViewer = currentViewerCount,
-                            PreviousMax = currentMaxViewer,
-                            Timestamp = DateTime.UtcNow
-                        });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating max viewer count for livestream {LivestreamId}", livestreamId);
             }
         }
 
@@ -640,7 +600,412 @@ namespace LivestreamService.Infrastructure.Hubs
                 _logger.LogError(ex, "Error leaving livestream chat room {LivestreamId}", livestreamId);
             }
         }
+        /// <summary>
+        /// Real-time cập nhật stock sản phẩm trong livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productId">ID của sản phẩm</param>
+        /// <param name="variantId">ID của variant (optional)</param>
+        /// <param name="newStock">Số lượng stock mới</param>
+        public async Task UpdateProductStock(string livestreamId, string productId, string? variantId, int newStock)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
 
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute update command
+                var command = new UpdateStockCommand
+                {
+                    LivestreamId = Guid.Parse(livestreamId),
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
+                    Stock = newStock,
+                    SellerId = userGuid
+                };
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time update to all viewers
+                    await Clients.Group($"livestream_viewers_{livestreamId}")
+                        .SendAsync("ProductStockUpdated", new
+                        {
+                            LivestreamId = livestreamId,
+                            ProductId = productId,
+                            VariantId = variantId,
+                            NewStock = newStock,
+                            OriginalPrice = result.OriginalPrice,
+                            Price = result.Price,
+                            ProductName = result.ProductName,
+                            UpdatedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"📦 Stock được cập nhật: {newStock} sản phẩm còn lại"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "StockUpdate",
+                        ProductId = productId,
+                        NewStock = newStock,
+                        OriginalPrice = result.OriginalPrice,
+                        Price = result.Price,
+                        Message = "Cập nhật stock thành công"
+                    });
+
+                    _logger.LogInformation("✅ Real-time stock update: Product {ProductId} in livestream {LivestreamId} updated to {NewStock}",
+                        productId, livestreamId, newStock);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to update product stock");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating product stock real-time");
+                await Clients.Caller.SendAsync("Error", $"Stock update failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Real-time pin/unpin sản phẩm trong livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productId">ID của sản phẩm</param>
+        /// <param name="variantId">ID của variant (optional)</param>
+        /// <param name="isPin">true để pin, false để unpin</param>
+        public async Task PinProduct(string livestreamId, string productId, string? variantId, bool isPin)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute pin command
+                var command = new PinProductCommand
+                {
+                    LivestreamId = Guid.Parse(livestreamId),
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
+                    IsPin = isPin,
+                    SellerId = userGuid
+                };
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time pin/unpin to all viewers
+                    await Clients.Group($"livestream_viewers_{livestreamId}")
+                        .SendAsync("ProductPinStatusChanged", new
+                        {
+                            LivestreamId = livestreamId,
+                            ProductId = productId,
+                            VariantId = variantId,
+                            IsPin = isPin,
+                            OriginalPrice = result.OriginalPrice,
+                            Price = result.Price,
+                            Stock = result.Stock,
+                            UpdatedBy = userId,
+                            ProductName = result.ProductName,
+                            Timestamp = DateTime.UtcNow,
+                            Message = isPin ?
+                                $"📌 {result.ProductName} đã được ghim!" :
+                                $"📌 {result.ProductName} đã bỏ ghim!"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = isPin ? "ProductPinned" : "ProductUnpinned",
+                        ProductId = productId,
+                        ProductName = result.ProductName,
+                        OriginalPrice = result.OriginalPrice,
+                        Price = result.Price,
+                        Message = isPin ? "Sản phẩm đã được ghim" : "Sản phẩm đã bỏ ghim"
+                    });
+
+                    _logger.LogInformation("✅ Real-time pin update: Product {ProductId} in livestream {LivestreamId} {Action}",
+                        productId, livestreamId, isPin ? "pinned" : "unpinned");
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to update pin status");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating pin status real-time");
+                await Clients.Caller.SendAsync("Error", $"Pin update failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Real-time thêm sản phẩm vào livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productId">ID của sản phẩm</param>
+        /// <param name="variantId">ID của variant (optional)</param>
+        /// <param name="price">Giá sản phẩm</param>
+        /// <param name="stock">Số lượng tồn kho</param>
+        /// <param name="isPin">Có pin ngay không</param>
+        public async Task AddProductToLivestream(string livestreamId, string productId, string? variantId, decimal price, int stock, bool isPin = false)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute create command
+                var command = new CreateLivestreamProductCommand
+                {
+                    LivestreamId = Guid.Parse(livestreamId),
+                    ProductId = productId,
+                    VariantId = variantId,
+                    Price = price,
+                    Stock = stock,
+                    IsPin = isPin,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time product addition to all viewers
+                    await Clients.Group($"livestream_viewers_{livestreamId}")
+                        .SendAsync("ProductAddedToLivestream", new
+                        {
+                            LivestreamId = livestreamId,
+                            Product = result,
+                            AddedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"🆕 Sản phẩm mới: {result.ProductName} đã được thêm vào livestream!"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "ProductAdded",
+                        Product = result,
+                        Message = "Sản phẩm đã được thêm vào livestream"
+                    });
+
+                    _logger.LogInformation("✅ Real-time product add: Product {ProductId} added to livestream {LivestreamId}",
+                        productId, livestreamId);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to add product to livestream");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding product to livestream real-time");
+                await Clients.Caller.SendAsync("Error", $"Add product failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Real-time xóa sản phẩm khỏi livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productId">ID của sản phẩm</param>
+        /// <param name="variantId">ID của variant (optional)</param>
+        public async Task RemoveProductFromLivestream(string livestreamId, string productId, string? variantId)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute delete command
+                var command = new DeleteLivestreamProductCommand
+                {
+                    LivestreamId = Guid.Parse(livestreamId),
+                    ProductId = productId,
+                    VariantId = variantId ?? string.Empty,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result)
+                {
+                    // ✅ BROADCAST real-time product removal to all viewers
+                    await Clients.Group($"livestream_viewers_{livestreamId}")
+                        .SendAsync("ProductRemovedFromLivestream", new
+                        {
+                            LivestreamId = livestreamId,
+                            ProductId = productId,
+                            VariantId = variantId,
+                            RemovedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = "🗑️ Một sản phẩm đã được gỡ khỏi livestream"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "ProductRemoved",
+                        ProductId = productId,
+                        Message = "Sản phẩm đã được gỡ khỏi livestream"
+                    });
+
+                    _logger.LogInformation("✅ Real-time product remove: Product {ProductId} removed from livestream {LivestreamId}",
+                        productId, livestreamId);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to remove product from livestream");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing product from livestream real-time");
+                await Clients.Caller.SendAsync("Error", $"Remove product failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Real-time lấy danh sách sản phẩm trong livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        public async Task GetLivestreamProducts(string livestreamId)
+        {
+            try
+            {
+                var query = new GetLivestreamProductsQuery { LivestreamId = Guid.Parse(livestreamId) };
+                var products = await _mediator.Send(query);
+
+                await Clients.Caller.SendAsync("LivestreamProductsLoaded", new
+                {
+                    LivestreamId = livestreamId,
+                    Products = products,
+                    Timestamp = DateTime.UtcNow,
+                    Count = products?.Count() ?? 0
+                });
+
+                _logger.LogInformation("✅ Real-time products loaded for livestream {LivestreamId}", livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading livestream products");
+                await Clients.Caller.SendAsync("Error", "Failed to load livestream products");
+            }
+        }
+        /// <summary>
+        /// Real-time lấy sản phẩm đã pin
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        public async Task GetPinnedProducts(string livestreamId)
+        {
+            try
+            {
+                var query = new GetPinnedProductsQuery { LivestreamId = Guid.Parse(livestreamId), Limit = 5 };
+                var pinnedProducts = await _mediator.Send(query);
+
+                await Clients.Group($"livestream_viewers_{livestreamId}")
+                    .SendAsync("PinnedProductsUpdated", new
+                    {
+                        LivestreamId = livestreamId,
+                        PinnedProducts = pinnedProducts,
+                        Timestamp = DateTime.UtcNow,
+                        Count = pinnedProducts?.Count() ?? 0
+                    });
+
+                _logger.LogInformation("✅ Real-time pinned products updated for livestream {LivestreamId}", livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading pinned products");
+                await Clients.Caller.SendAsync("Error", "Failed to load pinned products");
+            }
+        }
+        /// <summary>
+        /// Broadcast stock update từ bên ngoài (ví dụ: khi có đơn hàng)
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productId">ID của sản phẩm</param>
+        /// <param name="variantId">ID của variant</param>
+        /// <param name="newStock">Stock mới</param>
+        /// <param name="reason">Lý do thay đổi</param>
+        /// <param name="originalPrice">Giá gốc (optional)</param>
+        /// <param name="currentPrice">Giá hiện tại (optional)</param>
+
+        public async Task BroadcastStockChange(string livestreamId, string productId, string? variantId, int newStock, string reason,
+            decimal? originalPrice = null, decimal? currentPrice = null, decimal? discountPercentage = null)
+        {
+            try
+            {
+                // ✅ BROADCAST to all viewers with price information
+                var notification = new
+                {
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId,
+                    NewStock = newStock,
+                    Reason = reason,
+                    OriginalPrice = originalPrice,
+                    Price = currentPrice,
+                    Timestamp = DateTime.UtcNow,
+                    Message = reason == "order_placed" ?
+                        $"🛒 Có người vừa đặt mua! Còn {newStock} sản phẩm" :
+                        $"📦 Stock cập nhật: {newStock} sản phẩm"
+                };
+
+                await Clients.Group($"livestream_viewers_{livestreamId}")
+                    .SendAsync("StockChanged", notification);
+
+                _logger.LogInformation("✅ Stock change broadcasted: Product {ProductId} in livestream {LivestreamId}, new stock: {NewStock}, reason: {Reason}",
+                    productId, livestreamId, newStock, reason);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting stock change");
+            }
+        }
         // ✅ Helper methods
         private bool IsUserAuthenticated()
         {

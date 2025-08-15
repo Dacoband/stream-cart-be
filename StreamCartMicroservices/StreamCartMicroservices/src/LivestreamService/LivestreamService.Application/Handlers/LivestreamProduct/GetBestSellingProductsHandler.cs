@@ -45,6 +45,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             ProductId = lp.ProductId,
                             ProductName = product.ProductName,
                             ProductImageUrl = product.ImageUrl,
+                           // OriginalPrice = product.OriginalPrice,
                             Price = lp.Price,
                             Stock = lp.Stock,
                             IsPin = lp.IsPin,

@@ -9,6 +9,7 @@ namespace LivestreamService.Application.Commands
         public string? Title { get; set; }
         public string? Description { get; set; }
         public Guid ShopId { get; set; }
+        public Guid LivestreamHostId { get; set; }
         public DateTime ScheduledStartTime { get; set; }
         public string? ThumbnailUrl { get; set; }
         public string? Tags { get; set; }
