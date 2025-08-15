@@ -149,10 +149,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-builder.Services.AddMessaging(builder.Configuration, x =>
-{
-    x.AddConsumer<OrderChangeComsumer>();
-});
+//builder.Services.AddMessaging(builder.Configuration, x =>
+//{
+//    x.AddConsumer<OrderChangeComsumer>();
+//});
 var app = builder.Build();
 
 
