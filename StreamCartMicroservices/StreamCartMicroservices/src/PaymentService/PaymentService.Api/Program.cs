@@ -2,7 +2,9 @@
 using dotenv.net;
 using PaymentService.Api.Service;
 using PaymentService.Application.Extensions;
+using PaymentService.Application.Hubs;
 using PaymentService.Application.Interfaces;
+using PaymentService.Application.Services;
 using PaymentService.Infrastructure.Extensions;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
@@ -38,6 +40,8 @@ builder.Services.AddAppwriteServices(builder.Configuration);
 builder.Services.AddCurrentUserService();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IPaymentHubService, PaymentHubService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -95,6 +99,7 @@ if (!app.Environment.IsEnvironment("Docker"))
 
 //app.UseHttpsRedirection();
 app.UseRouting();
+app.MapHub<PaymentHub>("/paymentHub");
 app.UseCors("AllowSpecificOrigin");
 app.UseHttpsRedirection();
 app.UseConfiguredCors();

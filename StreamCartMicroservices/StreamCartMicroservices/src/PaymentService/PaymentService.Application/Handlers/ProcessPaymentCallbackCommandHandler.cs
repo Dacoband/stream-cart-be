@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using PaymentService.Application.Commands;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
+using PaymentService.Application.Services;
 
 namespace PaymentService.Application.Handlers
 {
@@ -15,17 +16,20 @@ namespace PaymentService.Application.Handlers
         private readonly IPaymentRepository _paymentRepository;
         private readonly ILogger<ProcessPaymentCallbackCommandHandler> _logger;
         private readonly IOrderServiceClient _orderServiceClient;
+        private readonly IPaymentHubService _paymentHubService;
 
         public ProcessPaymentCallbackCommandHandler(
             IMediator mediator,
             IPaymentRepository paymentRepository,
             ILogger<ProcessPaymentCallbackCommandHandler> logger,
-            IOrderServiceClient orderServiceClient)
+            IOrderServiceClient orderServiceClient,
+            IPaymentHubService paymentHubService)
         {
             _mediator = mediator;
             _paymentRepository = paymentRepository;
             _logger = logger;
             _orderServiceClient = orderServiceClient;
+            _paymentHubService = paymentHubService;
         }
 
         public async Task<PaymentDto?> Handle(ProcessPaymentCallbackCommand request, CancellationToken cancellationToken)
@@ -126,6 +130,17 @@ namespace PaymentService.Application.Handlers
                         // Có thể thêm cơ chế retry hoặc ghi vào queue để xử lý sau
                     }
                 }
+                _logger.LogInformation("Payment callback processed for {PaymentId}, status: {IsSuccessful}",
+                    request.PaymentId, request.IsSuccessful);
+                if (result != null)
+                {
+                    await _paymentHubService.NotifyPaymentStatusUpdateAsync(
+                        new List<Guid> { payment.OrderId },
+                        result.Status,
+                        result.Id,
+                        result.Amount);
+                }
+
                 _logger.LogInformation("Payment callback processed for {PaymentId}, status: {IsSuccessful}",
                     request.PaymentId, request.IsSuccessful);
 
