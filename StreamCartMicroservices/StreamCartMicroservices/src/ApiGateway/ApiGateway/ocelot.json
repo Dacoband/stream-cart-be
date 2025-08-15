@@ -834,19 +834,19 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
       "SwaggerKey": "payment"
     },
-    {
-      "DownstreamPathTemplate": "paymentHub/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "payment-service",
-          "Port": 80
-        }
-      ],
-      "UpstreamPathTemplate": "paymentHub/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST" ],
-      "AllowWebSockets": true
-    },
+    //{
+    //  "DownstreamPathTemplate": "paymentHub/{everything}",
+    //  "DownstreamScheme": "http",
+    //  "DownstreamHostAndPorts": [
+    //    {
+    //      "Host": "payment-service",
+    //      "Port": 80
+    //    }
+    //  ],
+    //  "UpstreamPathTemplate": "paymentHub/{everything}",
+    //  "UpstreamHttpMethod": [ "GET", "POST" ],
+    //  "AllowWebSockets": true
+    //},
     //notification
     {
       "DownstreamPathTemplate": "/api/notification/{everything}",
