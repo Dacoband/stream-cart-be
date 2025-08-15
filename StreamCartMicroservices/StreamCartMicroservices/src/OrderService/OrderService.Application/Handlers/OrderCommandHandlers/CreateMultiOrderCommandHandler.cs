@@ -248,35 +248,35 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         }
         private async Task PublishOrderEventsAsync(Orders order, string paymentMethod, Guid userId)
         {
-
             var orderItemEvent = order.Items.Select(x => new OrderItemInEvent
             {
                 ProductId = x.ProductId.ToString(),
-                VariantId = x.VariantId.ToString(),
+                VariantId = x.VariantId?.ToString(),
                 Quantity = x.Quantity,
             }).ToList();
+
             if (paymentMethod == "COD")
             {
-                var shopAccounts = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                if (shopAccounts != null)
+                var shopAccounts =await  _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                if (shopAccounts != null && shopAccounts.Any())
                 {
-                   
-                        _orderNotificationQueue.Enqueue(new OrderCreatedOrUpdatedEvent
-                        {
-                            OrderCode = order.OrderCode,
-                            Message = "đã được tạo thành công. Vui lòng chuẩn bị đơn hàng",
-                            UserId = shopAccounts.Select(x => x.Id.ToString()).ToList(),
-                            OrderStatus = "Pending",
-                            OrderItems = orderItemEvent,
-                            ShopId = order.ShopId.ToString(),
-                            CreatedBy = order.CreatedBy,
-                        });
-                    
+                    var @event = new OrderCreatedOrUpdatedEvent
+                    {
+                        OrderCode = order.OrderCode,
+                        Message = "đã được tạo thành công. Vui lòng chuẩn bị đơn hàng",
+                        UserId = shopAccounts.Select(x => x.Id.ToString()).ToList(),
+                        OrderStatus = "Pending",
+                        OrderItems = orderItemEvent,
+                        ShopId = order.ShopId.ToString(),
+                        CreatedBy = order.CreatedBy,
+                    };
+
+                     _publishEndpoint.Publish(@event); // publish trực tiếp
                 }
             }
             else
             {
-                _orderNotificationQueue.Enqueue(new OrderCreatedOrUpdatedEvent
+                var @event = new OrderCreatedOrUpdatedEvent
                 {
                     OrderCode = order.OrderCode,
                     Message = "đã được tạo thành công",
@@ -285,8 +285,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     OrderItems = orderItemEvent,
                     ShopId = order.ShopId.ToString(),
                     CreatedBy = order.CreatedBy,
+                };
 
-                });
+                 _publishEndpoint.Publish(@event); // publish trực tiếp
             }
         }
         private async Task<OrderDto> BuildOrderDtoAsync(Orders order)

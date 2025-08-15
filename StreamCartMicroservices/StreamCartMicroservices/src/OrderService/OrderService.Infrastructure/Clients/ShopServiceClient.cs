@@ -48,7 +48,7 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting shop details for ID: {ShopId}", shopId);
 
-                var response = await _httpClient.GetAsync($"/api/shops/{shopId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/shops/{shopId}");
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     _logger.LogWarning("Shop with ID {ShopId} not found", shopId);
@@ -106,7 +106,7 @@ namespace OrderService.Infrastructure.Clients
                 _logger.LogInformation("Checking if account {AccountId} is a member of shop {ShopId}", accountId, shopId);
 
                 // Call the Shop service API to check membership
-                var response = await _httpClient.GetAsync($"/api/shops/{shopId}/members/check/{accountId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/shops/{shopId}/members/check/{accountId}");
 
                 // If the response is successful, the account is a member
                 if (response.IsSuccessStatusCode)
@@ -222,7 +222,7 @@ namespace OrderService.Infrastructure.Clients
                     UpdatedByAccountId = updatedByAccountId
                 };
 
-                var response = await _httpClient.PutAsJsonAsync($"api/shops/{shopId}/completion-rate", request);
+                var response = await _httpClient.PutAsJsonAsync($"https://brightpa.me/api/shops/{shopId}/completion-rate", request);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -235,7 +235,7 @@ namespace OrderService.Infrastructure.Clients
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/shops/{shopId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/shops/{shopId}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
