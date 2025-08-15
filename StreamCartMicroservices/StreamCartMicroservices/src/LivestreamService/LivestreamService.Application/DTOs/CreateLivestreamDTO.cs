@@ -21,7 +21,7 @@ namespace LivestreamService.Application.DTOs
 
         [StringLength(500)]
         public string? Tags { get; set; }
-
+        public Guid LivestreamHostId { get; set; }
         // ✅ THÊM DANH SÁCH SẢN PHẨM
         public List<CreateLivestreamProductItemDTO>? Products { get; set; } = new();
     }
