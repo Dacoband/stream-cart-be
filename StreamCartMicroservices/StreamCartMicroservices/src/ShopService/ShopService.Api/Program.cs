@@ -84,11 +84,11 @@ builder.Services.AddSwaggerGen(c =>
   
 
 });
-builder.Services.AddMessaging(builder.Configuration, x =>
-{
-    x.AddConsumer<OrderChangeComsumer>();
-    x.AddConsumer<ShopRegisteredConsumer>();
-});
+//builder.Services.AddMessaging(builder.Configuration, x =>
+//{
+//    x.AddConsumer<OrderChangeComsumer>();
+//    x.AddConsumer<ShopRegisteredConsumer>();
+//});
 var app = builder.Build();
 
 app.UseSwagger();
