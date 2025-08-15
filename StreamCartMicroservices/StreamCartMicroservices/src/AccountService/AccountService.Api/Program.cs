@@ -1,5 +1,6 @@
 ﻿using AccountService.Api.Services;
 using AccountService.Application.Commands;
+using AccountService.Application.Consumer;
 using AccountService.Application.Extensions;
 using AccountService.Application.Handlers.ImageHandler;
 using AccountService.Application.Interfaces;
@@ -93,7 +94,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+builder.Services.AddMessaging(builder.Configuration, x =>
+{
+    x.AddConsumer<OrderChangeComsumer>();
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

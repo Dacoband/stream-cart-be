@@ -13,6 +13,7 @@ using ProductService.Application.Commands.CombinationCommands;
 using ProductService.Application.Commands.FlashSaleCommands;
 using ProductService.Application.Commands.ProductComands;
 using ProductService.Application.Commands.VariantCommands;
+using ProductService.Application.Consumer;
 using ProductService.Application.DTOs.Attributes;
 using ProductService.Application.DTOs.Combinations;
 using ProductService.Application.DTOs.Variants;
@@ -148,7 +149,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+builder.Services.AddMessaging(builder.Configuration, x =>
+{
+    x.AddConsumer<OrderChangeComsumer>();
+});
 var app = builder.Build();
 
 

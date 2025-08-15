@@ -10,6 +10,9 @@ using ShopService.Application.Extensions;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using Microsoft.Extensions.Options;
+using ShopService.Application.Consumer;
+using ShopService.Application.Events;
+using ShopService.Infrastructure.Messaging.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnv.Load();
@@ -81,7 +84,11 @@ builder.Services.AddSwaggerGen(c =>
   
 
 });
-
+builder.Services.AddMessaging(builder.Configuration, x =>
+{
+    x.AddConsumer<OrderChangeComsumer>();
+    x.AddConsumer<ShopRegisteredConsumer>();
+});
 var app = builder.Build();
 
 app.UseSwagger();

@@ -69,7 +69,7 @@ namespace OrderService.Infrastructure.Clients
             {
                 _logger.LogInformation("Getting variant details for ID: {VariantId}", variantId);
                 
-                var response = await _httpClient.GetAsync($"/api/product-variants/{variantId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -143,7 +143,7 @@ namespace OrderService.Infrastructure.Clients
                     QuantityChange = quantity
                 };
                 
-                var response = await _httpClient.PostAsJsonAsync("/api/products/variants/stock/update", updateStockData);
+                var response = await _httpClient.PostAsJsonAsync("https://brightpa.me/api/product-variants/stock/update", updateStockData);
                 
                 if (!response.IsSuccessStatusCode)
                 {
