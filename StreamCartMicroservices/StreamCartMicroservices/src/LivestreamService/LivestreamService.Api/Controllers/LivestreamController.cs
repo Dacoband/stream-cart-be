@@ -67,6 +67,7 @@ namespace LivestreamService.Api.Controllers
                     Title = request.Title,
                     Description = request.Description,
                     ShopId =Guid.Parse(shopId),
+                    LivestreamHostId = request.LivestreamHostId,
                     ScheduledStartTime = request.ScheduledStartTime,
                     ThumbnailUrl = request.ThumbnailUrl,
                     Tags = request.Tags,
