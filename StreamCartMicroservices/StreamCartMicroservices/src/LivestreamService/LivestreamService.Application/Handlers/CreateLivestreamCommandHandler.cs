@@ -133,6 +133,7 @@ namespace LivestreamService.Application.Handlers
                     ShopId = livestream.ShopId,
                     ShopName = shop.ShopName,
                     LivestreamHostId = livestream.LivestreamHostId,
+                    LivestreamHostName = hostAccount.Fullname ?? hostAccount.Username,
                     ScheduledStartTime = livestream.ScheduledStartTime,
                     ActualStartTime = livestream.ActualStartTime,
                     ActualEndTime = livestream.ActualEndTime,
@@ -201,7 +202,7 @@ namespace LivestreamService.Application.Handlers
                     }
 
                     // ✅ XÁC ĐỊNH GIÁ GỐC VÀ GIÁ LIVESTREAM
-                    decimal originalPrice = productItem.OriginalPrice ?? (variant?.Price ?? product?.BasePrice ?? 0);
+                    decimal originalPrice = (variant?.Price ?? product?.BasePrice ?? 0);
                     decimal livestreamPrice = productItem.Price ?? originalPrice; // Mặc định giá livestream = giá gốc nếu không cung cấp
                     int finalStock = productItem.Stock ?? (variant?.Stock ?? product?.StockQuantity ?? 0);
 

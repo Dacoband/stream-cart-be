@@ -1006,6 +1006,377 @@ namespace LivestreamService.Infrastructure.Hubs
                 _logger.LogError(ex, "Error broadcasting stock change");
             }
         }
+        /// <summary>
+        /// Real-time cập nhật sản phẩm livestream bằng ID
+        /// </summary>
+        /// <param name="id">ID của livestream product</param>
+        /// <param name="price">Giá mới</param>
+        /// <param name="stock">Stock mới</param>
+        /// <param name="isPin">Trạng thái pin</param>
+        public async Task UpdateLivestreamProductById(string id, decimal price, int stock, bool isPin)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute update command
+                var command = new UpdateLivestreamProductByIdCommand
+                {
+                    Id = Guid.Parse(id),
+                    Price = price,
+                    Stock = stock,
+                    IsPin = isPin,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time update to all viewers
+                    await Clients.Group($"livestream_viewers_{result.LivestreamId}")
+                        .SendAsync("LivestreamProductUpdated", new
+                        {
+                            Id = id,
+                            LivestreamId = result.LivestreamId,
+                            ProductId = result.ProductId,
+                            VariantId = result.VariantId,
+                            Price = price,
+                            Stock = stock,
+                            IsPin = isPin,
+                            ProductName = result.ProductName,
+                            UpdatedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"🔄 {result.ProductName} đã được cập nhật!"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "LivestreamProductUpdated",
+                        Id = id,
+                        Product = result,
+                        Message = "Cập nhật sản phẩm livestream thành công"
+                    });
+
+                    _logger.LogInformation("✅ Real-time livestream product update: Product ID {Id} updated",
+                        id);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to update livestream product");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating livestream product real-time");
+                await Clients.Caller.SendAsync("Error", $"Update livestream product failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time pin/unpin sản phẩm livestream bằng ID
+        /// </summary>
+        /// <param name="id">ID của livestream product</param>
+        /// <param name="isPin">true để pin, false để unpin</param>
+        public async Task PinLivestreamProductById(string id, bool isPin)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute pin command
+                var command = new PinProductByIdCommand
+                {
+                    Id = Guid.Parse(id),
+                    IsPin = isPin,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time pin/unpin to all viewers
+                    await Clients.Group($"livestream_viewers_{result.LivestreamId}")
+                        .SendAsync("LivestreamProductPinStatusChanged", new
+                        {
+                            Id = id,
+                            LivestreamId = result.LivestreamId,
+                            ProductId = result.ProductId,
+                            VariantId = result.VariantId,
+                            IsPin = isPin,
+                            OriginalPrice = result.OriginalPrice,
+                            Price = result.Price,
+                            Stock = result.Stock,
+                            ProductName = result.ProductName,
+                            UpdatedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = isPin ?
+                                $"📌 {result.ProductName} đã được ghim!" :
+                                $"📌 {result.ProductName} đã bỏ ghim!"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = isPin ? "LivestreamProductPinned" : "LivestreamProductUnpinned",
+                        Id = id,
+                        Product = result,
+                        Message = isPin ? "Sản phẩm đã được ghim" : "Sản phẩm đã bỏ ghim"
+                    });
+
+                    _logger.LogInformation("✅ Real-time livestream product pin update: Product ID {Id} {Action}",
+                        id, isPin ? "pinned" : "unpinned");
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to update pin status");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating livestream product pin status real-time");
+                await Clients.Caller.SendAsync("Error", $"Pin update failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time cập nhật stock sản phẩm livestream bằng ID
+        /// </summary>
+        /// <param name="id">ID của livestream product</param>
+        /// <param name="newStock">Số lượng stock mới</param>
+        public async Task UpdateLivestreamProductStockById(string id, int newStock)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute stock update command
+                var command = new UpdateStockByIdCommand
+                {
+                    Id = Guid.Parse(id),
+                    Stock = newStock,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result != null)
+                {
+                    // ✅ BROADCAST real-time stock update to all viewers
+                    await Clients.Group($"livestream_viewers_{result.LivestreamId}")
+                        .SendAsync("LivestreamProductStockUpdated", new
+                        {
+                            Id = id,
+                            LivestreamId = result.LivestreamId,
+                            ProductId = result.ProductId,
+                            VariantId = result.VariantId,
+                            NewStock = newStock,
+                            OriginalPrice = result.OriginalPrice,
+                            Price = result.Price,
+                            ProductName = result.ProductName,
+                            UpdatedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"📦 {result.ProductName} - Stock được cập nhật: {newStock} sản phẩm còn lại"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "LivestreamProductStockUpdate",
+                        Id = id,
+                        Product = result,
+                        NewStock = newStock,
+                        Message = "Cập nhật stock sản phẩm thành công"
+                    });
+
+                    _logger.LogInformation("✅ Real-time livestream product stock update: Product ID {Id} updated to {NewStock}",
+                        id, newStock);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to update product stock");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating livestream product stock real-time");
+                await Clients.Caller.SendAsync("Error", $"Stock update failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time xóa sản phẩm khỏi livestream bằng ID
+        /// </summary>
+        /// <param name="id">ID của livestream product</param>
+        public async Task DeleteLivestreamProductById(string id)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute delete command
+                var command = new DeleteLivestreamProductByIdCommand
+                {
+                    Id = Guid.Parse(id),
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result)
+                {
+                    // ✅ BROADCAST real-time product removal to all viewers
+                    await Clients.Group($"livestream_viewers_*")
+                        .SendAsync("LivestreamProductDeleted", new
+                        {
+                            Id = id,
+                            DeletedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = "🗑️ Một sản phẩm đã được gỡ khỏi livestream"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "LivestreamProductDeleted",
+                        Id = id,
+                        Message = "Sản phẩm đã được xóa khỏi livestream"
+                    });
+
+                    _logger.LogInformation("✅ Real-time livestream product delete: Product ID {Id} removed",
+                        id);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to delete livestream product");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting livestream product real-time");
+                await Clients.Caller.SendAsync("Error", $"Delete product failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time xóa sản phẩm khỏi livestream bằng ID (soft delete)
+        /// </summary>
+        /// <param name="id">ID của livestream product</param>
+        /// <param name="reason">Lý do xóa</param>
+        public async Task SoftDeleteLivestreamProductById(string id, string reason = "Removed by seller")
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var userGuid = Guid.Parse(userId);
+
+                // Execute soft delete command
+                var command = new SoftDeleteLivestreamProductByIdCommand
+                {
+                    Id = Guid.Parse(id),
+                    Reason = reason,
+                    SellerId = userGuid
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result)
+                {
+                    // ✅ BROADCAST real-time product soft removal to all viewers
+                    await Clients.Group($"livestream_viewers_*")
+                        .SendAsync("LivestreamProductSoftDeleted", new
+                        {
+                            Id = id,
+                            Reason = reason,
+                            DeletedBy = userId,
+                            Timestamp = DateTime.UtcNow,
+                            Message = $"🗑️ Sản phẩm đã được tạm thời gỡ bỏ: {reason}"
+                        });
+
+                    await Clients.Caller.SendAsync("UpdateSuccess", new
+                    {
+                        Action = "LivestreamProductSoftDeleted",
+                        Id = id,
+                        Reason = reason,
+                        Message = "Sản phẩm đã được tạm thời gỡ bỏ khỏi livestream"
+                    });
+
+                    _logger.LogInformation("✅ Real-time livestream product soft delete: Product ID {Id} soft removed for reason: {Reason}",
+                        id, reason);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Failed to soft delete livestream product");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error soft deleting livestream product real-time");
+                await Clients.Caller.SendAsync("Error", $"Soft delete product failed: {ex.Message}");
+            }
+        }
         // ✅ Helper methods
         private bool IsUserAuthenticated()
         {
