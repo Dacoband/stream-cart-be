@@ -795,6 +795,19 @@
       "SwaggerKey": "order"
     },
     {
+      "DownstreamPathTemplate": "/api/reviews/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "order-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/reviews/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "SwaggerKey": "order"
+    },
+    {
       "DownstreamPathTemplate": "/api/order-items/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

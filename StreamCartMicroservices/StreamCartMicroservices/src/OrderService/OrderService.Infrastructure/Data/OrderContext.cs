@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace OrderService.Infrastructure.Data
 {
@@ -24,6 +25,7 @@ namespace OrderService.Infrastructure.Data
         /// Order items collection
         /// </summary>
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Review> Reviews { get; set; }
 
         /// <summary>
         /// Creates a new instance of OrderContext
@@ -302,7 +304,30 @@ namespace OrderService.Infrastructure.Data
 
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });
+            modelBuilder.Entity<Review>(entity =>
+            {
+                entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.ReviewText)
+                    .HasMaxLength(2000)
+                    .IsRequired();
+
+                entity.Property(e => e.Rating)
+                    .IsRequired();
+
+                entity.Property(e => e.ImageUrl)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                        v => JsonSerializer.Deserialize<string>(v, JsonSerializerOptions.Default) ?? string.Empty)
+                    .HasColumnType("text");
+
+                entity.HasIndex(e => e.ProductID);
+                entity.HasIndex(e => e.OrderID);
+                entity.HasIndex(e => e.LivestreamId);
+                entity.HasIndex(e => e.AccountID);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.Rating);
+            });
             modelBuilder
                 .HasPostgresEnum<OrderStatus>()
                 .HasPostgresEnum<PaymentStatus>();

@@ -234,6 +234,7 @@ services:
       - ServiceUrls__ShopService=http://shop-service
       - ServiceUrls__AccountService=http://account-service
       - ServiceUrls__PaymentService=http://payment-service
+      - ServiceUrls__LivestreamService=http://livestream-service
       #Delivery Service
       - API_TOKEN_GHN=&{API_TOKEN_GHN}
       - GHN_SHOPID=${GHN_SHOPID}

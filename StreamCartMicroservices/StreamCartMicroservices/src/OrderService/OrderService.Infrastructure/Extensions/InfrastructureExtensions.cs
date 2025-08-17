@@ -58,7 +58,7 @@ namespace OrderService.Infrastructure.Extensions
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();
             services.AddScoped<IOrderService, OrderManagementService>();
             services.AddScoped<IOrderItemService, OrderItemManagementService>();
-
+            services.AddScoped<IReviewRepository,ReviewRepository>();
             services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
             services.AddHostedService<OrderNotificationWorker>();
 
@@ -76,6 +76,12 @@ namespace OrderService.Infrastructure.Extensions
             services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
             {
                 var baseUrl = configuration["ServiceUrls:ShopService"];
+                if (!string.IsNullOrEmpty(baseUrl))
+                    client.BaseAddress = new Uri(baseUrl);
+            });
+            services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>(client =>
+            {
+                var baseUrl = configuration["ServiceUrls:LivestreamService"];
                 if (!string.IsNullOrEmpty(baseUrl))
                     client.BaseAddress = new Uri(baseUrl);
             });
@@ -157,6 +163,7 @@ namespace OrderService.Infrastructure.Extensions
 
             // Nếu có service chạy nền theo interval ngoài Quartz
             services.AddHostedService<OrderCompletionService>();
+            services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>();
 
             return services;
         }
