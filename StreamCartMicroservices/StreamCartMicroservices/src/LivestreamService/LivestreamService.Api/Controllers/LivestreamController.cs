@@ -321,7 +321,7 @@ namespace LivestreamService.Api.Controllers
         /// Start a livestream (Seller only)
         /// </summary>
         [HttpPost("{id}/start")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -359,7 +359,7 @@ namespace LivestreamService.Api.Controllers
         /// End a livestream (Seller only)
         /// </summary>
         [HttpPost("{id}/end")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
