@@ -65,7 +65,7 @@ namespace OrderService.Api.Controllers
                     Rating = (int)request.Rating,
                     ReviewText = request.ReviewText,
                     Type = reviewType,
-                    ImageUrl = null,
+                    ImageUrls = request.ImageUrls,
                     IsVerifiedPurchase = await CheckVerifiedPurchase(request, userId)
                 };
 
@@ -310,7 +310,7 @@ namespace OrderService.Api.Controllers
                     UserId = userId,
                     ReviewText = request.ReviewText,
                     Rating = request.Rating,
-                    //ImageUrl = request.ImageUrl
+                    ImageUrls = request.ImageUrls
                 };
 
                 var result = await _mediator.Send(command);

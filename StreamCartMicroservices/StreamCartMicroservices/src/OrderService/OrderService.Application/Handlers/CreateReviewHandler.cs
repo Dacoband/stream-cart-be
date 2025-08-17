@@ -50,15 +50,6 @@ namespace OrderService.Application.Handlers
 
                 // Validate target exists
                 await ValidateTargetExists(request);
-
-               string? reviewImageUrl = null;
-
-                if (request.ProductID.HasValue)
-                {
-                    // For product reviews, automatically get product image
-                    var product  = await _productServiceClient.GetProductByIdAsync(request.ProductID.Value);
-                    reviewImageUrl = product.PrimaryImageUrl ?? string.Empty;
-                }
                 // Create the review entity
                 var review = new Review(
                     orderId: request.OrderID,
@@ -69,7 +60,7 @@ namespace OrderService.Application.Handlers
                     reviewText: request.ReviewText,
                     type: request.Type,
                     isVerifiedPurchase: request.IsVerifiedPurchase,
-                    imageUrl: reviewImageUrl ,
+                    imageUrls: request.ImageUrls ,
                     createdBy: request.AccountID.ToString()
                 );
 
@@ -130,7 +121,7 @@ namespace OrderService.Application.Handlers
                 ReviewText = review.ReviewText,
                 IsVerifiedPurchase = review.IsVerifiedPurchase,
                 Type = review.Type,
-                ImageUrl = review.ImageUrl,
+                ImageUrls = review.ImageUrls,
                 CreatedAt = review.CreatedAt,
                 ApprovedAt = review.ApprovedAt,
                 ApprovedBy = review.ApprovedBy,

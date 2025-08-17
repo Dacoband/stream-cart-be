@@ -12,6 +12,6 @@ namespace OrderService.Application.DTOs
         [Range(1, 5, ErrorMessage = "Rating phải từ 1 đến 5 sao")]
         public int Rating { get; set; }
 
-       // public List<string>? ImageUrls { get; set; }
+        public List<string>? ImageUrls { get; set; }
     }
 }

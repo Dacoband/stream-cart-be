@@ -64,7 +64,7 @@ namespace OrderService.Application.Handlers
                         ReviewText = review.ReviewText,
                         IsVerifiedPurchase = review.IsVerifiedPurchase,
                         Type = review.Type,
-                        ImageUrl  = review.ImageUrl,
+                        ImageUrls = review.ImageUrls,
                         CreatedAt = review.CreatedAt,
                         ApprovedAt = review.ApprovedAt,
                         ApprovedBy = review.ApprovedBy,

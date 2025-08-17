@@ -15,7 +15,7 @@ namespace OrderService.Domain.Entities
         public string ReviewText { get; private set; } = string.Empty;
         public bool IsVerifiedPurchase { get; private set; }
         public ReviewType Type { get; private set; }
-        public string? ImageUrl { get; private set; } // ✅ CHANGED: Single URL instead of list
+        public List<string> ImageUrls { get; private set; } = new List<string>();
         public DateTime? ApprovedAt { get; private set; }
         public string? ApprovedBy { get; private set; }
         public int HelpfulCount { get; private set; }
@@ -32,7 +32,7 @@ namespace OrderService.Domain.Entities
             string reviewText,
             ReviewType type,
             bool isVerifiedPurchase = false,
-            string? imageUrl = null, // ✅ CHANGED: Single URL parameter
+            List<string>? imageUrls = null, 
             string? createdBy = null) : base()
         {
             ValidateReviewTarget(orderId, productId, livestreamId);
@@ -46,7 +46,7 @@ namespace OrderService.Domain.Entities
             ReviewText = reviewText ?? string.Empty;
             Type = type;
             IsVerifiedPurchase = isVerifiedPurchase;
-            ImageUrl = imageUrl; // ✅ CHANGED: Assign single URL
+            ImageUrls = imageUrls ?? new List<string>(); 
             HelpfulCount = 0;
             UnhelpfulCount = 0;
 
@@ -54,15 +54,15 @@ namespace OrderService.Domain.Entities
                 SetCreator(createdBy);
         }
 
-        public void UpdateReview(string reviewText, int rating, string? imageUrl = null, string? modifiedBy = null)
+        public void UpdateReview(string reviewText, int rating, List<string>? imageUrls = null, string? modifiedBy = null)
         {
             ValidateRating(rating);
 
             ReviewText = reviewText ?? ReviewText;
             Rating = rating;
 
-            if (imageUrl != null)
-                ImageUrl = imageUrl; // ✅ CHANGED: Assign single URL
+            if (imageUrls != null)
+                ImageUrls = imageUrls; // ✅ CHANGED: Assign list of URLs
 
             if (!string.IsNullOrEmpty(modifiedBy))
                 SetModifier(modifiedBy);

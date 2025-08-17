@@ -14,7 +14,7 @@ namespace OrderService.Application.DTOs
         public bool IsVerifiedPurchase { get; set; }
         public ReviewType Type { get; set; }
         public string TypeDisplayName => Type.ToString();
-        public string? ImageUrl { get; set; } 
+        public List<string> ImageUrls { get; set; } = new List<string>();
         public DateTime CreatedAt { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public string? ApprovedBy { get; set; }

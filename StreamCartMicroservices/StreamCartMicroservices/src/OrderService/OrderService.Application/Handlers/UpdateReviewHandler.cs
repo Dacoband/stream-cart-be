@@ -13,7 +13,7 @@ namespace OrderService.Application.Handlers
         private readonly IReviewRepository _reviewRepository;
         private readonly IProductServiceClient _productServiceClient;
         private readonly ILivestreamServiceClient _livestreamServiceClient;
-        private readonly IShopServiceClient _shopServiceClient; // ✅ ADD Shop Service Client
+        private readonly IShopServiceClient _shopServiceClient; 
         private readonly ILogger<UpdateReviewHandler> _logger;
 
         public UpdateReviewHandler(
@@ -53,7 +53,7 @@ namespace OrderService.Application.Handlers
                 review.UpdateReview(
                     reviewText: request.ReviewText,
                     rating: request.Rating,
-                    imageUrl: review.ImageUrl,
+                    imageUrls: review.ImageUrls,
                     modifiedBy: request.UserId.ToString()
                 );
 
@@ -87,7 +87,7 @@ namespace OrderService.Application.Handlers
                 ReviewText = review.ReviewText,
                 IsVerifiedPurchase = review.IsVerifiedPurchase,
                 Type = review.Type,
-                ImageUrl = review.ImageUrl,
+                ImageUrls  = review.ImageUrls,
                 CreatedAt = review.CreatedAt,
                 ApprovedAt = review.ApprovedAt,
                 ApprovedBy = review.ApprovedBy,

@@ -5,6 +5,7 @@ using LivestreamService.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Services.User;
 using System;
@@ -1375,6 +1376,462 @@ namespace LivestreamService.Infrastructure.Hubs
             {
                 _logger.LogError(ex, "Error soft deleting livestream product real-time");
                 await Clients.Caller.SendAsync("Error", $"Soft delete product failed: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// Real-time thêm sản phẩm vào giỏ hàng livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="livestreamProductId">ID của livestream product</param>
+        /// <param name="quantity">Số lượng</param>
+        public async Task AddToLivestreamCart(string livestreamId, string livestreamProductId, int quantity)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var viewerGuid = Guid.Parse(userId);
+                var livestreamGuid = Guid.Parse(livestreamId);
+                var livestreamProductGuid = Guid.Parse(livestreamProductId);
+
+                // Get services from DI
+                var cartRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartRepository>();
+                var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartItemRepository>();
+                var livestreamProductRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamProductRepository>();
+
+                if (cartRepository == null || cartItemRepository == null || livestreamProductRepository == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Service dependencies not available");
+                    return;
+                }
+
+                // 1. Validate livestream product
+                var livestreamProduct = await livestreamProductRepository.GetByIdAsync(livestreamProductGuid.ToString());
+                if (livestreamProduct == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Sản phẩm không tồn tại trong livestream");
+                    return;
+                }
+
+                // 2. Check stock
+                if (livestreamProduct.Stock < quantity)
+                {
+                    await Clients.Caller.SendAsync("Error", "Số lượng sản phẩm không đủ");
+                    return;
+                }
+
+                // 3. Get or create cart
+                var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamGuid, viewerGuid);
+                if (cart == null)
+                {
+                    cart = new LivestreamCart(livestreamGuid, viewerGuid, userId);
+
+                    // ✅ FIX: Use ScheduledStartTime instead of ScheduledEndTime
+                    var livestream = await _livestreamRepository.GetByIdAsync(livestreamId);
+                    if (livestream?.ScheduledStartTime != null)
+                    {
+                        // Set expiration to 2 hours after scheduled start time (assuming livestream lasts ~1 hour + 1 hour buffer)
+                        cart.SetExpiration(livestream.ScheduledStartTime.AddHours(2), userId);
+                    }
+
+                    await cartRepository.InsertAsync(cart);
+                }
+
+                // 4. Check existing item
+                var existingItem = await cartItemRepository.FindByCartAndProductAsync(
+                    cart.Id, livestreamProductGuid, livestreamProduct.VariantId);
+
+                if (existingItem != null)
+                {
+                    var newQuantity = existingItem.Quantity + quantity;
+                    if (newQuantity > livestreamProduct.Stock)
+                    {
+                        await Clients.Caller.SendAsync("Error", "Tổng số lượng vượt quá tồn kho");
+                        return;
+                    }
+
+                    existingItem.UpdateQuantity(newQuantity, userId);
+                    await cartItemRepository.ReplaceAsync(existingItem.Id.ToString(), existingItem);
+                }
+                else
+                {
+                    // Create new cart item
+                    var newItem = new LivestreamCartItem(
+                        cart.Id,
+                        livestreamGuid,
+                        livestreamProductGuid,
+                        livestreamProduct.ProductId,
+                        livestreamProduct.VariantId,
+                        "Product Name", // TODO: Get from ProductService
+                        Guid.NewGuid(), // TODO: Get ShopId from livestream
+                        "Shop Name", // TODO: Get from ShopService
+                        livestreamProduct.Price,
+                        livestreamProduct.OriginalPrice,
+                        livestreamProduct.Stock,
+                        quantity,
+                        "image.jpg", // TODO: Get from ProductService
+                        createdBy: userId
+                    );
+
+                    await cartItemRepository.InsertAsync(newItem);
+                }
+
+                // 5. Get updated cart data
+                var updatedCart = await GetLivestreamCartDataAsync(livestreamGuid, viewerGuid);
+
+                // 6. Broadcast real-time updates
+                await Clients.Caller.SendAsync("LivestreamCartUpdated", new
+                {
+                    Action = "ITEM_ADDED",
+                    LivestreamId = livestreamId,
+                    Cart = updatedCart,
+                    ProductName = "Product Name", // TODO: Get from service
+                    Quantity = quantity,
+                    Timestamp = DateTime.UtcNow,
+                    Message = $"✅ Đã thêm {quantity} sản phẩm vào giỏ hàng!"
+                });
+
+                // Broadcast to livestream viewers (activity notification)
+                await Clients.Group($"livestream_viewers_{livestreamId}")
+                    .SendAsync("LivestreamCartActivity", new
+                    {
+                        ViewerId = userId,
+                        Action = "ITEM_ADDED",
+                        ProductName = "Product Name",
+                        Quantity = quantity,
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                _logger.LogInformation("✅ Real-time cart add: User {UserId} added {Quantity} of product {ProductId} to livestream {LivestreamId}",
+                    userId, quantity, livestreamProductId, livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding to livestream cart real-time");
+                await Clients.Caller.SendAsync("Error", $"Failed to add to cart: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time cập nhật số lượng sản phẩm trong giỏ hàng livestream
+        /// </summary>
+        /// <param name="cartItemId">ID của cart item</param>
+        /// <param name="newQuantity">Số lượng mới</param>
+        public async Task UpdateLivestreamCartItemQuantity(string cartItemId, int newQuantity)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var cartItemGuid = Guid.Parse(cartItemId);
+                var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartItemRepository>();
+                var cartRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartRepository>();
+
+                if (cartItemRepository == null || cartRepository == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Service dependencies not available");
+                    return;
+                }
+
+                var cartItem = await cartItemRepository.GetByIdAsync(cartItemId);
+                if (cartItem == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Cart item not found");
+                    return;
+                }
+
+                // Verify ownership
+                var cart = await cartRepository.GetByIdAsync(cartItem.LivestreamCartId.ToString());
+                if (cart?.ViewerId.ToString() != userId)
+                {
+                    await Clients.Caller.SendAsync("Error", "Access denied");
+                    return;
+                }
+
+                // Check stock
+                if (newQuantity > cartItem.Stock)
+                {
+                    await Clients.Caller.SendAsync("Error", "Số lượng vượt quá tồn kho");
+                    return;
+                }
+
+                if (newQuantity <= 0)
+                {
+                    // Remove item if quantity is 0 or negative
+                    await cartItemRepository.DeleteCartItemAsync(cartItemGuid);
+                }
+                else
+                {
+                    cartItem.UpdateQuantity(newQuantity, userId);
+                    await cartItemRepository.ReplaceAsync(cartItemId, cartItem);
+                }
+
+                // Get updated cart
+                var updatedCart = await GetLivestreamCartDataAsync(cartItem.LivestreamId, Guid.Parse(userId));
+
+                // Broadcast updates
+                await Clients.Caller.SendAsync("LivestreamCartUpdated", new
+                {
+                    Action = newQuantity <= 0 ? "ITEM_REMOVED" : "ITEM_UPDATED",
+                    LivestreamId = cartItem.LivestreamId,
+                    Cart = updatedCart,
+                    ProductName = cartItem.ProductName,
+                    NewQuantity = newQuantity,
+                    Timestamp = DateTime.UtcNow,
+                    Message = newQuantity <= 0 ?
+                        $"🗑️ Đã xóa {cartItem.ProductName} khỏi giỏ hàng" :
+                        $"🔄 Đã cập nhật số lượng {cartItem.ProductName}: {newQuantity}"
+                });
+
+                _logger.LogInformation("✅ Real-time cart update: User {UserId} updated item {ItemId} to quantity {Quantity}",
+                    userId, cartItemId, newQuantity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating livestream cart item real-time");
+                await Clients.Caller.SendAsync("Error", $"Failed to update cart item: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time lấy giỏ hàng livestream của viewer
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        public async Task GetLivestreamCart(string livestreamId)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var livestreamGuid = Guid.Parse(livestreamId);
+                var viewerGuid = Guid.Parse(userId);
+
+                var cartData = await GetLivestreamCartDataAsync(livestreamGuid, viewerGuid);
+
+                await Clients.Caller.SendAsync("LivestreamCartLoaded", new
+                {
+                    LivestreamId = livestreamId,
+                    Cart = cartData,
+                    Timestamp = DateTime.UtcNow
+                });
+
+                _logger.LogInformation("✅ Real-time cart loaded for user {UserId} in livestream {LivestreamId}",
+                    userId, livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream cart real-time");
+                await Clients.Caller.SendAsync("Error", $"Failed to load cart: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Real-time xóa toàn bộ giỏ hàng livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        public async Task ClearLivestreamCart(string livestreamId)
+        {
+            if (!IsUserAuthenticated())
+            {
+                await Clients.Caller.SendAsync("Error", "Authentication required");
+                return;
+            }
+
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    await Clients.Caller.SendAsync("Error", "User ID not found");
+                    return;
+                }
+
+                var livestreamGuid = Guid.Parse(livestreamId);
+                var viewerGuid = Guid.Parse(userId);
+
+                var cartRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartRepository>();
+                var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartItemRepository>();
+
+                if (cartRepository == null || cartItemRepository == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Service dependencies not available");
+                    return;
+                }
+
+                var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamGuid, viewerGuid);
+                if (cart == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Cart not found");
+                    return;
+                }
+
+                // Remove all items
+                var items = await cartItemRepository.GetByCartIdAsync(cart.Id);
+                foreach (var item in items)
+                {
+                    await cartItemRepository.DeleteCartItemAsync(item.Id);
+                }
+
+                // Deactivate cart
+                cart.Deactivate(userId);
+                await cartRepository.ReplaceAsync(cart.Id.ToString(), cart);
+
+                // Broadcast update
+                await Clients.Caller.SendAsync("LivestreamCartCleared", new
+                {
+                    LivestreamId = livestreamId,
+                    Message = "🗑️ Giỏ hàng đã được xóa",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                _logger.LogInformation("✅ Real-time cart cleared for user {UserId} in livestream {LivestreamId}",
+                    userId, livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing livestream cart real-time");
+                await Clients.Caller.SendAsync("Error", $"Failed to clear cart: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Helper method để lấy cart data
+        /// </summary>
+        private async Task<object> GetLivestreamCartDataAsync(Guid livestreamId, Guid viewerId)
+        {
+            var cartRepository = Context.GetHttpContext()?.RequestServices
+                .GetRequiredService<ILivestreamCartRepository>();
+            var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                .GetRequiredService<ILivestreamCartItemRepository>();
+
+            if (cartRepository == null || cartItemRepository == null)
+            {
+                return new { Items = new List<object>(), TotalItems = 0, TotalAmount = 0 };
+            }
+
+            var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamId, viewerId);
+            if (cart == null)
+            {
+                return new
+                {
+                    LivestreamId = livestreamId,
+                    ViewerId = viewerId,
+                    Items = new List<object>(),
+                    TotalItems = 0,
+                    TotalAmount = 0,
+                    IsActive = true,
+                    ExpiresAt = (DateTime?)null
+                };
+            }
+
+            var items = await cartItemRepository.GetByCartIdAsync(cart.Id);
+
+            return new
+            {
+                LivestreamCartId = cart.Id,
+                LivestreamId = cart.LivestreamId,
+                ViewerId = cart.ViewerId,
+                Items = items.Select(item => new
+                {
+                    Id = item.Id,
+                    LivestreamProductId = item.LivestreamProductId,
+                    ProductId = item.ProductId,
+                    VariantId = item.VariantId,
+                    ProductName = item.ProductName,
+                    ShopId = item.ShopId,
+                    ShopName = item.ShopName,
+                    LivestreamPrice = item.LivestreamPrice,
+                    OriginalPrice = item.OriginalPrice,
+                    DiscountPercentage = item.DiscountPercentage,
+                    Quantity = item.Quantity,
+                    Stock = item.Stock,
+                    PrimaryImage = item.PrimaryImage,
+                    Attributes = item.Attributes,
+                    ProductStatus = item.ProductStatus,
+                    TotalPrice = item.TotalPrice,
+                    CreatedAt = item.CreatedAt
+                }).ToList(),
+                TotalItems = items.Sum(x => x.Quantity),
+                TotalAmount = items.Sum(x => x.TotalPrice),
+                TotalDiscount = items.Sum(x => (x.OriginalPrice - x.LivestreamPrice) * x.Quantity),
+                SubTotal = items.Sum(x => x.OriginalPrice * x.Quantity),
+                IsActive = cart.IsActive,
+                ExpiresAt = cart.ExpiresAt,
+                CreatedAt = cart.CreatedAt
+            };
+        }
+
+        /// <summary>
+        /// Broadcast cart statistics to livestream viewers
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        public async Task BroadcastLivestreamCartStats(string livestreamId)
+        {
+            try
+            {
+                var cartRepository = Context.GetHttpContext()?.RequestServices
+                    .GetRequiredService<ILivestreamCartRepository>();
+
+                if (cartRepository == null) return;
+
+                var livestreamGuid = Guid.Parse(livestreamId);
+                var activeCartsCount = await cartRepository.CountActiveCartsInLivestreamAsync(livestreamGuid);
+
+                await Clients.Group($"livestream_viewers_{livestreamId}")
+                    .SendAsync("LivestreamCartStats", new
+                    {
+                        LivestreamId = livestreamId,
+                        ActiveCarts = activeCartsCount,
+                        Timestamp = DateTime.UtcNow,
+                        Message = $"📊 {activeCartsCount} người đang có sản phẩm trong giỏ hàng"
+                    });
+
+                _logger.LogInformation("📊 Broadcasted cart stats for livestream {LivestreamId}: {ActiveCarts} active carts",
+                    livestreamId, activeCartsCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting cart stats for livestream {LivestreamId}", livestreamId);
             }
         }
         // ✅ Helper methods

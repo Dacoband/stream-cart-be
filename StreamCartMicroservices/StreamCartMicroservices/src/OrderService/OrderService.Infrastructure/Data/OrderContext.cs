@@ -315,10 +315,10 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.Rating)
                     .IsRequired();
 
-                entity.Property(e => e.ImageUrl)
+                entity.Property(e => e.ImageUrls)
                     .HasConversion(
                         v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
-                        v => JsonSerializer.Deserialize<string>(v, JsonSerializerOptions.Default) ?? string.Empty)
+                        v => JsonSerializer.Deserialize<List<string>>(v, JsonSerializerOptions.Default) ?? new List<string>())
                     .HasColumnType("text");
 
                 entity.HasIndex(e => e.ProductID);

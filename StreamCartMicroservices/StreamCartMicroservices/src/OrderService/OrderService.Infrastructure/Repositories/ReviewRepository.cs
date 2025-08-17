@@ -173,11 +173,11 @@ namespace OrderService.Infrastructure.Repositories
             {
                 if (hasImages.Value)
                 {
-                    query = query.Where(r => r.ImageUrl != null);
+                    query = query.Where(r => r.ImageUrls != null);
                 }
                 else
                 {
-                    query = query.Where(r => r.ImageUrl == null);
+                    query = query.Where(r => r.ImageUrls == null);
                 }
             }
 

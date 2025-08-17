@@ -18,7 +18,7 @@ namespace OrderService.Application.Commands
         public int Rating { get; set; }
         public string ReviewText { get; set; } = string.Empty;
         public ReviewType Type { get; set; }
-        public string? ImageUrl { get; set; }
+        public List<string>? ImageUrls { get; set; } = new List<string>();
         public bool IsVerifiedPurchase { get; set; }
     }
 }

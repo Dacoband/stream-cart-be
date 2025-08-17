@@ -9,6 +9,6 @@ namespace OrderService.Application.Commands
         public Guid UserId { get; set; }
         public string ReviewText { get; set; } = string.Empty;
         public int Rating { get; set; }
-       // public string? ImageUrls { get; set; }
+        public List<string>? ImageUrls { get; set; } = new List<string>();
     }
 }

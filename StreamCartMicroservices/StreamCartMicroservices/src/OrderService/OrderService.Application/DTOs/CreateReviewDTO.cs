@@ -19,6 +19,6 @@ namespace OrderService.Application.DTOs
         [StringLength(2000, ErrorMessage = "Nội dung review không được quá 2000 ký tự")]
         public string? ReviewText { get; set; } = string.Empty;
 
-       // public List<string>? ImageUrls { get; set; }
+        public List<string>? ImageUrls { get; set; }
     }
 }

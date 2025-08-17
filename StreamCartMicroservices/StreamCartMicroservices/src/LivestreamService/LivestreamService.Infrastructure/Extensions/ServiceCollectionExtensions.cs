@@ -1,4 +1,5 @@
 ﻿using LivestreamService.Application.Interfaces;
+using LivestreamService.Infrastructure.BackgroundServices;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
@@ -7,7 +8,7 @@ using LivestreamService.Infrastructure.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using Quartz;
 namespace LivestreamService.Infrastructure.Extensions
 {
     public static class ServiceCollectionExtensions
@@ -87,8 +88,26 @@ namespace LivestreamService.Infrastructure.Extensions
             services.AddScoped<IChatNotificationServiceSignalR, ChatNotificationServiceSignalR>();
             services.AddScoped<ISignalRChatService, SignalRChatService>();
             services.AddScoped<IChatNotificationService, ChatNotificationService>();
-            return services;
 
+            services.AddScoped<ILivestreamCartRepository, LivestreamCartRepository>();
+            services.AddScoped<ILivestreamCartItemRepository, LivestreamCartItemRepository>();
+
+            // ✅ Background Services
+            services.AddHostedService<LivestreamCartCleanupService>();
+            services.AddQuartz(q =>
+            {
+                q.UseMicrosoftDependencyInjectionJobFactory();
+                var cartCleanupJobKey = new JobKey("LivestreamCartCleanupJob");
+                q.AddJob<LivestreamCartCleanupJob>(opts => opts.WithIdentity(cartCleanupJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(cartCleanupJobKey)
+                    .WithIdentity("LivestreamCartCleanupTrigger")
+                    .WithCronSchedule("0 0 * * * ?") // Every hour at minute 0
+                    .WithDescription("Cleanup expired livestream carts"));
+            });
+
+            services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+           return services;
         }
 
         //public static IServiceCollection AddHttpClientFactory(this IServiceCollection services)
