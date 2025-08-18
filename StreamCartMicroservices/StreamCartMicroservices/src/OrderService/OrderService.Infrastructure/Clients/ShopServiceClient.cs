@@ -244,5 +244,24 @@ namespace OrderService.Infrastructure.Clients
                 return false;
             }
         }
+        public async Task<bool> UpdateShopRatingAsync(Guid shopId, decimal newRating, string? modifier = null)
+        {
+            try
+            {
+                var requestData = new
+                {
+                    Rating = newRating,
+                    Modifier = modifier ?? "OrderService"
+                };
+
+                var response = await _httpClient.PutAsJsonAsync($"api/shops/{shopId}/rating", requestData);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật rating cho shop {ShopId}", shopId);
+                return false;
+            }
+        }
     }
 }
