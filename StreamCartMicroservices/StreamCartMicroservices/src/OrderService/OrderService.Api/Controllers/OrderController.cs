@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.OrderCommands;
+using OrderService.Application.DTOs;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
@@ -15,6 +16,7 @@ using Shared.Common.Services.User;
 using ShopService.Application.DTOs.Dashboard;
 using ShopService.Application.Interfaces;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace OrderService.Api.Controllers
@@ -858,6 +860,58 @@ namespace OrderService.Api.Controllers
             {
                 _logger.LogError(ex, "Error retrieving livestream orders for shop {ShopId}", shopId);
                 return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        /// <summary>
+        /// 🚀 Tạo đơn hàng từ cart live trong livestream
+        /// </summary>
+        [HttpPost("livestream/{livestreamId}/checkout")]
+        [Authorize(Roles = "Customer")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamOrderResult>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> CreateOrderFromLiveCart(
+            Guid livestreamId,
+            [FromBody] CreateLiveCartOrderDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+
+                _logger.LogInformation("🛒 Creating order from live cart for user {UserId} in livestream {LivestreamId}",
+                    userId, livestreamId);
+
+                var command = new CreateLiveCartOrderCommand
+                {
+                    UserId = userId,
+                    LivestreamId = livestreamId,
+                    CartItems = request.CartItems,
+                    PaymentMethod = request.PaymentMethod,
+                    DeliveryAddressId = request.DeliveryAddressId,
+                    CustomerNotes = request.CustomerNotes,
+                    VoucherCode = request.VoucherCode
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (result.Success)
+                {
+                    return Created($"/api/orders/{result.Data.OrderId}",
+                        ApiResponse<LivestreamOrderResult>.SuccessResult(result.Data, "🎉 Đặt hàng từ livestream thành công!"));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult(result.Message));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error creating order from live cart for livestream {LivestreamId}", livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
             }
         }
     }

@@ -1,10 +1,12 @@
 ﻿using LivestreamService.Application.Interfaces;
 using LivestreamService.Infrastructure.BackgroundServices;
+using LivestreamService.Infrastructure.Consumers;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using LivestreamService.Infrastructure.Settings;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,7 +109,26 @@ namespace LivestreamService.Infrastructure.Extensions
             });
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-           return services;
+            services.AddScoped<LivestreamOrderStatsUpdatedConsumer>();
+            services.AddMassTransit(x =>
+            {
+                x.AddConsumer<LivestreamOrderStatsUpdatedConsumer>();
+
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    cfg.Host(configuration.GetConnectionString("RabbitMQ") ?? "rabbitmq", h =>
+                    {
+                        h.Username("guest");
+                        h.Password("guest");
+                    });
+
+                    cfg.ReceiveEndpoint("livestream-order-stats-updated", e =>
+                    {
+                        e.ConfigureConsumer<LivestreamOrderStatsUpdatedConsumer>(context);
+                    });
+                });
+            });
+            return services;
         }
 
         //public static IServiceCollection AddHttpClientFactory(this IServiceCollection services)

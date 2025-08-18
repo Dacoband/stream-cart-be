@@ -1834,6 +1834,70 @@ namespace LivestreamService.Infrastructure.Hubs
                 _logger.LogError(ex, "Error broadcasting cart stats for livestream {LivestreamId}", livestreamId);
             }
         }
+        // ✅ Thêm methods này vào SignalRChatHub class
+
+        /// <summary>
+        /// ✅ NEW: Broadcast real-time order statistics cho livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="orderStats">Thống kê đơn hàng</param>
+        public async Task BroadcastLivestreamOrderStats(string livestreamId, object orderStats)
+        {
+            try
+            {
+                var groupName = $"livestream_viewers_{livestreamId}";
+
+                await Clients.Group(groupName).SendAsync("LivestreamOrderStatsUpdated", orderStats);
+
+                _logger.LogInformation("📊 Broadcasted order stats for livestream {LivestreamId}", livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting order stats for livestream {LivestreamId}", livestreamId);
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Broadcast new order celebration với effects
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="orderData">Dữ liệu đơn hàng mới</param>
+        public async Task BroadcastNewOrderCelebration(string livestreamId, object orderData)
+        {
+            try
+            {
+                var groupName = $"livestream_viewers_{livestreamId}";
+
+                await Clients.Group(groupName).SendAsync("NewLivestreamOrder", orderData);
+
+                _logger.LogInformation("🎉 Broadcasted new order celebration for livestream {LivestreamId}", livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting order celebration for livestream {LivestreamId}", livestreamId);
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Broadcast real-time product sales update
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <param name="productSalesData">Dữ liệu bán hàng sản phẩm</param>
+        public async Task BroadcastProductSalesUpdate(string livestreamId, object productSalesData)
+        {
+            try
+            {
+                var groupName = $"livestream_viewers_{livestreamId}";
+
+                await Clients.Group(groupName).SendAsync("ProductSalesUpdated", productSalesData);
+
+                _logger.LogInformation("📈 Broadcasted product sales update for livestream {LivestreamId}", livestreamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting product sales update for livestream {LivestreamId}", livestreamId);
+            }
+        }
         // ✅ Helper methods
         private bool IsUserAuthenticated()
         {
