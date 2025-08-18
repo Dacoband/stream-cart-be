@@ -38,7 +38,7 @@ namespace LivestreamService.Application.Handlers
                 throw new KeyNotFoundException($"Livestream with ID {request.Id} not found");
             }
 
-            if (livestream.SellerId != request.SellerId)
+            if (livestream.LivestreamHostId != request.SellerId)
             {
                 throw new UnauthorizedAccessException("Only the livestream creator can start it");
             }
