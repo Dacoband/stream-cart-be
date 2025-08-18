@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -38,17 +38,34 @@ namespace OrderService.Infrastructure.Clients
             try
             {
                 _logger.LogInformation("Getting account details for ID: {AccountId}", accountId);
-                
+
                 var response = await _httpClient.GetAsync($"/api/accounts/{accountId}");
                 response.EnsureSuccessStatusCode();
-                
-                var account = await response.Content.ReadFromJsonAsync<AccountDto>();
-                return account ?? new AccountDto { Id = accountId };
+
+                // ✅ FIX: Đọc qua ApiResponse wrapper
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AccountDto>>();
+
+                if (apiResponse?.Success == true && apiResponse.Data != null)
+                {
+                    _logger.LogInformation("✅ Successfully retrieved account {AccountId}: {FullName}, Avatar: {Avatar}",
+                        accountId, apiResponse.Data.FullName, apiResponse.Data.AvatarURL);
+                    return apiResponse.Data;
+                }
+
+                _logger.LogWarning("⚠️ Account {AccountId} not found or API returned unsuccessful response", accountId);
+                return new AccountDto { Id = accountId };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting account details for ID: {AccountId}", accountId);
-                throw;
+                _logger.LogError(ex, "❌ Error getting account details for ID: {AccountId}", accountId);
+
+                // ✅ Return fallback instead of throwing
+                return new AccountDto
+                {
+                    Id = accountId,
+                    FullName = "Unknown User",
+                    AvatarURL = null
+                };
             }
         }
 
@@ -82,18 +99,18 @@ namespace OrderService.Infrastructure.Clients
 
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<ShopAccountDto>>>();
 
-                if (result?.Success == true && result.Data.Count() > 0 )
+                if (result?.Success == true && result.Data?.Count() > 0)
                 {
                     return result.Data;
                 }
 
                 _logger.LogWarning("No account found for shop ID: {ShopId}", shopId);
-                return null;
+                return Enumerable.Empty<ShopAccountDto>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting account by shop ID: {ShopId}", shopId);
-                return null;
+                return Enumerable.Empty<ShopAccountDto>();
             }
         }
     }
