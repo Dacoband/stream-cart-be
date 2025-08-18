@@ -48,8 +48,9 @@ namespace OrderService.Application.Handlers
                     throw new ArgumentException("Phải chỉ định đúng 1 loại review (Order, Product, hoặc Livestream)");
                 }
 
-                // Validate target exists
-                await ValidateTargetExists(request);
+                // Validate target exists and get shop info
+                var shopId = await ValidateTargetAndGetShopId(request);
+
                 // Create the review entity
                 var review = new Review(
                     orderId: request.OrderID,
@@ -60,7 +61,7 @@ namespace OrderService.Application.Handlers
                     reviewText: request.ReviewText,
                     type: request.Type,
                     isVerifiedPurchase: request.IsVerifiedPurchase,
-                    imageUrls: request.ImageUrls ,
+                    imageUrls: request.ImageUrls,
                     createdBy: request.AccountID.ToString()
                 );
 
@@ -72,6 +73,12 @@ namespace OrderService.Application.Handlers
 
                 // Save to repository
                 await _reviewRepository.AddAsync(review);
+
+                // ✅ CẬP NHẬT SHOP RATING
+                if (shopId.HasValue)
+                {
+                    await UpdateShopRatingAsync(shopId.Value, request.Rating, request.AccountID.ToString());
+                }
 
                 // Convert to DTO manually (không dùng AutoMapper)
                 var reviewDto = await ConvertToDTO(review);
@@ -87,16 +94,21 @@ namespace OrderService.Application.Handlers
             }
         }
 
-        private async Task ValidateTargetExists(CreateReviewCommand request)
+        /// <summary>
+        /// ✅ Validate target và lấy ShopId
+        /// </summary>
+        private async Task<Guid?> ValidateTargetAndGetShopId(CreateReviewCommand request)
         {
+            Guid? shopId = null;
+
             if (request.ProductID.HasValue)
             {
-                // ✅ FIX: Sử dụng GetProductByIdAsync thay vì DoesProductExistAsync
                 var product = await _productServiceClient.GetProductByIdAsync(request.ProductID.Value);
                 if (product == null)
                 {
                     throw new ArgumentException($"Sản phẩm với ID {request.ProductID} không tồn tại");
                 }
+                shopId = product.ShopId;
             }
             else if (request.LivestreamId.HasValue)
             {
@@ -105,6 +117,36 @@ namespace OrderService.Application.Handlers
                 {
                     throw new ArgumentException($"Livestream với ID {request.LivestreamId} không tồn tại");
                 }
+                // Có thể lấy ShopId từ livestream nếu có
+                // shopId = livestream.ShopId;
+            }
+
+            return shopId;
+        }
+
+        /// <summary>
+        /// ✅ Cập nhật rating cho shop
+        /// </summary>
+        private async Task UpdateShopRatingAsync(Guid shopId, int newRating, string modifier)
+        {
+            try
+            {
+                var success = await _shopServiceClient.UpdateShopRatingAsync(shopId, newRating, modifier);
+
+                if (success)
+                {
+                    _logger.LogInformation("✅ Successfully updated shop {ShopId} rating with new rating: {Rating}",
+                        shopId, newRating);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Failed to update shop {ShopId} rating", shopId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không throw để không ảnh hưởng đến việc tạo review
+                _logger.LogError(ex, "❌ Error updating shop {ShopId} rating", shopId);
             }
         }
 
@@ -138,7 +180,6 @@ namespace OrderService.Application.Handlers
                     reviewDto.ProductName = productInfo.ProductName;
                     reviewDto.ProductImageUrl = productInfo.PrimaryImageUrl;
 
-                    // ✅ FIX: Lấy shop name thông qua ShopId từ ProductDto
                     if (productInfo.ShopId.HasValue)
                     {
                         var shopInfo = await _shopServiceClient.GetShopByIdAsync(productInfo.ShopId.Value);

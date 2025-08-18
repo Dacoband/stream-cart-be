@@ -28,5 +28,7 @@ namespace OrderService.Application.DTOs
         public string? LivestreamTitle { get; set; }
         public string? ReviewerName { get; set; }
         public string? ShopName { get; set; }
+        public string? AvatarImage { get; set; }
+        public string? UserName { get; set; }
     }
 }

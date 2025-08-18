@@ -16,17 +16,19 @@ namespace OrderService.Application.Handlers
         private readonly IProductServiceClient _productServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ILogger<GetReviewsByProductHandler> _logger;
-
+        private readonly IAccountServiceClient _accountServiceClient;
         public GetReviewsByProductHandler(
             IReviewRepository reviewRepository,
             IProductServiceClient productServiceClient,
             IShopServiceClient shopServiceClient,
-            ILogger<GetReviewsByProductHandler> logger)
+            ILogger<GetReviewsByProductHandler> logger,
+            IAccountServiceClient accountServiceClient)
         {
             _reviewRepository = reviewRepository;
             _productServiceClient = productServiceClient;
             _shopServiceClient = shopServiceClient;
             _logger = logger;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<PagedResult<ReviewDTO>> Handle(GetReviewsByProductQuery request, CancellationToken cancellationToken)
@@ -53,6 +55,7 @@ namespace OrderService.Application.Handlers
                 var reviewDTOs = new List<ReviewDTO>();
                 foreach (var review in reviews.Items)
                 {
+                    var account = await _accountServiceClient.GetAccountByIdAsync(review.AccountID);
                     var reviewDto = new ReviewDTO
                     {
                         Id = review.Id,
@@ -60,6 +63,8 @@ namespace OrderService.Application.Handlers
                         ProductID = review.ProductID,
                         LivestreamId = review.LivestreamId,
                         AccountID = review.AccountID,
+                        UserName = account?.FullName,
+                        AvatarImage = account?.AvatarURL,
                         Rating = review.Rating,
                         ReviewText = review.ReviewText,
                         IsVerifiedPurchase = review.IsVerifiedPurchase,

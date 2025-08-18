@@ -28,6 +28,8 @@ namespace OrderService.Application.Interfaces
         Task<AddressOfShop> GetShopAddressAsync(Guid shopId);
         Task<bool> UpdateShopCompletionRateAsync(Guid shopId, decimal changeAmount, Guid updatedByAccountId);
         Task<bool> DoesShopExistAsync(Guid shopId);
+        Task<bool> UpdateShopRatingAsync(Guid shopId, decimal newRating, string? modifier = null);
+
 
     }
 }

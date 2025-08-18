@@ -751,5 +751,30 @@ namespace ShopService.Api.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        [HttpPut("{id}/rating")]
+        [AllowAnonymous] // Cho phép OrderService gọi
+        [ProducesResponseType(typeof(ApiResponse<ShopDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateShopRating(Guid id, [FromBody] UpdateShopRatingDto updateRatingDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu rating không hợp lệ"));
+
+                var shop = await _shopManagementService.UpdateShopRatingAsync(id, updateRatingDto.Rating, updateRatingDto.Modifier);
+
+                if (shop == null)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Shop với ID {id} không tồn tại"));
+
+                return Ok(ApiResponse<ShopDto>.SuccessResult(shop, "Cập nhật rating shop thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật rating cho shop {ShopId}", id);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Đã xảy ra lỗi khi cập nhật rating"));
+            }
+        }
     }   
 }

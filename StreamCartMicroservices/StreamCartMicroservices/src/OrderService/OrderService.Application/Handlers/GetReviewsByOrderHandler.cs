@@ -15,19 +15,21 @@ namespace OrderService.Application.Handlers
         private readonly ILivestreamServiceClient _livestreamServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ILogger<GetReviewsByOrderHandler> _logger;
-
+        private readonly IAccountServiceClient _accountServiceClient;
         public GetReviewsByOrderHandler(
             IReviewRepository reviewRepository,
             IProductServiceClient productServiceClient,
             ILivestreamServiceClient livestreamServiceClient,
             IShopServiceClient shopServiceClient,
-            ILogger<GetReviewsByOrderHandler> logger)
+            ILogger<GetReviewsByOrderHandler> logger,
+            IAccountServiceClient accountServiceClient)
         {
             _reviewRepository = reviewRepository;
             _productServiceClient = productServiceClient;
             _livestreamServiceClient = livestreamServiceClient;
             _shopServiceClient = shopServiceClient;
             _logger = logger;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<IEnumerable<ReviewDTO>> Handle(GetReviewsByOrderQuery request, CancellationToken cancellationToken)
@@ -43,6 +45,7 @@ namespace OrderService.Application.Handlers
                 var reviewDTOs = new List<ReviewDTO>();
                 foreach (var review in reviews)
                 {
+                    var account = await _accountServiceClient.GetAccountByIdAsync(review.AccountID);
                     var reviewDto = new ReviewDTO
                     {
                         Id = review.Id,
@@ -50,6 +53,8 @@ namespace OrderService.Application.Handlers
                         ProductID = review.ProductID,
                         LivestreamId = review.LivestreamId,
                         AccountID = review.AccountID,
+                        UserName = account?.FullName,
+                        AvatarImage = account?.AvatarURL,
                         Rating = review.Rating,
                         ReviewText = review.ReviewText,
                         IsVerifiedPurchase = review.IsVerifiedPurchase,

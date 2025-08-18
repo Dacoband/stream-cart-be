@@ -12,15 +12,18 @@ namespace OrderService.Application.Handlers
         private readonly IReviewRepository _reviewRepository;
         private readonly ILivestreamServiceClient _livestreamServiceClient;
         private readonly ILogger<GetReviewsByLivestreamHandler> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
 
         public GetReviewsByLivestreamHandler(
             IReviewRepository reviewRepository,
             ILivestreamServiceClient livestreamServiceClient,
-            ILogger<GetReviewsByLivestreamHandler> logger)
+            ILogger<GetReviewsByLivestreamHandler> logger,
+            IAccountServiceClient accountServiceClient)
         {
             _reviewRepository = reviewRepository;
             _livestreamServiceClient = livestreamServiceClient;
             _logger = logger;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<IEnumerable<ReviewDTO>> Handle(GetReviewsByLivestreamQuery request, CancellationToken cancellationToken)
@@ -34,11 +37,11 @@ namespace OrderService.Application.Handlers
 
                 // Lấy thông tin livestream từ Livestream Service
                 var livestreamInfo = await _livestreamServiceClient.GetLivestreamBasicInfoAsync(request.LivestreamId);
-
                 // Convert sang DTOs và enrich với thông tin từ client
                 var reviewDTOs = new List<ReviewDTO>();
                 foreach (var review in reviews)
                 {
+                    var account = await _accountServiceClient.GetAccountByIdAsync(review.AccountID);
                     var reviewDto = new ReviewDTO
                     {
                         Id = review.Id,
@@ -46,6 +49,8 @@ namespace OrderService.Application.Handlers
                         ProductID = review.ProductID,
                         LivestreamId = review.LivestreamId,
                         AccountID = review.AccountID,
+                        UserName = account?.FullName,
+                        AvatarImage = account?.AvatarURL,
                         Rating = review.Rating,
                         ReviewText = review.ReviewText,
                         IsVerifiedPurchase = review.IsVerifiedPurchase,

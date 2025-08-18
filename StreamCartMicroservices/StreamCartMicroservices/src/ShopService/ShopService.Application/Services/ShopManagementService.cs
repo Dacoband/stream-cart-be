@@ -872,6 +872,30 @@ namespace ShopService.Application.Services
                 return null;
             }
         }
+        public async Task<ShopDto?> UpdateShopRatingAsync(Guid shopId, decimal newRating, string? modifier = null)
+        {
+            try
+            {
+                var shop = await _shopRepository.GetByIdAsync(shopId.ToString());
+                if (shop == null || shop.IsDeleted)
+                    return null;
+
+                // ✅ Sử dụng method AddReview có sẵn trong Shop entity
+                shop.AddReview(newRating, modifier);
+
+                await _shopRepository.ReplaceAsync(shopId.ToString(), shop);
+
+                _logger.LogInformation("Updated shop {ShopId} rating. New average: {NewRating}, Total reviews: {TotalReviews}",
+                    shopId, shop.RatingAverage, shop.TotalReview);
+
+                return await MapShopToDtoAsync(shop);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating shop {ShopId} rating", shopId);
+                throw;
+            }
+        }
         #region Helper Methods
         #region Helper Methods
 

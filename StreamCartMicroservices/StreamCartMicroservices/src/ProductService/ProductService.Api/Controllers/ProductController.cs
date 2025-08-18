@@ -140,7 +140,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                var  userId = _currentUserService.GetUserId();
+                var userId = _currentUserService.GetUserId();
 
                 var result = await _productService.DeleteProductAsync(id, userId.ToString(), reason);
 
