@@ -344,10 +344,6 @@ namespace LivestreamService.Api.Controllers
             {
                 return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid();
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting livestream");
