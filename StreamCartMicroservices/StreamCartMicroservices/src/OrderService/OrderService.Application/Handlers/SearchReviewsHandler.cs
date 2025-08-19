@@ -17,19 +17,22 @@ namespace OrderService.Application.Handlers
         private readonly ILivestreamServiceClient _livestreamServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
         private readonly ILogger<SearchReviewsHandler> _logger;
+        private readonly IAccountServiceClient _accountServiceClient;
 
         public SearchReviewsHandler(
             IReviewRepository reviewRepository,
             IProductServiceClient productServiceClient,
             ILivestreamServiceClient livestreamServiceClient,
             IShopServiceClient shopServiceClient,
-            ILogger<SearchReviewsHandler> logger)
+            ILogger<SearchReviewsHandler> logger,
+            IAccountServiceClient accountServiceClient)
         {
             _reviewRepository = reviewRepository;
             _productServiceClient = productServiceClient;
             _livestreamServiceClient = livestreamServiceClient;
             _shopServiceClient = shopServiceClient;
             _logger = logger;
+            _accountServiceClient = accountServiceClient;
         }
 
         public async Task<PagedResult<ReviewDTO>> Handle(SearchReviewsQuery request, CancellationToken cancellationToken)
@@ -57,11 +60,12 @@ namespace OrderService.Application.Handlers
                     hasResponse: request.HasResponse,
                     minTextLength: request.MinTextLength
                 );
-
+                
                 // Convert to DTOs manually và enrich với thông tin từ clients
                 var reviewDTOs = new List<ReviewDTO>();
                 foreach (var review in result.Items)
                 {
+                    var account = await _accountServiceClient.GetAccountByIdAsync(review.AccountID);
                     var reviewDto = new ReviewDTO
                     {
                         Id = review.Id,
@@ -78,7 +82,9 @@ namespace OrderService.Application.Handlers
                         ApprovedAt = review.ApprovedAt,
                         ApprovedBy = review.ApprovedBy,
                         HelpfulCount = review.HelpfulCount,
-                        UnhelpfulCount = review.UnhelpfulCount
+                        UnhelpfulCount = review.UnhelpfulCount,
+                        UserName = account?.FullName,
+                        AvatarImage = account?.AvatarURL,
                     };
 
                     // Enrich với thông tin từ các service clients

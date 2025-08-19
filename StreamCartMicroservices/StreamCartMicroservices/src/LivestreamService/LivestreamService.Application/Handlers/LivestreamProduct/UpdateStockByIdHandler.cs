@@ -46,11 +46,6 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.LivestreamHostId != request.SellerId)
-                {
-                    throw new UnauthorizedAccessException("You can only update stock for products in your own livestream");
-                }
-
                 // Update stock
                 livestreamProduct.UpdateStock(request.Stock, request.SellerId.ToString());
                 await _livestreamProductRepository.ReplaceAsync(livestreamProduct.Id.ToString(), livestreamProduct);
