@@ -45,11 +45,6 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.LivestreamHostId != request.SellerId)
-                {
-                    throw new UnauthorizedAccessException("You can only pin products in your own livestream");
-                }
-
                 // Handle pinning logic
                 if (request.IsPin)
                 {

@@ -46,7 +46,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.SellerId != request.SellerId)
+                if (livestream.LivestreamHostId != request.SellerId)
                 {
                     throw new UnauthorizedAccessException("You can only update stock for products in your own livestream");
                 }

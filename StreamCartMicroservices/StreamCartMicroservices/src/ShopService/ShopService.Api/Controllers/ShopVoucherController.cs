@@ -95,7 +95,8 @@ namespace ShopService.Api.Controllers
                     Code = code,
                     OrderAmount = request.OrderAmount,
                     OrderId = request.OrderId,
-                    UserId = userId
+                    UserId = userId,
+                    ShopId = _currentUserService.GetShopId() != null ? Guid.Parse(_currentUserService.GetShopId()) : null
                 };
 
                 var result = await _mediator.Send(command);

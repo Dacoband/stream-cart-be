@@ -10,6 +10,7 @@ namespace OrderService.Application.Interfaces
     public interface IShopVoucherClientService
     {
         Task<VoucherValidationDto> ValidateVoucherAsync(string code, decimal orderAmount, Guid? shopId = null);
-        Task<VoucherApplicationDto> ApplyVoucherAsync(string code, Guid orderId, decimal orderAmount, string accessToken);
+        Task<VoucherApplicationDto> ApplyVoucherAsync(string code, Guid orderId, decimal orderAmount, Guid shopId, string accessToken);
+
     }
 }

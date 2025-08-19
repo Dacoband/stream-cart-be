@@ -41,11 +41,6 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.SellerId != request.SellerId)
-                {
-                    throw new UnauthorizedAccessException("You can only delete products from your own livestream");
-                }
-
                 await _livestreamProductRepository.DeleteAsync(request.Id.ToString());
                 return true;
             }
