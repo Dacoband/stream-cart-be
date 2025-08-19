@@ -893,7 +893,11 @@ namespace OrderService.Api.Controllers
                     PaymentMethod = request.PaymentMethod,
                     DeliveryAddressId = request.DeliveryAddressId,
                     CustomerNotes = request.CustomerNotes,
-                    VoucherCode = request.VoucherCode
+                    VoucherCode = request.VoucherCode,
+                    CreatedFromCommentId = request.CreatedFromCommentId,
+                    ShippingProviderId = request.ShippingProviderId,
+                    ShippingFee = request.ShippingFee,
+                    ExpectedDeliveryDay = request.ExpectedDeliveryDay
                 };
 
                 var result = await _mediator.Send(command);

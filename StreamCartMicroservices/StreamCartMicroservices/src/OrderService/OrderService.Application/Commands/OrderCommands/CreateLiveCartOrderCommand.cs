@@ -13,5 +13,9 @@ namespace OrderService.Application.Commands.OrderCommands
         public Guid DeliveryAddressId { get; set; }
         public string? CustomerNotes { get; set; }
         public string? VoucherCode { get; set; }
+        public Guid? CreatedFromCommentId { get; set; }
+        public Guid? ShippingProviderId { get; set; }
+        public decimal? ShippingFee { get; set; }
+        public DateTime? ExpectedDeliveryDay { get; set; }
     }
 }

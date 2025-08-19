@@ -20,6 +20,12 @@ namespace OrderService.Application.DTOs
 
         public string? CustomerNotes { get; set; }
         public string? VoucherCode { get; set; }
+        public Guid? LivestreamId { get; set; }
+        public Guid? CreatedFromCommentId { get; set; }
+
+        public Guid? ShippingProviderId { get; set; }
+        public decimal? ShippingFee { get; set; }
+        public DateTime? ExpectedDeliveryDay { get; set; }
     }
 
     public class LiveCartItemDto
@@ -36,6 +42,8 @@ namespace OrderService.Application.DTOs
         public Guid ShopId { get; set; }
 
         public string? SKU { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public decimal? DiscountAmount { get; set; }
     }
 
     public class LivestreamOrderResult

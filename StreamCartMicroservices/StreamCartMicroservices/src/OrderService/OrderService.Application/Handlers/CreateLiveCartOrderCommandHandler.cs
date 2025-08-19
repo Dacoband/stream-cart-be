@@ -11,7 +11,7 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Models;
 using Shared.Messaging.Event.OrderEvents;
-using Shared.Messaging.Event.LivestreamEvents; // ✅ NEW: Add this namespace
+using Shared.Messaging.Event.LivestreamEvents;
 using MassTransit;
 
 namespace OrderService.Application.Handlers
@@ -22,6 +22,7 @@ namespace OrderService.Application.Handlers
         private readonly IProductServiceClient _productServiceClient;
         private readonly IAdressServiceClient _addressServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
+        private readonly IShopVoucherClientService _shopVoucherClientService; 
         private readonly ILogger<CreateLiveCartOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly IAccountServiceClient _accountServiceClient;
@@ -31,6 +32,7 @@ namespace OrderService.Application.Handlers
             IProductServiceClient productServiceClient,
             IAdressServiceClient addressServiceClient,
             IShopServiceClient shopServiceClient,
+            IShopVoucherClientService shopVoucherClientService, 
             ILogger<CreateLiveCartOrderCommandHandler> logger,
             IPublishEndpoint publishEndpoint,
             IAccountServiceClient accountServiceClient)
@@ -39,6 +41,7 @@ namespace OrderService.Application.Handlers
             _productServiceClient = productServiceClient;
             _addressServiceClient = addressServiceClient;
             _shopServiceClient = shopServiceClient;
+            _shopVoucherClientService = shopVoucherClientService;
             _logger = logger;
             _publishEndpoint = publishEndpoint;
             _accountServiceClient = accountServiceClient;
@@ -82,7 +85,6 @@ namespace OrderService.Application.Handlers
                         return ApiResponse<LivestreamOrderResult>.ErrorResult($"Không tìm thấy địa chỉ shop {shopId}");
                     }
 
-                    // Create order for this shop
                     var order = await CreateOrderForShop(
                         request.UserId,
                         request.LivestreamId,
@@ -91,7 +93,12 @@ namespace OrderService.Application.Handlers
                         shopItems,
                         deliveryAddress,
                         request.PaymentMethod,
-                        request.CustomerNotes);
+                        request.CustomerNotes,
+                        request.VoucherCode,              
+                        request.ShippingProviderId,      
+                        request.ShippingFee,             
+                        request.ExpectedDeliveryDay,     
+                        request.CreatedFromCommentId);  
 
                     if (order == null)
                     {
@@ -115,7 +122,7 @@ namespace OrderService.Application.Handlers
                     await PublishOrderEventsAsync(order, request.PaymentMethod, request.UserId);
                 }
 
-                // ✅ 5. NEW: Publish LIVESTREAM-SPECIFIC EVENT for real-time updates
+                // 5. Publish LIVESTREAM-SPECIFIC EVENT for real-time updates
                 await PublishLivestreamOrderStatsUpdateAsync(request.LivestreamId, orders);
 
                 // 6. Get first order for result (hoặc tạo combined result nếu cần)
@@ -151,11 +158,15 @@ namespace OrderService.Application.Handlers
             List<LiveCartItemDto> shopItems,
             AdressDto deliveryAddress,
             string paymentMethod,
-            string? customerNotes)
+            string? customerNotes,
+            string? voucherCode = null,          
+            Guid? shippingProviderId = null,    
+            decimal? shippingFee = null,         
+            DateTime? expectedDeliveryDay = null, 
+            Guid? createdFromCommentId = null)   
         {
             try
             {
-                // Create order first
                 var order = new Orders(
                     accountId: userId,
                     shopId: shopInfo.Id,
@@ -173,12 +184,22 @@ namespace OrderService.Application.Handlers
                     fromPostalCode: shopAddress.PostalCode,
                     fromShop: shopAddress.RecipientName,
                     fromPhone: shopAddress.PhoneNumber,
-                    shippingProviderId: Guid.Empty,
+                    shippingProviderId: shippingProviderId ?? Guid.Empty, 
                     customerNotes: customerNotes ?? "",
-                    livestreamId: livestreamId
-                );
+                    livestreamId: livestreamId,
+                    createdFromCommentId: createdFromCommentId); 
 
                 order.SetCreator(userId.ToString());
+
+                if (shippingFee.HasValue && shippingFee.Value > 0)
+                {
+                    order.SetShippingFee(shippingFee.Value, userId.ToString());
+                }
+
+               
+                if (expectedDeliveryDay.HasValue)
+                {
+                }
 
                 var orderItems = new List<OrderItem>();
 
@@ -200,14 +221,16 @@ namespace OrderService.Application.Handlers
                             cartItem.ProductId, cartItem.Quantity, product.StockQuantity);
                         continue;
                     }
+                    var unitPrice = cartItem.UnitPrice ?? product.FinalPrice;
+                    var discountAmount = cartItem.DiscountAmount ?? 0m;
 
                     // Create order item
                     var orderItem = new OrderItem(
                         orderId: order.Id,
                         productId: cartItem.ProductId,
                         quantity: cartItem.Quantity,
-                        unitPrice: product.FinalPrice,
-                        discountAmount: 0m,
+                        unitPrice: unitPrice,         
+                        discountAmount: discountAmount, 
                         notes: "",
                         variantId: cartItem.VariantId);
 
@@ -223,7 +246,11 @@ namespace OrderService.Application.Handlers
                 // Add items to order
                 order.AddItems(orderItems);
 
-                // Set payment status based on payment method
+                if (!string.IsNullOrEmpty(voucherCode))
+                {
+                    await ApplyVoucherToOrderAsync(order, voucherCode, shopInfo.Id, userId.ToString());
+                }
+
                 if (paymentMethod != "COD")
                 {
                     order.OrderStatus = OrderStatus.Pending;
@@ -235,6 +262,44 @@ namespace OrderService.Application.Handlers
             {
                 _logger.LogError(ex, "Error creating order for shop {ShopId}", shopInfo.Id);
                 return null;
+            }
+        }
+
+        private async Task ApplyVoucherToOrderAsync(Orders order, string voucherCode, Guid shopId, string modifiedBy)
+        {
+            try
+            {
+                _logger.LogInformation("🎫 Applying voucher {VoucherCode} to order {OrderId} for shop {ShopId}",
+                    voucherCode, order.Id, shopId);
+
+                // Validate voucher first
+                var validation = await _shopVoucherClientService.ValidateVoucherAsync(voucherCode, order.TotalPrice, shopId);
+                if (validation == null || !validation.IsValid)
+                {
+                    _logger.LogWarning("❌ Voucher validation failed: {Message}", validation?.Message ?? "Unknown error");
+                    return;
+                }
+
+                var accessToken = ""; 
+                var applied = await _shopVoucherClientService.ApplyVoucherAsync(voucherCode, order.Id, order.TotalPrice, shopId, accessToken);
+
+                if (applied != null && applied.IsApplied)
+                {
+                    // Apply discount to order
+                    order.ApplyDiscount(applied.DiscountAmount, modifiedBy);
+                    order.VoucherCode = applied.VoucherCode;
+
+                    _logger.LogInformation("✅ Voucher applied successfully! Code: {Code}, Discount: {Discount}đ",
+                        applied.VoucherCode, applied.DiscountAmount);
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Voucher application failed: {Message}", applied?.Message ?? "Unknown error");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error applying voucher {VoucherCode} to order {OrderId}", voucherCode, order.Id);
             }
         }
 
@@ -289,6 +354,7 @@ namespace OrderService.Application.Handlers
                 _logger.LogError(ex, "Error publishing order events for order {OrderId}", order.Id);
             }
         }
+
         private async Task PublishLivestreamOrderStatsUpdateAsync(Guid livestreamId, List<Orders> newOrders)
         {
             try
