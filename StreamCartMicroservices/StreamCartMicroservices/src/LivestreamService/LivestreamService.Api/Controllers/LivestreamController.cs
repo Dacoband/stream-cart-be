@@ -128,6 +128,7 @@ namespace LivestreamService.Api.Controllers
                 var userId = _currentUserService.GetUserId();
                 var isCustomer = User.IsInRole("Customer");
                 var isSeller = User.IsInRole("Seller");
+                var isModerator = User.IsInRole("Moderator");
 
                 // Fetch the livestream
                 var livestream = await _livestreamRepository.GetByIdAsync(id.ToString());
@@ -137,13 +138,14 @@ namespace LivestreamService.Api.Controllers
                 }
 
                 // Check if user is the owner of the livestream
-                bool isOwner = livestream.SellerId == userId;
+                bool isOwner = livestream.SellerId == userId ;
+
 
                 // Generate join token with appropriate permissions
                 var token = await _livekitService.GenerateJoinTokenAsync(
                     livestream.LivekitRoomId,
                     userId.ToString(),
-                    isOwner || isSeller // Only sellers can publish
+                    isOwner || isSeller || isModerator 
                 );
 
                 // Get shop information

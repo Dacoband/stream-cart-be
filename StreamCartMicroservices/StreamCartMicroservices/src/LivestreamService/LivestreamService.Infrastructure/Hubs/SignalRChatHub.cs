@@ -279,6 +279,7 @@ namespace LivestreamService.Infrastructure.Hubs
                             1 => "Admin",
                             2 => "Seller",
                             3 => "Customer",
+                            4 => "Moderator",
                             _ => "Unknown"
                         };
                     }
