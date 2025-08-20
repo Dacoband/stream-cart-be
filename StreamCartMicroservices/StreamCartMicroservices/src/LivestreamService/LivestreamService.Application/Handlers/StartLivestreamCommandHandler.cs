@@ -51,9 +51,10 @@ namespace LivestreamService.Application.Handlers
             string token = await _livekitService.GenerateJoinTokenAsync(
                 livestream.LivekitRoomId,
                 request.SellerId.ToString(),
-                true // Can publish
+                true 
             );
-
+            livestream.SetJoinToken(token, requestingUserId.ToString());
+            await _livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
             _logger.LogInformation("Livestream {LivestreamId} started by seller {SellerId}", livestream.Id, request.SellerId);
 
             return new LivestreamDTO
