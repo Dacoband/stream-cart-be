@@ -1522,7 +1522,6 @@ namespace LivestreamService.Infrastructure.Hubs
                 var cartRepository = sp?.GetRequiredService<ILivestreamCartRepository>();
                 var cartItemRepository = sp?.GetRequiredService<ILivestreamCartItemRepository>();
                 var livestreamProductRepository = sp?.GetRequiredService<ILivestreamProductRepository>();
-                var productServiceClient = sp?.GetService<IProductServiceClient>();
 
                 if (cartRepository == null || cartItemRepository == null || livestreamProductRepository == null)
                 {
@@ -1530,63 +1529,61 @@ namespace LivestreamService.Infrastructure.Hubs
                     return;
                 }
 
-                // 1) Validate livestream product (domain entity)
+                // 1) Validate livestream product
                 var livestreamProduct = await livestreamProductRepository.GetByIdAsync(livestreamProductGuid.ToString());
                 if (livestreamProduct == null)
                 {
                     await Clients.Caller.SendAsync("Error", "Sản phẩm không tồn tại trong livestream");
                     return;
                 }
-
-                // Ensure product belongs to the requested livestream
                 if (livestreamProduct.LivestreamId != livestreamGuid)
                 {
                     await Clients.Caller.SendAsync("Error", "Sản phẩm không thuộc livestream này");
                     return;
                 }
-
-                // 2) Check stock vs requested quantity
                 if (quantity > livestreamProduct.Stock)
                 {
                     await Clients.Caller.SendAsync("Error", "Số lượng sản phẩm không đủ");
                     return;
                 }
 
-                // 3) Get or create cart
+                // 2) Lấy Livestream (để có ShopId fallback) và tạo/get cart
+                var livestreamDoc = await _livestreamRepository.GetByIdAsync(livestreamId);
                 var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamGuid, viewerGuid);
                 if (cart == null)
                 {
                     cart = new LivestreamCart(livestreamGuid, viewerGuid, userId);
 
-                    var livestream = await _livestreamRepository.GetByIdAsync(livestreamId);
-                    if (livestream?.ScheduledStartTime != null)
+                    if (livestreamDoc?.ScheduledStartTime != null)
                     {
-                        try { cart.SetExpiration(livestream.ScheduledStartTime.AddHours(2), userId); } catch { }
+                        try { cart.SetExpiration(livestreamDoc.ScheduledStartTime.AddHours(2), userId); } catch { }
                     }
 
                     await cartRepository.InsertAsync(cart);
                 }
 
-                // 4) Enrich product info from Product Service (để lấy ProductName, ShopId, Image)
+                // 3) Enrich từ ProductService (ProductName, Image, Shop)
                 string productName = "Sản phẩm";
                 string primaryImage = string.Empty;
-                Guid shopId = Guid.Empty;
+                Guid shopId = livestreamDoc?.ShopId ?? Guid.Empty; // fallback ưu tiên từ Livestream
                 string shopName = "Shop";
 
                 try
                 {
+                    // Lấy ProductService client nếu có đăng ký
+                    var productServiceClient = sp.GetService<IProductServiceClient>();
                     if (productServiceClient != null)
                     {
-                        // LivestreamProduct.ProductId là string => dùng overload string cho chắc chắn
                         var productInfo = await productServiceClient.GetProductByIdAsync(livestreamProduct.ProductId);
                         if (productInfo != null)
                         {
-                            productName = !string.IsNullOrWhiteSpace(productInfo.ProductName) ? productInfo.ProductName : productName;
+                            if (!string.IsNullOrWhiteSpace(productInfo.ProductName))
+                                productName = productInfo.ProductName;
 
-                            // Ảnh: ProductDTO của LivestreamService dùng ImageUrl
-                            primaryImage = productInfo.ImageUrl ?? string.Empty;
+                            primaryImage = productInfo.PrimaryImageUrl
+                                           ?? productInfo.ImageUrl
+                                           ?? string.Empty;
 
-                            // ShopId/ShopName nếu có trong DTO, nếu không sẽ fallback phía dưới
                             if (productInfo.ShopId != Guid.Empty)
                                 shopId = productInfo.ShopId;
 
@@ -1594,22 +1591,20 @@ namespace LivestreamService.Infrastructure.Hubs
                                 shopName = productInfo.ShopName!;
                         }
                     }
-
-                    // Fallback ShopId từ Livestream nếu Product không trả về
-                    if (shopId == Guid.Empty)
-                    {
-                        var livestreamDoc = await _livestreamRepository.GetByIdAsync(livestreamId);
-                        if (livestreamDoc != null)
-                            shopId = livestreamDoc.ShopId;
-                    }
                 }
                 catch (Exception enrichEx)
                 {
                     _logger.LogWarning(enrichEx, "Không thể enrich thông tin sản phẩm từ ProductService cho ProductId={ProductId}", livestreamProduct.ProductId);
-                    // Tiếp tục với fallback đã set
                 }
 
-                // 5) Upsert cart item
+                // BẮT BUỘC có ShopId hợp lệ
+                if (shopId == Guid.Empty)
+                {
+                    await Clients.Caller.SendAsync("Error", "Không xác định được ShopId cho sản phẩm");
+                    return;
+                }
+
+                // 4) Upsert cart item
                 var existingItem = await cartItemRepository.FindByCartAndProductAsync(
                     cart.Id, livestreamProductGuid, livestreamProduct.VariantId);
 
@@ -1633,9 +1628,9 @@ namespace LivestreamService.Infrastructure.Hubs
                         livestreamProductGuid,
                         livestreamProduct.ProductId,
                         livestreamProduct.VariantId,
-                        productName,            // <- đúng tên sản phẩm
-                        shopId,                 // <- đúng ShopId
-                        shopName,               // <- tên shop nếu có
+                        productName,
+                        shopId,
+                        shopName,
                         livestreamProduct.Price,
                         livestreamProduct.OriginalPrice,
                         livestreamProduct.Stock,
@@ -1644,13 +1639,21 @@ namespace LivestreamService.Infrastructure.Hubs
                         createdBy: userId
                     );
 
+                    // Validate trước khi insert để tránh rơi vào tình huống "insert im lặng"
+                    if (!newItem.IsValid())
+                    {
+                        _logger.LogWarning("LivestreamCartItem không hợp lệ: {@Item}", newItem);
+                        await Clients.Caller.SendAsync("Error", "Dữ liệu sản phẩm không hợp lệ (thiếu ShopId/ProductName...)");
+                        return;
+                    }
+
                     await cartItemRepository.InsertAsync(newItem);
                 }
 
-                // 6) Get updated cart
+                // 5) Lấy giỏ hàng cập nhật
                 var updatedCart = await GetLivestreamCartDataAsync(livestreamGuid, viewerGuid);
 
-                // 7) Notify caller + group
+                // 6) Notify
                 await Clients.Caller.SendAsync("LivestreamCartUpdated", new
                 {
                     Action = "ITEM_ADDED",
