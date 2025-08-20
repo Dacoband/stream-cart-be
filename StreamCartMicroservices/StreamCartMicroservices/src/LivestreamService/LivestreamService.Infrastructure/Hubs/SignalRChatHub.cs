@@ -1547,30 +1547,67 @@ namespace LivestreamService.Infrastructure.Hubs
                     return;
                 }
 
-                // 2) Lấy Livestream (để có ShopId fallback) và tạo/get cart
+                // 2) Get Livestream (for Shop fallback) and create/get cart
                 var livestreamDoc = await _livestreamRepository.GetByIdAsync(livestreamId);
+
+                // Prefer existing cart by (LivestreamId, ViewerId) regardless of IsActive
                 var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamGuid, viewerGuid);
                 if (cart == null)
                 {
-                    cart = new LivestreamCart(livestreamGuid, viewerGuid, userId);
+                    // Try to find even if inactive (to avoid duplicate key if DB has a unique index)
+                    var anyCart = await cartRepository.FindOneAsync(c =>
+                        c.LivestreamId == livestreamGuid && c.ViewerId == viewerGuid);
 
-                    if (livestreamDoc?.ScheduledStartTime != null)
+                    if (anyCart != null)
                     {
-                        try { cart.SetExpiration(livestreamDoc.ScheduledStartTime.AddHours(2), userId); } catch { }
+                        // Reactivate existing cart
+                        anyCart.IsActive = true;
+                        if (livestreamDoc?.ScheduledStartTime != null && !anyCart.ExpiresAt.HasValue)
+                        {
+                            try { anyCart.SetExpiration(livestreamDoc.ScheduledStartTime.AddHours(2), userId); } catch { }
+                        }
+                        anyCart.SetModifier(userId);
+                        await cartRepository.ReplaceAsync(anyCart.Id.ToString(), anyCart);
+                        cart = anyCart;
                     }
+                    else
+                    {
+                        var newCart = new LivestreamCart(livestreamGuid, viewerGuid, userId);
+                        if (livestreamDoc?.ScheduledStartTime != null)
+                        {
+                            try { newCart.SetExpiration(livestreamDoc.ScheduledStartTime.AddHours(2), userId); } catch { }
+                        }
 
-                    await cartRepository.InsertAsync(cart);
+                        if (!newCart.IsValid())
+                        {
+                            await Clients.Caller.SendAsync("Error", "Cart dữ liệu không hợp lệ");
+                            return;
+                        }
+
+                        try
+                        {
+                            await cartRepository.InsertAsync(newCart);
+                        }
+                        catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+                        {
+                            var root = dbEx.InnerException?.Message ?? dbEx.Message;
+                            _logger.LogError(dbEx, "DbUpdateException while creating livestream cart: {Message}", root);
+                            await Clients.Caller.SendAsync("Error", $"Failed to create cart: {root}");
+                            return;
+                        }
+
+                        cart = newCart;
+                    }
                 }
 
                 // 3) Enrich từ ProductService (ProductName, Image, Shop)
                 string productName = "Sản phẩm";
                 string primaryImage = string.Empty;
-                Guid shopId = livestreamDoc?.ShopId ?? Guid.Empty; // fallback ưu tiên từ Livestream
+                Guid shopId = livestreamDoc?.ShopId ?? Guid.Empty;
                 string shopName = "Shop";
 
                 try
                 {
-                    // Lấy ProductService client nếu có đăng ký
                     var productServiceClient = sp.GetService<IProductServiceClient>();
                     if (productServiceClient != null)
                     {
@@ -1596,6 +1633,11 @@ namespace LivestreamService.Infrastructure.Hubs
                 {
                     _logger.LogWarning(enrichEx, "Không thể enrich thông tin sản phẩm từ ProductService cho ProductId={ProductId}", livestreamProduct.ProductId);
                 }
+
+                // Enforce DB max lengths (avoid EF/DB exceptions later)
+                productName = TrimTo(productName?.Trim(), 255, nameof(productName));
+                shopName = TrimTo(shopName?.Trim(), 255, nameof(shopName));
+                primaryImage = TrimTo(primaryImage?.Trim() ?? string.Empty, 500, nameof(primaryImage));
 
                 // BẮT BUỘC có ShopId hợp lệ
                 if (shopId == Guid.Empty)
@@ -1639,7 +1681,6 @@ namespace LivestreamService.Infrastructure.Hubs
                         createdBy: userId
                     );
 
-                    // Validate trước khi insert để tránh rơi vào tình huống "insert im lặng"
                     if (!newItem.IsValid())
                     {
                         _logger.LogWarning("LivestreamCartItem không hợp lệ: {@Item}", newItem);
@@ -1647,7 +1688,17 @@ namespace LivestreamService.Infrastructure.Hubs
                         return;
                     }
 
-                    await cartItemRepository.InsertAsync(newItem);
+                    try
+                    {
+                        await cartItemRepository.InsertAsync(newItem);
+                    }
+                    catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+                    {
+                        var root = dbEx.InnerException?.Message ?? dbEx.Message;
+                        _logger.LogError(dbEx, "DbUpdateException when adding item to livestream cart: {Message}", root);
+                        await Clients.Caller.SendAsync("Error", $"Failed to add to cart: {root}");
+                        return;
+                    }
                 }
 
                 // 5) Lấy giỏ hàng cập nhật
@@ -1677,11 +1728,27 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 _logger.LogInformation("✅ Real-time cart add: User {UserId} added {Quantity} of {LivestreamProductId} in livestream {LivestreamId}",
                     userId, quantity, livestreamProductId, livestreamId);
+
+                // Local helper
+                string TrimTo(string? value, int maxLen, string fieldName)
+                {
+                    if (string.IsNullOrEmpty(value)) return string.Empty;
+                    if (value.Length <= maxLen) return value;
+                    _logger.LogWarning("{Field} length {Len} exceeds {Max}. Truncating.", fieldName, value.Length, maxLen);
+                    return value.Substring(0, maxLen);
+                }
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            {
+                var root = dbEx.InnerException?.Message ?? dbEx.Message;
+                _logger.LogError(dbEx, "DbUpdateException when adding to livestream cart: {Message}", root);
+                await Clients.Caller.SendAsync("Error", $"Failed to add to cart: {root}");
             }
             catch (Exception ex)
             {
+                var root = ex.InnerException?.Message ?? ex.Message;
                 _logger.LogError(ex, "Error adding to livestream cart real-time");
-                await Clients.Caller.SendAsync("Error", $"Failed to add to cart: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", $"Failed to add to cart: {root}");
             }
         }
 
