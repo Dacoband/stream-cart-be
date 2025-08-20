@@ -82,11 +82,11 @@ namespace LivestreamService.Application.Handlers
                 // Create LiveKit room
                 string roomId = $"shop-{request.ShopId}-{Guid.NewGuid()}";
                 string livekitRoomId = await _livekitService.CreateRoomAsync(roomId);
-                string joinToken = await _livekitService.GenerateJoinTokenAsync(
-                    livekitRoomId,
-                    request.SellerId.ToString(),
-                    true // Can publish
-                );
+                //string joinToken = await _livekitService.GenerateJoinTokenAsync(
+                //    livekitRoomId,
+                //    request.SellerId.ToString(),
+                //    true // Can publish
+                //);
                 // Generate unique stream key
                 string streamKey = Guid.NewGuid().ToString("N");
 
@@ -102,7 +102,7 @@ namespace LivestreamService.Application.Handlers
                     streamKey,
                     request.ThumbnailUrl,
                     request.Tags,
-                    joinToken,
+                    null,
                     request.SellerId.ToString()
                 );
 
@@ -140,7 +140,7 @@ namespace LivestreamService.Application.Handlers
                     Status = livestream.Status,
                     StreamKey = livestream.StreamKey,
                     LivekitRoomId = livekitRoomId,
-                    JoinToken = joinToken,
+                    JoinToken = null,
                     ThumbnailUrl = livestream.ThumbnailUrl,
                     Tags = livestream.Tags,
                     MaxViewer = livestream.MaxViewer,

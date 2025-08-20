@@ -117,7 +117,7 @@ namespace LivestreamService.Api.Controllers
         /// Join a livestream (authenticated users)
         /// </summary>
         [HttpGet("{id}/join")]
-       // [Authorize]
+        // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -126,29 +126,49 @@ namespace LivestreamService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-                var isCustomer = User.IsInRole("Customer");
                 var isSeller = User.IsInRole("Seller");
                 var isModerator = User.IsInRole("Moderator");
 
-                // Fetch the livestream
+                // 1) Lấy livestream
                 var livestream = await _livestreamRepository.GetByIdAsync(id.ToString());
                 if (livestream == null)
-                {
                     return NotFound(ApiResponse<object>.ErrorResult("Livestream not found"));
+
+                // 2) Tính vai trò
+                var isHost = livestream.LivestreamHostId == userId;
+
+                // Kiểm tra thuộc shop để cho phép support
+                var hasShopAccess = false;
+                try
+                {
+                    hasShopAccess = await _shopServiceClient.IsShopMemberAsync(livestream.ShopId, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Skip IsShopMemberAsync check for user {UserId}", userId);
                 }
 
-                // Check if user is the owner of the livestream
-                bool isOwner = livestream.SellerId == userId ;
+                var isSupport = !isHost && hasShopAccess && (isSeller || isModerator);
 
+                // 3) Phân quyền publish:
+                // - Host: true
+                // - Support: false (FE không mic/cam, chỉ subscribe)
+                // - Viewer: false
+                var canPublish = isHost;
 
-                // Generate join token with appropriate permissions
+                // 4) Identity theo vai trò để tránh đụng độ participant
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var rolePrefix = isHost ? "host" : isSupport ? "support" : "viewer";
+                var participantIdentity = $"{rolePrefix}-{userId}-{ts}";
+
+                // 5) Tạo token
                 var token = await _livekitService.GenerateJoinTokenAsync(
                     livestream.LivekitRoomId,
-                    userId.ToString(),
-                    isOwner || isSeller || isModerator 
+                    participantIdentity,
+                    canPublish
                 );
 
-                // Get shop information
+                // 6) Thông tin shop
                 var shop = await _shopServiceClient.GetShopByIdAsync(livestream.ShopId);
 
                 var result = new LivestreamDTO
@@ -159,6 +179,7 @@ namespace LivestreamService.Api.Controllers
                     SellerId = livestream.SellerId,
                     ShopId = livestream.ShopId,
                     ShopName = shop?.ShopName,
+                    LivestreamHostId = livestream.LivestreamHostId,
                     ScheduledStartTime = livestream.ScheduledStartTime,
                     ActualStartTime = livestream.ActualStartTime,
                     ActualEndTime = livestream.ActualEndTime,
@@ -170,6 +191,9 @@ namespace LivestreamService.Api.Controllers
                     ThumbnailUrl = livestream.ThumbnailUrl,
                     Tags = livestream.Tags
                 };
+
+                _logger.LogInformation("Join livestream {LivestreamId}: user {UserId}, role={Role}, canPublish={CanPublish}, identity={Identity}",
+                    id, userId, rolePrefix, canPublish, participantIdentity);
 
                 return Ok(ApiResponse<LivestreamDTO>.SuccessResult(result, "Join token generated successfully"));
             }
