@@ -56,5 +56,6 @@ namespace LivestreamService.Application.Interfaces
         /// Cập nhật stock cho tất cả cart items của một livestream product
         /// </summary>
         Task UpdateStockForLivestreamProductAsync(Guid livestreamProductId, int newStock);
+
     }
 }
