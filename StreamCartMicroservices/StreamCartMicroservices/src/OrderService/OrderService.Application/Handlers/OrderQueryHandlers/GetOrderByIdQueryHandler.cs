@@ -107,6 +107,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     PaymentStatus = order.PaymentStatus,
                     ShippingAddress = shippingAddressDto,
                     ShippingProviderId = order.ShippingProviderId,
+                    PaymentMethod = order.PaymentMethod,
                     ShippingFee = order.ShippingFee,
                     TotalPrice = order.TotalPrice,
                     DiscountAmount = order.DiscountAmount,

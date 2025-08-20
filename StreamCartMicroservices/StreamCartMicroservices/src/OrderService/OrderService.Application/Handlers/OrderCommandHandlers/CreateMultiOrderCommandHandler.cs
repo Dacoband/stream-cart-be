@@ -172,7 +172,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 shippingProviderId: shopOrder.ShippingProviderId,
                 customerNotes: shopOrder.CustomerNotes,
                 livestreamId: request.LivestreamId,
-                createdFromCommentId: request.CreatedFromCommentId
+                createdFromCommentId: request.CreatedFromCommentId,
+                paymentMethod: request.PaymentMethod 
+
             );
         }
         private async Task<ApiResponse<List<OrderItem>>> BuildOrderItemsAsync(Orders order, List<CreateOrderItemDto> items, DetailMembershipDTO membership)
@@ -360,6 +362,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 OrderDate = order.OrderDate,
                 OrderStatus = order.OrderStatus,
                 PaymentStatus = order.PaymentStatus,
+                PaymentMethod = order.PaymentMethod,
                 ShippingAddress = shippingDto,
                 ShippingProviderId = order.ShippingProviderId,
                 ShippingFee = order.ShippingFee,

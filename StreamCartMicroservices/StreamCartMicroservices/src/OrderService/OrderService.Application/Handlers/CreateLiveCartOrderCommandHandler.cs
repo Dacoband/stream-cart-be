@@ -22,7 +22,7 @@ namespace OrderService.Application.Handlers
         private readonly IProductServiceClient _productServiceClient;
         private readonly IAdressServiceClient _addressServiceClient;
         private readonly IShopServiceClient _shopServiceClient;
-        private readonly IShopVoucherClientService _shopVoucherClientService; 
+        private readonly IShopVoucherClientService _shopVoucherClientService;
         private readonly ILogger<CreateLiveCartOrderCommandHandler> _logger;
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly IAccountServiceClient _accountServiceClient;
@@ -32,7 +32,7 @@ namespace OrderService.Application.Handlers
             IProductServiceClient productServiceClient,
             IAdressServiceClient addressServiceClient,
             IShopServiceClient shopServiceClient,
-            IShopVoucherClientService shopVoucherClientService, 
+            IShopVoucherClientService shopVoucherClientService,
             ILogger<CreateLiveCartOrderCommandHandler> logger,
             IPublishEndpoint publishEndpoint,
             IAccountServiceClient accountServiceClient)
@@ -94,11 +94,11 @@ namespace OrderService.Application.Handlers
                         deliveryAddress,
                         request.PaymentMethod,
                         request.CustomerNotes,
-                        request.VoucherCode,              
-                        request.ShippingProviderId,      
-                        request.ShippingFee,             
-                        request.ExpectedDeliveryDay,     
-                        request.CreatedFromCommentId);  
+                        request.VoucherCode,
+                        request.ShippingProviderId,
+                        request.ShippingFee,
+                        request.ExpectedDeliveryDay,
+                        request.CreatedFromCommentId);
 
                     if (order == null)
                     {
@@ -159,11 +159,11 @@ namespace OrderService.Application.Handlers
             AdressDto deliveryAddress,
             string paymentMethod,
             string? customerNotes,
-            string? voucherCode = null,          
-            Guid? shippingProviderId = null,    
-            decimal? shippingFee = null,         
-            DateTime? expectedDeliveryDay = null, 
-            Guid? createdFromCommentId = null)   
+            string? voucherCode = null,
+            Guid? shippingProviderId = null,
+            decimal? shippingFee = null,
+            DateTime? expectedDeliveryDay = null,
+            Guid? createdFromCommentId = null)
         {
             try
             {
@@ -184,10 +184,11 @@ namespace OrderService.Application.Handlers
                     fromPostalCode: shopAddress.PostalCode,
                     fromShop: shopAddress.RecipientName,
                     fromPhone: shopAddress.PhoneNumber,
-                    shippingProviderId: shippingProviderId ?? Guid.Empty, 
+                    shippingProviderId: shippingProviderId ?? Guid.Empty,
                     customerNotes: customerNotes ?? "",
                     livestreamId: livestreamId,
-                    createdFromCommentId: createdFromCommentId); 
+                    createdFromCommentId: createdFromCommentId,
+                    paymentMethod: paymentMethod); // ✅ ADDED: Pass payment method
 
                 order.SetCreator(userId.ToString());
 
@@ -196,7 +197,7 @@ namespace OrderService.Application.Handlers
                     order.SetShippingFee(shippingFee.Value, userId.ToString());
                 }
 
-               
+
                 if (expectedDeliveryDay.HasValue)
                 {
                 }
@@ -214,6 +215,17 @@ namespace OrderService.Application.Handlers
                         continue;
                     }
 
+                    // ✅ ADDED: Get variant name if variant exists
+                    string variantName = string.Empty;
+                    if (cartItem.VariantId.HasValue)
+                    {
+                        var variant = await _productServiceClient.GetVariantByIdAsync(cartItem.VariantId.Value);
+                        if (variant != null)
+                        {
+                           // variantName = variant.Name ?? string.Empty;
+                        }
+                    }
+
                     // Check stock
                     if (product.StockQuantity < cartItem.Quantity)
                     {
@@ -229,8 +241,8 @@ namespace OrderService.Application.Handlers
                         orderId: order.Id,
                         productId: cartItem.ProductId,
                         quantity: cartItem.Quantity,
-                        unitPrice: unitPrice,         
-                        discountAmount: discountAmount, 
+                        unitPrice: unitPrice,
+                        discountAmount: discountAmount,
                         notes: "",
                         variantId: cartItem.VariantId);
 
@@ -280,7 +292,7 @@ namespace OrderService.Application.Handlers
                     return;
                 }
 
-                var accessToken = ""; 
+                var accessToken = "";
                 var applied = await _shopVoucherClientService.ApplyVoucherAsync(voucherCode, order.Id, order.TotalPrice, shopId, accessToken);
 
                 if (applied != null && applied.IsApplied)

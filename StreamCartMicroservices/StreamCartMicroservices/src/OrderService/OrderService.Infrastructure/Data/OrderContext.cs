@@ -93,6 +93,10 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.PaymentStatus)
                     .HasColumnName("payment_status");
 
+                entity.Property(e => e.PaymentMethod)
+                   .HasColumnName("payment_method")
+                   .HasMaxLength(50);
+
                 entity.Property(e => e.CustomerNotes)
                     .HasColumnName("customer_notes")
                     .HasMaxLength(1000);
