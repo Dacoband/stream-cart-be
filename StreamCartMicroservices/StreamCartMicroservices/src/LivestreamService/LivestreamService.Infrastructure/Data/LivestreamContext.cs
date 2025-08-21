@@ -1,5 +1,7 @@
 ﻿using LivestreamService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 
 namespace LivestreamService.Infrastructure.Data
 {
@@ -20,6 +22,11 @@ namespace LivestreamService.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            var jsonOptions = new JsonSerializerOptions(); 
+            var dictToJsonConverter = new ValueConverter<Dictionary<string, string>?, string?>(
+                v => v == null || v.Count == 0 ? null : JsonSerializer.Serialize(v, jsonOptions),
+                v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(v, jsonOptions)!
+            );
 
             // Configure Livestream entity
             modelBuilder.Entity<Livestream>(entity =>
@@ -115,7 +122,9 @@ namespace LivestreamService.Infrastructure.Data
                 entity.Property(e => e.PrimaryImage).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.LivestreamPrice).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.OriginalPrice).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Attributes).HasColumnType("jsonb");
+                entity.Property(e => e.Attributes)
+                       .HasColumnType("jsonb")
+                       .HasConversion(dictToJsonConverter);
 
                 // Indexes
                 entity.HasIndex(e => e.LivestreamCartId);

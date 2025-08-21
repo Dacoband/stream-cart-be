@@ -55,7 +55,7 @@ namespace LivestreamService.Domain.Entities
         public bool ProductStatus { get; set; } = true;
 
         [Column(TypeName = "jsonb")]
-        public Dictionary<string, string>? Attributes { get; set; } = new();
+        public Dictionary<string, string>? Attributes { get; set; } // allow null
 
         // Navigation properties
         public virtual LivestreamCart? LivestreamCart { get; set; }
@@ -93,7 +93,7 @@ namespace LivestreamService.Domain.Entities
             Stock = stock;
             Quantity = quantity;
             PrimaryImage = primaryImage;
-            Attributes = attributes ?? new Dictionary<string, string>();
+            Attributes = attributes; // keep null if not provided
             ProductStatus = true;
             SetCreator(createdBy);
         }
