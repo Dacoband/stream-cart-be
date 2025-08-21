@@ -1151,7 +1151,7 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 if (result != null)
                 {
-                    // ✅ BROADCAST real-time update to all viewers
+                    // Thông báo cập nhật 1 item
                     await Clients.Group($"livestream_viewers_{result.LivestreamId}")
                         .SendAsync("LivestreamProductUpdated", new
                         {
@@ -1176,8 +1176,36 @@ namespace LivestreamService.Infrastructure.Hubs
                         Message = "Cập nhật sản phẩm livestream thành công"
                     });
 
-                    _logger.LogInformation("✅ Real-time livestream product update: Product ID {Id} updated",
-                        id);
+                    // NEW: Lấy lại danh sách sản phẩm và broadcast để FE không cần reload
+                    try
+                    {
+                        var refreshed = (await _mediator.Send(new GetLivestreamProductsQuery
+                        {
+                            LivestreamId = result.LivestreamId
+                        }))?.ToList() ?? new List<LivestreamProductDTO>();
+
+                        var payload = new
+                        {
+                            LivestreamId = result.LivestreamId,
+                            Products = refreshed,
+                            Count = refreshed.Count,
+                            Timestamp = DateTime.UtcNow
+                        };
+
+                        await Clients.Group($"livestream_viewers_{result.LivestreamId}")
+                            .SendAsync("LivestreamProductsRefreshed", payload);
+
+                        // Gửi cho caller để đồng bộ ngay lập tức
+                        await Clients.Caller.SendAsync("LivestreamProductsRefreshed", payload);
+                    }
+                    catch (Exception refreshEx)
+                    {
+                        _logger.LogWarning(refreshEx,
+                            "Failed to refresh products list after update for livestream {LivestreamId}",
+                            result.LivestreamId);
+                    }
+
+                    _logger.LogInformation("✅ Real-time livestream product update: Product ID {Id} updated", id);
                 }
                 else
                 {
@@ -1965,39 +1993,53 @@ namespace LivestreamService.Infrastructure.Hubs
         /// </summary>
         private async Task<object> GetLivestreamCartDataAsync(Guid livestreamId, Guid viewerId)
         {
-            var cartRepository = Context.GetHttpContext()?.RequestServices
-                .GetRequiredService<ILivestreamCartRepository>();
-            var cartItemRepository = Context.GetHttpContext()?.RequestServices
-                .GetRequiredService<ILivestreamCartItemRepository>();
+            var sp = Context.GetHttpContext()?.RequestServices;
+            var cartRepository = sp?.GetRequiredService<ILivestreamCartRepository>();
+            var cartItemRepository = sp?.GetRequiredService<ILivestreamCartItemRepository>();
 
-            if (cartRepository == null || cartItemRepository == null)
-            {
-                return new { Items = new List<object>(), TotalItems = 0, TotalAmount = 0 };
-            }
-
-            var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamId, viewerId);
-            if (cart == null)
+            object BuildEmpty()
             {
                 return new
                 {
+                    LivestreamCartId = (Guid?)null,
                     LivestreamId = livestreamId,
                     ViewerId = viewerId,
                     Items = new List<object>(),
                     TotalItems = 0,
-                    TotalAmount = 0,
+                    TotalAmount = 0m,
+                    TotalDiscount = 0m,
+                    SubTotal = 0m,
                     IsActive = true,
-                    ExpiresAt = (DateTime?)null
+                    ExpiresAt = (DateTime?)null,
+                    CreatedAt = (DateTime?)null
                 };
             }
 
-            var items = await cartItemRepository.GetByCartIdAsync(cart.Id);
-
-            return new
+            if (cartRepository == null || cartItemRepository == null)
             {
-                LivestreamCartId = cart.Id,
-                LivestreamId = cart.LivestreamId,
-                ViewerId = cart.ViewerId,
-                Items = items.Select(item => new
+                return BuildEmpty();
+            }
+
+            try
+            {
+                // Lấy cart đang active
+                var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamId, viewerId);
+
+                // Fallback: lấy cart bất kỳ (kể cả inactive) nếu không có cart active
+                if (cart == null)
+                {
+                    var anyCart = await cartRepository.FindOneAsync(c =>
+                        c.LivestreamId == livestreamId && c.ViewerId == viewerId);
+
+                    if (anyCart == null)
+                        return BuildEmpty();
+
+                    cart = anyCart;
+                }
+
+                var items = await cartItemRepository.GetByCartIdAsync(cart.Id) ?? Enumerable.Empty<LivestreamCartItem>();
+
+                var itemDtos = items.Select(item => new
                 {
                     Id = item.Id,
                     LivestreamProductId = item.LivestreamProductId,
@@ -2016,15 +2058,34 @@ namespace LivestreamService.Infrastructure.Hubs
                     ProductStatus = item.ProductStatus,
                     TotalPrice = item.TotalPrice,
                     CreatedAt = item.CreatedAt
-                }).ToList(),
-                TotalItems = items.Sum(x => x.Quantity),
-                TotalAmount = items.Sum(x => x.TotalPrice),
-                TotalDiscount = items.Sum(x => (x.OriginalPrice - x.LivestreamPrice) * x.Quantity),
-                SubTotal = items.Sum(x => x.OriginalPrice * x.Quantity),
-                IsActive = cart.IsActive,
-                ExpiresAt = cart.ExpiresAt,
-                CreatedAt = cart.CreatedAt
-            };
+                }).ToList();
+
+                var totalItems = itemDtos.Sum(x => x.Quantity);
+                var totalAmount = itemDtos.Sum(x => x.TotalPrice);
+                var totalDiscount = itemDtos.Sum(x => (x.OriginalPrice - x.LivestreamPrice) * x.Quantity);
+                var subTotal = itemDtos.Sum(x => x.OriginalPrice * x.Quantity);
+
+                return new
+                {
+                    LivestreamCartId = cart.Id,
+                    LivestreamId = cart.LivestreamId,
+                    ViewerId = cart.ViewerId,
+                    Items = itemDtos,
+                    TotalItems = totalItems,
+                    TotalAmount = totalAmount,
+                    TotalDiscount = totalDiscount,
+                    SubTotal = subTotal,
+                    IsActive = cart.IsActive,
+                    ExpiresAt = cart.ExpiresAt,
+                    CreatedAt = cart.CreatedAt
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error building livestream cart data for LivestreamId={LivestreamId}, ViewerId={ViewerId}",
+                    livestreamId, viewerId);
+                return BuildEmpty();
+            }
         }
 
         /// <summary>

@@ -36,6 +36,39 @@ namespace LivestreamService.Infrastructure.Services
                 }
             }
         }
+        public async Task<string?> GetCombinationStringByVariantIdAsyncs(Guid variantId)
+        {
+            try
+            {
+                var resp = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
+                var content = await resp.Content.ReadAsStringAsync();
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetCombinationString failed: {Status} {Body}", resp.StatusCode, content);
+                    return null;
+                }
+
+                var api = JsonSerializer.Deserialize<ApiResponse<List<ProductCombinationDto>>>(content,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (api?.Success == true && api.Data != null && api.Data.Any())
+                {
+                    // Ghép chuỗi: "Màu Đen , Model 509"
+                    var parts = api.Data
+                        .Select(d => $"{d.AttributeName} {d.ValueName}")
+                        .ToArray();
+                    return string.Join(" , ", parts);
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling product-combinations for variant {VariantId}", variantId);
+                return null;
+            }
+        }
 
         public async Task<ProductDTO?> GetProductByIdAsync(string productId)
         {

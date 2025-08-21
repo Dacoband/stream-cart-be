@@ -39,15 +39,55 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
 
                 foreach (var lp in flashSaleProducts)
                 {
-                    var product = await _productServiceClient.GetProductByIdAsync(lp.ProductId);
-                    if (product != null)
+                    try
                     {
-                        var shop = await _shopServiceClient.GetShopByIdAsync(product.ShopId);
+                        var product = await _productServiceClient.GetProductByIdAsync(lp.ProductId);
+                        if (product == null)
+                        {
+                            _logger.LogWarning("Product {ProductId} not found for livestream {LivestreamId}", lp.ProductId, request.LivestreamId);
+                            continue;
+                        }
 
-                        ProductVariantDTO? variant = null;
+                        // Optional shop info (kept as is for now)
+                        var _ = await _shopServiceClient.GetShopByIdAsync(product.ShopId);
+
+                        ProductVariantDTO? variantInfo = null;
+                        string variantName = string.Empty;
+                        string sku = string.Empty;
+                        int actualStock = 0;
+
                         if (!string.IsNullOrEmpty(lp.VariantId))
                         {
-                            variant = await _productServiceClient.GetProductVariantAsync(lp.ProductId, lp.VariantId);
+                            // Variant details: SKU/Stock
+                            variantInfo = await _productServiceClient.GetProductVariantAsync(lp.ProductId, lp.VariantId);
+
+                            // Build combination name from Product Service: "Màu Đen , Model 509"
+                            string? combination = null;
+                            if (Guid.TryParse(lp.VariantId, out var variantGuid))
+                            {
+                                combination = await _productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(combination))
+                            {
+                                combination = combination.Replace(" + ", " , ");
+                            }
+
+                            variantName = !string.IsNullOrWhiteSpace(combination)
+                                ? combination!
+                                : (!string.IsNullOrWhiteSpace(variantInfo?.Name)
+                                    ? variantInfo!.Name!
+                                    : $"Variant {lp.VariantId}");
+
+                            sku = variantInfo?.SKU ?? product.SKU ?? string.Empty;
+                            actualStock = variantInfo?.Stock ?? 0;
+                        }
+                        else
+                        {
+                            // Base product (no variant)
+                            variantName = product.ProductName ?? "Unknown Product";
+                            sku = product.SKU ?? string.Empty;
+                            actualStock = product.StockQuantity;
                         }
 
                         result.Add(new LivestreamProductDTO
@@ -61,11 +101,34 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             OriginalPrice = product.BasePrice,
                             Price = lp.Price,
                             Stock = lp.Stock,
+                            ProductStock = actualStock,
                             CreatedAt = lp.CreatedAt,
                             LastModifiedAt = lp.LastModifiedAt,
                             ProductName = product.ProductName,
-                            ProductImageUrl = product.ImageUrl,
-                            VariantName = variant?.Name
+                            ProductImageUrl = product.PrimaryImageUrl ?? product.ImageUrl ?? string.Empty,
+                            SKU = sku,
+                            VariantName = variantName
+                        });
+                    }
+                    catch (Exception itemEx)
+                    {
+                        _logger.LogWarning(itemEx, "Failed processing flash sale item {LivestreamProductId}", lp.Id);
+                        result.Add(new LivestreamProductDTO
+                        {
+                            Id = lp.Id,
+                            LivestreamId = lp.LivestreamId,
+                            ProductId = lp.ProductId,
+                            VariantId = lp.VariantId,
+                            IsPin = lp.IsPin,
+                            Price = lp.Price,
+                            Stock = lp.Stock,
+                            ProductStock = 0,
+                            CreatedAt = lp.CreatedAt,
+                            LastModifiedAt = lp.LastModifiedAt,
+                            ProductName = "Unavailable",
+                            ProductImageUrl = "",
+                            SKU = "",
+                            VariantName = ""
                         });
                     }
                 }

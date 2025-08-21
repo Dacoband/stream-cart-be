@@ -111,6 +111,9 @@ namespace OrderService.Infrastructure.Data
                     .HasColumnName("tracking_code")
                     .HasMaxLength(100);
 
+                entity.Property(e => e.TimeForShop)
+                    .HasColumnName("time_for_shop");
+
                 // Shipping From Information
                 entity.Property(e => e.FromAddress)
                     .HasColumnName("from_address")

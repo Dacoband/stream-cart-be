@@ -8,6 +8,7 @@ namespace LivestreamService.Application.Interfaces
 {
     public interface IProductServiceClient
     {
+        Task<string?> GetCombinationStringByVariantIdAsyncs(Guid variantId);
         /// <summary>
         /// Lấy thông tin sản phẩm theo ID
         /// </summary>

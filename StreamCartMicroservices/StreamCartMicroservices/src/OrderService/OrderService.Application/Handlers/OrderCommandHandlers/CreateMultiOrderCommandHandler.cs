@@ -1,22 +1,23 @@
-﻿    using MediatR;
+﻿    using MassTransit;
+    using MediatR;
     using Microsoft.Extensions.Logging;
     using OrderService.Application.Commands.OrderCommands;
+using OrderService.Application.DTOs;
     using OrderService.Application.DTOs.OrderDTOs;
     using OrderService.Application.DTOs.OrderItemDTOs;
+    using OrderService.Application.Interfaces;
     using OrderService.Application.Interfaces.IRepositories;
     using OrderService.Application.Interfaces.IServices;
     using OrderService.Domain.Entities;
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Shared.Messaging.Event.OrderEvents;
-    using MassTransit;
-    using OrderService.Application.Interfaces;
+using OrderService.Domain.Enums;
     using Shared.Common.Models;
     using Shared.Common.Services.User;
-using OrderService.Application.DTOs;
-using OrderService.Domain.Enums;
+    using Shared.Messaging.Event.OrderEvents;
+    using System;
+    using System.Collections.Generic;
+using System.Reflection;
+    using System.Threading;
+    using System.Threading.Tasks;
 
 namespace OrderService.Application.Handlers.OrderCommandHandlers
     {
@@ -100,16 +101,21 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     decimal voucherDiscount = 0;
                     decimal commissionRate = shopMembership.Commission ?? 0;
 
-                     CalculateOrderTotals(order, commissionRate, voucherDiscount);
+                    CalculateOrderTotals(order, commissionRate, voucherDiscount);
+
+                    order.SetPaymentMethod(request.PaymentMethod, request.AccountId.ToString());
                     if (request.PaymentMethod != "COD")
                     {
                         order.OrderStatus = Domain.Enums.OrderStatus.Pending;
+                        // time for shop = now + 24h
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                    }
+                    else
+                    {
+                       order.OrderStatus = Domain.Enums.OrderStatus.Waiting;
                     }
                     // Lưu đơn hàng ban đầu
                     await _orderRepository.InsertAsync(order);    
-
-                    // Áp dụng voucher nếu có
-                    //cập nhật product
                     
                     if (!string.IsNullOrEmpty(shopOrder.VoucherCode))
                     {
@@ -126,6 +132,17 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     // Gửi sự kiện
                     await PublishOrderEventsAsync(order, request.PaymentMethod, request.AccountId);
+
+                    // Schedule auto-cancel / deadline chain
+                    if (string.Equals(request.PaymentMethod, "COD", StringComparison.OrdinalIgnoreCase))
+                    {
+                      
+                        SchedulePendingThenProcessingThenShippedDeadlines(order.Id);
+                    }
+                    else
+                    {
+                        ScheduleBankTransferDeadlines(order.Id);
+                    }
 
                     // Tạo DTO trả về
                     var orderDto = await BuildOrderDtoAsync(order);
@@ -374,6 +391,8 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 EstimatedDeliveryDate = order.EstimatedDeliveryDate,
                 ActualDeliveryDate = order.ActualDeliveryDate,
                 LivestreamId = order.LivestreamId,
+                TimeForShop = order.TimeForShop, 
+
                 Items = itemDtos
             };
         }
@@ -390,7 +409,114 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             order.CommissionFee = order.TotalPrice * (commissionFee/100);
             order.NetAmount = totalPrice - commissionFee;
         }
+        private void ScheduleBankTransferDeadlines(Guid orderId)
+        {
+            // 30-minute deadline to reach Pending (1)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(30));
+                    var order = await _orderRepository.GetByIdAsync(orderId.ToString());
+                    if (order == null) return;
 
+                    if (order.OrderStatus == OrderStatus.Waiting)
+                    {
+                        await CancelOrderAsync(order, "system-timeout-30m");
+                        return;
+                    }
+
+                    if (order.OrderStatus >= OrderStatus.Pending)
+                    {
+                        // Start 24h chain: Pending -> Processing, then Processing -> Shipped
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                        await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                        SchedulePendingThenProcessingThenShippedDeadlines(order.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scheduling bank transfer deadlines for order {OrderId}", orderId);
+                }
+            });
+        }
+
+        private void SchedulePendingThenProcessingThenShippedDeadlines(Guid orderId)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // First 24h: must reach Processing (2)
+                    await Task.Delay(TimeSpan.FromHours(24));
+                    var order = await _orderRepository.GetByIdAsync(orderId.ToString());
+                    if (order == null) return;
+
+                    if (order.OrderStatus < OrderStatus.Processing && order.OrderStatus != OrderStatus.Cancelled)
+                    {
+                        await CancelOrderAsync(order, "system-timeout-24h-pending");
+                        return;
+                    }
+
+                    if (order.OrderStatus >= OrderStatus.Processing && order.OrderStatus != OrderStatus.Cancelled)
+                    {
+                        // Extend time for shop another 24h
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                        await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+
+                        // Second 24h: must reach Shipped (3)
+                        await Task.Delay(TimeSpan.FromHours(24));
+
+                        var order2 = await _orderRepository.GetByIdAsync(orderId.ToString());
+                        if (order2 == null) return;
+
+                        if (order2.OrderStatus < OrderStatus.Shipped && order2.OrderStatus != OrderStatus.Cancelled)
+                        {
+                            await CancelOrderAsync(order2, "system-timeout-24h-processing");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scheduling 24h deadlines for order {OrderId}", orderId);
+                }
+            });
+        }
+
+        private async Task CancelOrderAsync(Orders order, string reason)
+        {
+            try
+            {
+                order.UpdateStatus(OrderStatus.Cancelled, reason);
+                await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+
+                // Notify via event
+                await PublishOrderEventsAsync(order, order.PaymentMethod ?? "Unknown", order.AccountId);
+                _logger.LogInformation("Auto-cancelled order {OrderId} due to deadline ({Reason})", order.Id, reason);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error auto-cancelling order {OrderId}", order.Id);
+            }
+        }
+
+        private void SetTimeForShopIfExists(Orders order, DateTime deadlineUtc)
+        {
+            try
+            {
+                var prop = order.GetType().GetProperty("TimeForShop", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (prop != null && prop.CanWrite && (prop.PropertyType == typeof(DateTime?) || prop.PropertyType == typeof(DateTime)))
+                {
+                    // Convert to matching type
+                    object value = prop.PropertyType == typeof(DateTime) ? deadlineUtc : (DateTime?)deadlineUtc;
+                    prop.SetValue(order, value);
+                }
+            }
+            catch
+            {
+                // ignore if property not present
+            }
+        }
 
     }
 }

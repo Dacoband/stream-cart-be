@@ -20,6 +20,7 @@ using Shared.Messaging.Event.OrderEvents;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace OrderService.Infrastructure.Services
@@ -45,7 +46,7 @@ namespace OrderService.Infrastructure.Services
             ILogger<OrderManagementService> logger,
             IAccountServiceClient accountServiceClient,
             IShopServiceClient shopServiceClient,
-            ICurrentUserService currentUserService, 
+            ICurrentUserService currentUserService,
             IMapper mapper,
             IWalletServiceClient walletServiceClient, IProductServiceClient productServiceClient, IDeliveryClient deliveryClient, IPublishEndpoint publishEndpoint)
         {
@@ -109,7 +110,7 @@ namespace OrderService.Infrastructure.Services
                         Quantity = i.Quantity,
                         //Notes = i.Notes
                     }).ToList() ?? new List<CreateOrderItemDto>()
-                    
+
                 };
 
                 return await _mediator.Send(command);
@@ -347,7 +348,7 @@ namespace OrderService.Infrastructure.Services
         }
 
         public async Task<(bool IsValid, string ErrorMessage)> ValidateOrderAsync(CreateOrderDto createOrderDto)
-       
+
         {
             try
             {
@@ -431,7 +432,7 @@ namespace OrderService.Infrastructure.Services
                     return null;
                 }
 
-                if (order.AccountId != Guid.Parse( customerId) && customerId.ToString() != "system")
+                if (order.AccountId != Guid.Parse(customerId) && customerId.ToString() != "system")
                 {
                     _logger.LogWarning("Khách hàng {CustomerId} không có quyền xác nhận đơn hàng {OrderId}", customerId, orderId);
                     return null;
@@ -452,7 +453,7 @@ namespace OrderService.Infrastructure.Services
                 //Cập nhật reward
 
                 //Cập nhật rate
-            
+
                 // Chuyển đổi sang DTO
                 return _mapper.Map<OrderDto>(order);
             }
@@ -466,7 +467,7 @@ namespace OrderService.Infrastructure.Services
         {
             // Tính toán số tiền thanh toán cho shop (trừ 10% phí)
             decimal totalAmount = order.NetAmount;
-           
+
 
             // Gửi yêu cầu thanh toán đến WalletService
             var paymentRequest = new ShopPaymentRequest
@@ -543,11 +544,15 @@ namespace OrderService.Infrastructure.Services
 
                     case OrderStatus.Pending:
                         order.UpdateStatus(OrderStatus.Pending, request.ModifiedBy);
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                        SchedulePendingThenProcessingThenShippedDeadlines(order.Id);
                         message = "Chờ người bán xác nhận đơn hàng";
                         break;
 
                     case OrderStatus.Processing:
                         order.UpdateStatus(OrderStatus.Processing, request.ModifiedBy);
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                        ScheduleProcessingToShippedDeadline(order.Id);
                         message = "Người gửi đang chuẩn bị hàng";
 
                         // 👉 Gọi hàm tạo đơn GHN
@@ -605,7 +610,7 @@ namespace OrderService.Infrastructure.Services
                     case OrderStatus.Completed:
                         order.UpdateStatus(OrderStatus.Completed, request.ModifiedBy);
                         message = "Đơn hàng đã hoàn tất";
-                        await ConfirmOrderDeliveredAsync(request.OrderId,request.ModifiedBy);
+                        await ConfirmOrderDeliveredAsync(request.OrderId, request.ModifiedBy);
                         break;
 
                     case OrderStatus.Returning:
@@ -673,6 +678,7 @@ namespace OrderService.Infrastructure.Services
                     OrderDate = order.OrderDate,
                     OrderStatus = order.OrderStatus,
                     PaymentStatus = order.PaymentStatus,
+                    PaymentMethod = order.PaymentMethod,
                     ShippingAddress = shippingAddressDto,
                     ShippingProviderId = order.ShippingProviderId,
                     ShippingFee = order.ShippingFee,
@@ -684,6 +690,7 @@ namespace OrderService.Infrastructure.Services
                     EstimatedDeliveryDate = order.EstimatedDeliveryDate,
                     ActualDeliveryDate = order.ActualDeliveryDate,
                     LivestreamId = order.LivestreamId,
+                    TimeForShop = order.TimeForShop,
                     Items = orderItemDtos
                 };
 
@@ -709,7 +716,7 @@ namespace OrderService.Infrastructure.Services
                     UserRate = userRate,
                     CreatedBy = order.CreatedBy,
                     ShopId = order.ShopId.ToString(),
-                    
+
                 };
                 if (orderChangEvent.OrderStatus == "Pending")
                 {
@@ -756,7 +763,7 @@ namespace OrderService.Infrastructure.Services
 
             // Đơn do hệ thống hủy (null hoặc không rõ ai hủy)
             int canceledBySystem = orders.Count(o =>
-                o.OrderStatus == OrderStatus.Cancelled  && string.IsNullOrEmpty(o.LastModifiedBy)
+                o.OrderStatus == OrderStatus.Cancelled && string.IsNullOrEmpty(o.LastModifiedBy)
             );
 
             // Điểm phạt = 1% cho mỗi đơn bị shop hủy
@@ -767,8 +774,85 @@ namespace OrderService.Infrastructure.Services
 
             return finalRate;
         }
+    private void SchedulePendingThenProcessingThenShippedDeadlines(Guid orderId)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // After 24h from Pending: must reach Processing
+                    await Task.Delay(TimeSpan.FromHours(24));
+                    var order = await _orderRepository.GetByIdAsync(orderId.ToString());
+                    if (order == null) return;
 
-    }
+                    if (order.OrderStatus < OrderStatus.Processing && order.OrderStatus != OrderStatus.Cancelled)
+                    {
+                        order.UpdateStatus(OrderStatus.Cancelled, "system-timeout-24h-pending");
+                        await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                        return;
+                    }
 
+                    if (order.OrderStatus >= OrderStatus.Processing && order.OrderStatus != OrderStatus.Cancelled)
+                    {
+                        SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
+                        await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
 
+                        // After next 24h from Processing: must reach Shipped
+                        await Task.Delay(TimeSpan.FromHours(24));
+
+                        var order2 = await _orderRepository.GetByIdAsync(orderId.ToString());
+                        if (order2 == null) return;
+
+                        if (order2.OrderStatus < OrderStatus.Shipped && order2.OrderStatus != OrderStatus.Cancelled)
+                        {
+                            order2.UpdateStatus(OrderStatus.Cancelled, "system-timeout-24h-processing");
+                            await _orderRepository.ReplaceAsync(order2.Id.ToString(), order2);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scheduling deadlines for order {OrderId}", orderId);
+                }
+            });
+        }
+        private void ScheduleProcessingToShippedDeadline(Guid orderId)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromHours(24));
+                    var order = await _orderRepository.GetByIdAsync(orderId.ToString());
+                    if (order == null) return;
+
+                    if (order.OrderStatus < OrderStatus.Shipped && order.OrderStatus != OrderStatus.Cancelled)
+                    {
+                        order.UpdateStatus(OrderStatus.Cancelled, "system-timeout-24h-processing");
+                        await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scheduling processing->shipped deadline for order {OrderId}", orderId);
+                }
+            });
+        }
+        private void SetTimeForShopIfExists(Orders order, DateTime deadlineUtc)
+        {
+            try
+            {
+                var prop = order.GetType().GetProperty("TimeForShop", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (prop != null && prop.CanWrite && (prop.PropertyType == typeof(DateTime?) || prop.PropertyType == typeof(DateTime)))
+                {
+                    object value = prop.PropertyType == typeof(DateTime) ? deadlineUtc : (DateTime?)deadlineUtc;
+                    prop.SetValue(order, value);
+                }
+            }
+            catch
+            {
+                // ignore if property not present
+            }
+        }
+      }
 }

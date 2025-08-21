@@ -62,7 +62,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                 {
                     ProductId = request.ProductId,
                     ProductName = productInfo.ProductName ?? "Unknown Product",
-                    ProductImageUrl = productInfo.ImageUrl ?? "",
+                    ProductImageUrl = productInfo.PrimaryImageUrl ?? productInfo.ImageUrl ?? "",
                     HasVariants = productVariantsInLivestream.Count > 1 || !string.IsNullOrEmpty(productVariantsInLivestream.First().VariantId),
                     Variants = new List<LivestreamProductVariantDTO>()
                 };
@@ -77,7 +77,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     try
                     {
                         string variantName = "";
-                        string sku = ""; // Initialize empty, don't try to get from livestreamProduct.SKU
+                        string sku = "";
                         int actualStock = 0;
 
                         // Get variant details if this is a variant
@@ -86,28 +86,33 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             var variantInfo = await _productServiceClient.GetProductVariantAsync(
                                 livestreamProduct.ProductId, livestreamProduct.VariantId);
 
-                            if (variantInfo != null)
+                            // Lấy combination string để hiển thị tên variant: "Màu Đen , Model 509"
+                            string? combination = null;
+                            if (Guid.TryParse(livestreamProduct.VariantId, out var variantGuid))
                             {
-                                // Get variant combination string for display name
-                                var variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync(
-                                    Guid.Parse(livestreamProduct.VariantId));
+                                combination = await _productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
+                            }
 
-                                variantName = $"{productInfo.ProductName}{variantDetail ?? ""}";
-                                sku = variantInfo.SKU ?? "";
-                                actualStock = variantInfo.Stock; // No null coalescing needed - Stock is int
-                            }
-                            else
+                            if (!string.IsNullOrWhiteSpace(combination))
                             {
-                                variantName = $"{productInfo.ProductName} - Variant {livestreamProduct.VariantId}";
-                                _logger.LogWarning("Variant {VariantId} details not found for product {ProductId}",
-                                    livestreamProduct.VariantId, request.ProductId);
+                                // Chuẩn hóa dấu phân cách theo yêu cầu
+                                combination = combination.Replace(" + ", " , ");
                             }
+
+                            variantName = !string.IsNullOrWhiteSpace(combination)
+                                ? combination!
+                                : (!string.IsNullOrWhiteSpace(variantInfo?.Name)
+                                    ? variantInfo!.Name!
+                                    : $"Variant {livestreamProduct.VariantId}");
+
+                            sku = variantInfo?.SKU ?? "";
+                            actualStock = variantInfo?.Stock ?? 0;
                         }
                         else
                         {
                             // This is the base product without variants
-                            variantName = productInfo.ProductName ?? "Unknown Product";
-                            actualStock = productInfo.StockQuantity; // No null coalescing needed - StockQuantity is int
+                            variantName = "";
+                            actualStock = productInfo.StockQuantity;
                             sku = productInfo.SKU ?? "";
                         }
 
@@ -150,7 +155,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             ProductId = livestreamProduct.ProductId,
                             VariantId = livestreamProduct.VariantId ?? "",
                             VariantName = $"{productInfo.ProductName} - Unknown Variant",
-                            SKU = "", // Empty string for fallback
+                            SKU = "",
                             IsPin = livestreamProduct.IsPin,
                             Price = livestreamProduct.Price,
                             LivestreamStock = livestreamProduct.Stock,

@@ -3,10 +3,6 @@
     "Name": "New Profile",
     "Projects": [
       {
-        "Path": "src\\OrderService\\OrderService.Api\\OrderService.Api.csproj",
-        "Action": "Start"
-      },
-      {
         "Path": "src\\AccountService\\AccountService.Api\\AccountService.Api.csproj",
         "Action": "Start"
       },
@@ -16,10 +12,6 @@
       },
       {
         "Path": "src\\ProductService\\ProductService.Api\\ProductService.Api.csproj",
-        "Action": "Start"
-      },
-      {
-        "Path": "src\\ChatBotService\\ChatBoxService.Api\\ChatBoxService.Api.csproj",
         "Action": "Start"
       },
       {

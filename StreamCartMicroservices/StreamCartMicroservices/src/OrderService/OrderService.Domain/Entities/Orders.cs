@@ -27,6 +27,8 @@ namespace OrderService.Domain.Entities
         public DateTime? EstimatedDeliveryDate { get;  set; }
         public DateTime? ActualDeliveryDate { get; private set; }
         public string TrackingCode { get; private set; }
+        public DateTime? TimeForShop { get; private set; }
+
 
         #region Shipping From Information
         public string FromAddress { get; private set; }
@@ -435,6 +437,21 @@ namespace OrderService.Domain.Entities
             }
             
             OrderStatus = OrderStatus.Cancelled;
+            SetModifier(modifiedBy);
+        }
+        public void SetTimeForShop(DateTime deadlineUtc, string modifiedBy)
+        {
+            TimeForShop = deadlineUtc;
+            SetModifier(modifiedBy);
+        }
+        public void ExtendTimeForShop(TimeSpan extension, string modifiedBy)
+        {
+            TimeForShop = (TimeForShop ?? DateTime.UtcNow).Add(extension);
+            SetModifier(modifiedBy);
+        }
+        public void ClearTimeForShop(string modifiedBy)
+        {
+            TimeForShop = null;
             SetModifier(modifiedBy);
         }
 

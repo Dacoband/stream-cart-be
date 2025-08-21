@@ -61,48 +61,56 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             continue;
                         }
 
-                        // Initialize variables for variant information
-                        ProductVariantDTO variantInfo = null;
+                        // Init biến cho variant
+                        ProductVariantDTO? variantInfo = null;
                         string variantName = "";
-                        string sku = ""; // Don't try to get SKU from product entity since it doesn't exist
+                        string sku = "";
                         int actualStock = 0;
 
-                        // Lấy thông tin variant nếu có
                         if (!string.IsNullOrEmpty(product.VariantId))
                         {
                             try
                             {
+                                // Lấy thông tin variant cơ bản
                                 variantInfo = await _productServiceClient.GetProductVariantAsync(product.ProductId, product.VariantId);
 
-                                if (variantInfo != null)
+                                // Lấy combination string để build VariantName: "Màu Đen , Model 509"
+                                string? combination = null;
+                                if (Guid.TryParse(product.VariantId, out var variantGuid))
                                 {
-                                    // Lấy combination string để hiển thị tên variant
-                                    var variantDetail = await _productServiceClient.GetCombinationStringByVariantIdAsync(Guid.Parse(product.VariantId));
-
-                                    variantName = variantInfo.Name ?? string.Empty;
-
-                                    sku = variantInfo.SKU ?? "";
-                                    actualStock = variantInfo.Stock; // No null coalescing needed - Stock is int
+                                    combination = await _productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
                                 }
-                                else
+
+                                // Chuẩn hóa dấu phân cách theo yêu cầu " , "
+                                if (!string.IsNullOrWhiteSpace(combination))
                                 {
-                                    variantName = $"{productInfo.ProductName} - Variant {product.VariantId}";
-                                    _logger.LogWarning("Variant {VariantId} details not found for product {ProductId}",
-                                        product.VariantId, product.ProductId);
+                                    combination = combination.Replace(" + ", " , ");
                                 }
+
+                                // Ưu tiên combination; fallback -> variantInfo.Name; cuối cùng -> "Variant {id}"
+                                variantName = !string.IsNullOrWhiteSpace(combination)
+                                    ? combination!
+                                    : (!string.IsNullOrWhiteSpace(variantInfo?.Name)
+                                        ? variantInfo!.Name!
+                                        : $"Variant {product.VariantId}");
+
+                                sku = variantInfo?.SKU ?? "";
+                                actualStock = variantInfo?.Stock ?? 0;
                             }
                             catch (Exception variantEx)
                             {
                                 _logger.LogWarning(variantEx, "Failed to get variant {VariantId} details for product {ProductId}",
                                     product.VariantId, product.ProductId);
-                                variantName = $"{productInfo.ProductName} - Variant {product.VariantId}";
+                                variantName = $"Variant {product.VariantId}";
+                                sku = "";
+                                actualStock = 0;
                             }
                         }
                         else
                         {
-                            // Đây là sản phẩm gốc không có variant
-                            variantName = productInfo.ProductName ?? "Unknown Product";
-                            actualStock = productInfo.StockQuantity; // No null coalescing needed - StockQuantity is int
+                            // Sản phẩm gốc không có variant
+                            variantName = "";
+                            actualStock = productInfo.StockQuantity;
                             sku = productInfo.SKU ?? "";
                         }
 
@@ -115,8 +123,8 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             IsPin = product.IsPin,
                             Price = product.Price,
                             OriginalPrice = product.OriginalPrice,
-                            Stock = product.Stock, 
-                            ProductStock = actualStock, 
+                            Stock = product.Stock,
+                            ProductStock = actualStock,
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,
                             SKU = sku,
@@ -133,7 +141,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                         _logger.LogWarning(ex, "Failed to get complete details for product {ProductId} in livestream {LivestreamId}",
                             product.ProductId, request.LivestreamId);
 
-                        // Vẫn trả về thông tin cơ bản nếu không thể lấy thông tin chi tiết
+                        // Vẫn trả về thông tin cơ bản nếu lỗi
                         result.Add(new LivestreamProductDTO
                         {
                             Id = product.Id,
@@ -143,10 +151,10 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             IsPin = product.IsPin,
                             Price = product.Price,
                             Stock = product.Stock,
-                            ProductStock = 0, // Set to 0 if we can't get actual stock
+                            ProductStock = 0,
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,
-                            SKU = "", // Empty string for fallback
+                            SKU = "",
                             ProductName = "Unable to load product details",
                             ProductImageUrl = "",
                             VariantName = ""
@@ -154,7 +162,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     }
                 }
 
-                // Sort results: pinned products first, then by creation time
+                // Sort: ghim trước, sau đó theo CreatedAt
                 var sortedResult = result
                     .OrderByDescending(p => p.IsPin)
                     .ThenByDescending(p => p.CreatedAt)
