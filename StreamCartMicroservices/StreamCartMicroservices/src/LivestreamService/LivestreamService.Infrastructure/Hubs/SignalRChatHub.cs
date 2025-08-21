@@ -1996,6 +1996,7 @@ namespace LivestreamService.Infrastructure.Hubs
             var sp = Context.GetHttpContext()?.RequestServices;
             var cartRepository = sp?.GetRequiredService<ILivestreamCartRepository>();
             var cartItemRepository = sp?.GetRequiredService<ILivestreamCartItemRepository>();
+            var productServiceClient = sp?.GetService<IProductServiceClient>(); // ✅ for variant enrichment
 
             object BuildEmpty()
             {
@@ -2022,10 +2023,10 @@ namespace LivestreamService.Infrastructure.Hubs
 
             try
             {
-                // Lấy cart đang active
+                // Active cart
                 var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamId, viewerId);
 
-                // Fallback: lấy cart bất kỳ (kể cả inactive) nếu không có cart active
+                // Fallback any cart
                 if (cart == null)
                 {
                     var anyCart = await cartRepository.FindOneAsync(c =>
@@ -2039,31 +2040,92 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 var items = await cartItemRepository.GetByCartIdAsync(cart.Id) ?? Enumerable.Empty<LivestreamCartItem>();
 
-                var itemDtos = items.Select(item => new
-                {
-                    Id = item.Id,
-                    LivestreamProductId = item.LivestreamProductId,
-                    ProductId = item.ProductId,
-                    VariantId = item.VariantId,
-                    ProductName = item.ProductName,
-                    ShopId = item.ShopId,
-                    ShopName = item.ShopName,
-                    LivestreamPrice = item.LivestreamPrice,
-                    OriginalPrice = item.OriginalPrice,
-                    DiscountPercentage = item.DiscountPercentage,
-                    Quantity = item.Quantity,
-                    Stock = item.Stock,
-                    PrimaryImage = item.PrimaryImage,
-                    Attributes = item.Attributes,
-                    ProductStatus = item.ProductStatus,
-                    TotalPrice = item.TotalPrice,
-                    CreatedAt = item.CreatedAt
-                }).ToList();
+                var itemDtos = new List<object>();
 
-                var totalItems = itemDtos.Sum(x => x.Quantity);
-                var totalAmount = itemDtos.Sum(x => x.TotalPrice);
-                var totalDiscount = itemDtos.Sum(x => (x.OriginalPrice - x.LivestreamPrice) * x.Quantity);
-                var subTotal = itemDtos.Sum(x => x.OriginalPrice * x.Quantity);
+                foreach (var item in items)
+                {
+                    string variantName = "";
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.VariantId) && productServiceClient != null)
+                        {
+                            string? combination = null;
+
+                            if (Guid.TryParse(item.VariantId, out var variantGuid))
+                            {
+                                // Try combination string first
+                                combination = await productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(combination))
+                            {
+                                combination = combination.Replace(" + ", " , ");
+                                variantName = combination;
+                            }
+                            else
+                            {
+                                // Fallback: fetch variant basic info
+                                var variantInfo = await productServiceClient.GetProductVariantAsync(item.ProductId, item.VariantId);
+                                if (!string.IsNullOrWhiteSpace(variantInfo?.Name))
+                                {
+                                    variantName = variantInfo.Name!;
+                                }
+                                else
+                                {
+                                    variantName = $"Variant {item.VariantId}";
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception exVar)
+                    {
+                        _logger.LogWarning(exVar,
+                            "Failed to enrich variant name for cart item {CartItemId} (VariantId={VariantId})",
+                            item.Id, item.VariantId);
+                        if (!string.IsNullOrWhiteSpace(item.VariantId))
+                            variantName = $"Variant {item.VariantId}";
+                    }
+
+                    itemDtos.Add(new
+                    {
+                        Id = item.Id,
+                        LivestreamProductId = item.LivestreamProductId,
+                        ProductId = item.ProductId,
+                        VariantId = item.VariantId,
+                        VariantName = variantName,               // ✅ NEW
+                        ProductName = item.ProductName,
+                        ShopId = item.ShopId,
+                        ShopName = item.ShopName,
+                        LivestreamPrice = item.LivestreamPrice,
+                        OriginalPrice = item.OriginalPrice,
+                        DiscountPercentage = item.DiscountPercentage,
+                        Quantity = item.Quantity,
+                        Stock = item.Stock,
+                        PrimaryImage = item.PrimaryImage,
+                        Attributes = item.Attributes,
+                        ProductStatus = item.ProductStatus,
+                        TotalPrice = item.TotalPrice,
+                        CreatedAt = item.CreatedAt
+                    });
+                }
+
+                var totalItems = itemDtos.Sum(x => (int)x.GetType().GetProperty("Quantity")!.GetValue(x)!);
+                var totalAmount = itemDtos.Sum(x => (decimal)x.GetType().GetProperty("TotalPrice")!.GetValue(x)!);
+                var totalDiscount = itemDtos.Sum(x =>
+                {
+                    var orig = (decimal?)x.GetType().GetProperty("OriginalPrice")!.GetValue(x)!;
+                    var live = (decimal?)x.GetType().GetProperty("LivestreamPrice")!.GetValue(x)!;
+                    var qty = (int)x.GetType().GetProperty("Quantity")!.GetValue(x)!;
+                    if (orig.HasValue && live.HasValue)
+                        return (orig.Value - live.Value) * qty;
+                    return 0m;
+                });
+                var subTotal = itemDtos.Sum(x =>
+                {
+                    var orig = (decimal?)x.GetType().GetProperty("OriginalPrice")!.GetValue(x)!;
+                    var qty = (int)x.GetType().GetProperty("Quantity")!.GetValue(x)!;
+                    return (orig ?? 0m) * qty;
+                });
 
                 return new
                 {

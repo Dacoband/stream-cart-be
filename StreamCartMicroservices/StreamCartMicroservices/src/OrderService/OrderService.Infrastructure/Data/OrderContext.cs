@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -41,6 +43,10 @@ namespace OrderService.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.HasPostgresEnum<OrderStatus>(); 
+
+
+
 
             // Configure Orders entity for PostgreSQL
             modelBuilder.Entity<Orders>(entity =>
@@ -63,8 +69,9 @@ namespace OrderService.Infrastructure.Data
                     .IsRequired();
 
                 entity.Property(e => e.OrderStatus)
-                    .HasColumnName("order_status")
-                    .IsRequired();
+               .HasColumnName("order_status")
+               .IsRequired();
+
 
                 entity.Property(e => e.TotalPrice)
                     .HasColumnName("total_price")
@@ -336,8 +343,29 @@ namespace OrderService.Infrastructure.Data
                 entity.HasIndex(e => e.Rating);
             });
             modelBuilder
-                .HasPostgresEnum<OrderStatus>()
                 .HasPostgresEnum<PaymentStatus>();
+        }
+        private static class EnumConverters
+        {
+            public static OrderStatus ToOrderStatus(string? raw)
+            {
+                if (string.IsNullOrWhiteSpace(raw)) return OrderStatus.Waiting;
+                var norm = raw.Trim();
+                if (Enum.TryParse<OrderStatus>(norm, true, out var parsed))
+                    return parsed;
+                return OrderStatus.Waiting;
+            }
+
+            public static PaymentStatus ToPaymentStatus(string? raw)
+            {
+                if (string.IsNullOrWhiteSpace(raw))
+                    return PaymentStatus.Pending;
+
+                if (Enum.TryParse<PaymentStatus>(raw.Trim(), true, out var parsed))
+                    return parsed;
+
+                return PaymentStatus.Pending;
+            }
         }
 
     }

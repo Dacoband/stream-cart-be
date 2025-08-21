@@ -1,10 +1,12 @@
 ﻿using dotenv.net;
-using System.Text.RegularExpressions;
+using Npgsql;
+using OrderService.Api.Services;
+using OrderService.Application.Extensions;
+using OrderService.Domain.Enums;
+using OrderService.Infrastructure.Extensions;
 using Shared.Common.Extensions;
 using Shared.Messaging.Extensions;
-using OrderService.Api.Services;
-using OrderService.Infrastructure.Extensions;
-using OrderService.Application.Extensions;
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,7 +79,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status");
 
 var app = builder.Build();
 
