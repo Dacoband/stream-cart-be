@@ -40,7 +40,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                var resp = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
+                var resp = await _httpClient.GetAsync($"https://brightpa.me/api/product-combinations/{variantId}");
                 var content = await resp.Content.ReadAsStringAsync();
 
                 if (!resp.IsSuccessStatusCode)
