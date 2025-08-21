@@ -1018,6 +1018,19 @@
       "SwaggerKey": "livestream"
     },
     {
+      "DownstreamPathTemplate": "/api/livestream-carts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "livestream-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/livestream-carts/{everything}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "SwaggerKey": "livestream"
+    },
+    {
       "DownstreamPathTemplate": "/api/livestream-products/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
