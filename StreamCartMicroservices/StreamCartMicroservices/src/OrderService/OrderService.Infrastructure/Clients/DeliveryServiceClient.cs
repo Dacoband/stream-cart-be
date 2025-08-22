@@ -31,7 +31,7 @@ namespace OrderService.Infrastructure.Clients
 
                 var content = new StringContent(JsonSerializer.Serialize(deliveryCode), Encoding.UTF8, "application/json");
 
-               
+
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -62,31 +62,57 @@ namespace OrderService.Infrastructure.Clients
             {
                 var url = "https://brightpa.me/api/deliveries/create-ghn-order";
 
-                var json = JsonSerializer.Serialize(request);
+                // ✅ Log request payload để debug
+                _logger.LogInformation("Creating GHN order with request: {@Request}", request);
+
+                var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                });
+
+                _logger.LogDebug("GHN Request JSON: {Json}", json);
+
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-               
+                _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await _httpClient.PostAsync(url, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
+                _logger.LogInformation("GHN Response: Status={StatusCode}, Content={Content}",
+                    response.StatusCode, responseContent);
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("GHN order creation failed: {StatusCode} - {Content}", response.StatusCode, responseContent);
-                    return new ApiResponse<object> { Success = false, Message = "Tạo đơn hàng GHN thất bại" };
+                    _logger.LogError("GHN order creation failed: {StatusCode} - {Content}",
+                        response.StatusCode, responseContent);
+                    return new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = $"GHN API failed: {response.StatusCode} - {responseContent}"
+                    };
                 }
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(responseContent, options);
 
-                return apiResponse ?? new ApiResponse<object> { Success = false, Message = "Phản hồi không hợp lệ từ GHN" };
+                return apiResponse ?? new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Invalid response from GHN service"
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Exception while calling create-ghn-order");
-                return new ApiResponse<object> { Success = false, Message = "Lỗi khi gọi GHN API" };
+                _logger.LogError(ex, "Exception while calling create-ghn-order: {@Request}", request);
+                return new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = $"Exception: {ex.Message}"
+                };
             }
         }
     }
-}
+ }

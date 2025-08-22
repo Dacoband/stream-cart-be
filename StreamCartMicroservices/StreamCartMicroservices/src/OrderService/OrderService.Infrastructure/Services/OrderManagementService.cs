@@ -14,6 +14,7 @@ using OrderService.Application.Interfaces.IServices;
 using OrderService.Application.Queries.OrderQueries;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
+using OrderService.Infrastructure.Repositories;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Services.User;
 using Shared.Messaging.Event.OrderEvents;
@@ -38,6 +39,7 @@ namespace OrderService.Infrastructure.Services
         private readonly IProductServiceClient _productServiceClient;
         private readonly IDeliveryClient _deliveryClient;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IOrderItemRepository _orderItemRepository;
 
 
         public OrderManagementService(
@@ -48,7 +50,7 @@ namespace OrderService.Infrastructure.Services
             IShopServiceClient shopServiceClient,
             ICurrentUserService currentUserService,
             IMapper mapper,
-            IWalletServiceClient walletServiceClient, IProductServiceClient productServiceClient, IDeliveryClient deliveryClient, IPublishEndpoint publishEndpoint)
+            IWalletServiceClient walletServiceClient, IProductServiceClient productServiceClient, IDeliveryClient deliveryClient, IPublishEndpoint publishEndpoint, IOrderItemRepository orderItemRepository)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -61,6 +63,7 @@ namespace OrderService.Infrastructure.Services
             _productServiceClient = productServiceClient;
             _deliveryClient = deliveryClient;
             _publishEndpoint = publishEndpoint;
+            _orderItemRepository = orderItemRepository;
         }
 
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto)
@@ -500,32 +503,42 @@ namespace OrderService.Infrastructure.Services
 
                 // Get the order
                 var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+                var orderItems = await _orderItemRepository.GetByOrderIdAsync(order.Id);
                 var deliveryItemList = new List<UserOrderItem>();
-                foreach (var item in order.Items)
+
+                foreach (var item in orderItems)
                 {
-                    var deliveryItem = new UserOrderItem();
                     var product = await _productServiceClient.GetProductByIdAsync(item.ProductId);
-                    deliveryItem.Quantity = item.Quantity;
-                    deliveryItem.Name = product.ProductName;
-                    deliveryItem.Width = (int)product.Width;
-                    deliveryItem.Weight = (int)product.Weight;
-                    deliveryItem.Height = (int)product.Height;
-                    deliveryItem.Length = (int)product.Length;
                     if (product == null)
-                        throw new ApplicationException($"Không tìm thấy sản phẩm {item.Id}");
+                        throw new ApplicationException($"Không tìm thấy sản phẩm {item.ProductId}");
+
+                    var deliveryItem = new UserOrderItem
+                    {
+                        Quantity = item.Quantity,
+                        Name = product.ProductName
+                    };
+
                     if (item.VariantId.HasValue)
                     {
                         var variant = await _productServiceClient.GetVariantByIdAsync(item.VariantId.Value);
                         if (variant == null)
-                            throw new ApplicationException($"Không tìm thấy sản phẩm {item.VariantId}");
+                            throw new ApplicationException($"Không tìm thấy variant {item.VariantId}");
 
-                        deliveryItem.Name = product.ProductName;
-                        deliveryItem.Width = (int)(product.Width ?? variant.Width);
-                        deliveryItem.Weight = (int)(product.Weight ?? variant.Weight);
-                        deliveryItem.Height = (int)(product.Height ?? variant.Height);
-                        deliveryItem.Length = (int)(product.Length ?? variant.Length);
-
+                        // ✅ Nếu có Variant → dùng Variant
+                        deliveryItem.Width = Math.Max(1, (int)(variant.Width ?? 1));
+                        deliveryItem.Weight = Math.Max(1, (int)(variant.Weight ?? 1));
+                        deliveryItem.Height = Math.Max(1, (int)(variant.Height ?? 1));
+                        deliveryItem.Length = Math.Max(1, (int)(variant.Length ?? 1));
                     }
+                    else
+                    {
+                        // ✅ Nếu không có Variant → fallback Product
+                        deliveryItem.Width = Math.Max(1, (int)(product.Width ?? 1));
+                        deliveryItem.Weight = Math.Max(1, (int)(product.Weight ?? 1));
+                        deliveryItem.Height = Math.Max(1, (int)(product.Height ?? 1));
+                        deliveryItem.Length = Math.Max(1, (int)(product.Length ?? 1));
+                    }
+
                     deliveryItemList.Add(deliveryItem);
                 }
                 if (order == null)
@@ -587,7 +600,7 @@ namespace OrderService.Infrastructure.Services
                         if (!ghnResponse.Success)
                         {
                             _logger.LogWarning("Không thể tạo đơn GHN cho đơn hàng {OrderId}", order.Id);
-                            throw new ApplicationException("Tạo đơn giao hàng thất bại: " + ghnResponse.Message);
+                            throw new ApplicationException("Tạo đơn giao hàng thất bại: " + ghnRequest);
                         }
 
                         break;

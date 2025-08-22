@@ -262,7 +262,7 @@ namespace OrderService.Domain.Entities
         /// </summary>
         public void AddItem(OrderItem item)
         {
-            if (OrderStatus != OrderStatus.Pending)
+            if (OrderStatus != OrderStatus.Waiting && OrderStatus != OrderStatus.Pending)
             {
                 throw new InvalidOperationException("Cannot add items to an order that is not pending");
             }
@@ -281,7 +281,7 @@ namespace OrderService.Domain.Entities
         /// </summary>
         public void AddItems(IEnumerable<OrderItem> items)
         {
-            if (OrderStatus != OrderStatus.Waiting)
+            if (OrderStatus != OrderStatus.Waiting && OrderStatus != OrderStatus.Pending)
             {
                 throw new InvalidOperationException("Cannot add items to an order that is not pending");
             }
