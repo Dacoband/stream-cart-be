@@ -499,7 +499,7 @@ namespace OrderService.Infrastructure.Services
                 _logger.LogInformation("Updating order status for order {OrderId} to {NewStatus}", request.OrderId, request.NewStatus);
 
                 // Get the order
-                var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+                var order = await _orderRepository.GetOrderDetailById(request.OrderId);
                 var deliveryItemList = new List<UserOrderItem>();
                 foreach (var item in order.Items)
                 {

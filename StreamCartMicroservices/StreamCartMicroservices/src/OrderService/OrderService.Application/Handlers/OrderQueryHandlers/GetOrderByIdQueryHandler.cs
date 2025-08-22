@@ -34,7 +34,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
             {
                 _logger.LogInformation("Getting order by ID {OrderId}", request.OrderId);
 
-                var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+                var order = await _orderRepository.GetOrderDetailById(request.OrderId);
                 if (order == null)
                 {
                     _logger.LogWarning("Order with ID {OrderId} not found", request.OrderId);
