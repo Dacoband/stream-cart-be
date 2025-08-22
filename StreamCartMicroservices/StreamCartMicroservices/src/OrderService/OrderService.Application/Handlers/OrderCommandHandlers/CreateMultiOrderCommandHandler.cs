@@ -104,10 +104,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     CalculateOrderTotals(order, commissionRate, voucherDiscount);
 
                     order.SetPaymentMethod(request.PaymentMethod, request.AccountId.ToString());
-                    if (request.PaymentMethod != "COD")
+                    if (request.PaymentMethod == "COD")
                     {
                         order.OrderStatus = Domain.Enums.OrderStatus.Pending;
-                        // time for shop = now + 24h
                         SetTimeForShopIfExists(order, DateTime.UtcNow.AddHours(24));
                     }
                     else
