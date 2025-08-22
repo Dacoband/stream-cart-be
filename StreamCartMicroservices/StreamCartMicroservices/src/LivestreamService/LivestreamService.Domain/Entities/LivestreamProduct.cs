@@ -11,6 +11,7 @@ namespace LivestreamService.Domain.Entities
        // public Guid? FlashSaleId { get; private set; }
         public bool IsPin { get; private set; }
         public decimal Price { get; private set; }
+        public decimal OriginalPrice { get; private set; } // Giá gốc từ sản phẩm
         public int Stock { get; private set; }
         //public int DisplayOrder { get; private set; }
 
@@ -23,6 +24,7 @@ namespace LivestreamService.Domain.Entities
             string productId,
             string variantId,
             decimal price,
+            decimal originalPrice,
             int stock,
             bool isPin = false,
             string createdBy = "system")
@@ -31,14 +33,29 @@ namespace LivestreamService.Domain.Entities
             ProductId = productId;
             VariantId = variantId;
             Price = price;
+            OriginalPrice = originalPrice;
             Stock = stock;
             IsPin = isPin;
             SetCreator(createdBy);
             SetModifier(createdBy);
         }
+        public void UpdateOriginalPrice(decimal originalPrice, string modifiedBy)
+        {
+            if (originalPrice < 0)
+            {
+                throw new ArgumentException("Original price cannot be negative");
+            }
 
+            OriginalPrice = originalPrice;
+            SetModifier(modifiedBy);
+        }
         public void UpdatePrice(decimal price, string modifiedBy)
         {
+            if (price < 0)
+            {
+                throw new ArgumentException("Price cannot be negative");
+            }
+
             Price = price;
             SetModifier(modifiedBy);
         }
@@ -54,10 +71,18 @@ namespace LivestreamService.Domain.Entities
             IsPin = isPin;
             SetModifier(modifiedBy);
         }
+        public decimal DiscountPercentage
+        {
+            get
+            {
+                if (OriginalPrice == 0) return 0;
+                if (Price >= OriginalPrice) return 0;
 
-        
+                return Math.Round((OriginalPrice - Price) / OriginalPrice * 100, 2);
+            }
+        }
+        public bool HasDiscount => Price < OriginalPrice && OriginalPrice > 0;
 
-        
 
         public override bool IsValid()
         {

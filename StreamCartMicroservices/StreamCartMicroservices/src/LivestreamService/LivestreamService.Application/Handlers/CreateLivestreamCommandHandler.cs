@@ -57,7 +57,22 @@ namespace LivestreamService.Application.Handlers
                 {
                     throw new ApplicationException($"Seller account with ID {request.SellerId} not found");
                 }
+                // ✅ VALIDATE: Seller phải sở hữu shop
+                if (seller.ShopId != request.ShopId)
+                {
+                    throw new UnauthorizedAccessException("Only shop owner can create livestream");
+                }
+                // ✅ VALIDATE: LivestreamHostId phải thuộc về cùng shop
+                var hostAccount = await _accountServiceClient.GetAccountByIdAsync(request.LivestreamHostId);
+                if (hostAccount == null)
+                {
+                    throw new ApplicationException($"Livestream host account with ID {request.LivestreamHostId} not found");
+                }
 
+                if (hostAccount.ShopId != request.ShopId)
+                {
+                    throw new UnauthorizedAccessException("Livestream host must belong to the same shop");
+                }
                 // ✅ VALIDATE SẢN PHẨM TRƯỚC KHI TẠO LIVESTREAM
                 if (request.Products != null && request.Products.Any())
                 {
@@ -67,11 +82,11 @@ namespace LivestreamService.Application.Handlers
                 // Create LiveKit room
                 string roomId = $"shop-{request.ShopId}-{Guid.NewGuid()}";
                 string livekitRoomId = await _livekitService.CreateRoomAsync(roomId);
-                string joinToken = await _livekitService.GenerateJoinTokenAsync(
-                    livekitRoomId,
-                    request.SellerId.ToString(),
-                    true // Can publish
-                );
+                //string joinToken = await _livekitService.GenerateJoinTokenAsync(
+                //    livekitRoomId,
+                //    request.SellerId.ToString(),
+                //    true // Can publish
+                //);
                 // Generate unique stream key
                 string streamKey = Guid.NewGuid().ToString("N");
 
@@ -81,12 +96,13 @@ namespace LivestreamService.Application.Handlers
                     request.Description,
                     request.SellerId,
                     request.ShopId,
+                    request.LivestreamHostId,
                     request.ScheduledStartTime,
                     livekitRoomId,
                     streamKey,
                     request.ThumbnailUrl,
                     request.Tags,
-                    joinToken,
+                    null,
                     request.SellerId.ToString()
                 );
 
@@ -116,13 +132,15 @@ namespace LivestreamService.Application.Handlers
                     SellerName = seller.Fullname ?? seller.Username,
                     ShopId = livestream.ShopId,
                     ShopName = shop.ShopName,
+                    LivestreamHostId = livestream.LivestreamHostId,
+                    LivestreamHostName = hostAccount.Fullname ?? hostAccount.Username,
                     ScheduledStartTime = livestream.ScheduledStartTime,
                     ActualStartTime = livestream.ActualStartTime,
                     ActualEndTime = livestream.ActualEndTime,
                     Status = livestream.Status,
                     StreamKey = livestream.StreamKey,
                     LivekitRoomId = livekitRoomId,
-                    JoinToken = joinToken,
+                    JoinToken = null,
                     ThumbnailUrl = livestream.ThumbnailUrl,
                     Tags = livestream.Tags,
                     MaxViewer = livestream.MaxViewer,
@@ -183,16 +201,18 @@ namespace LivestreamService.Application.Handlers
                         variant = await _productServiceClient.GetProductVariantAsync(productItem.ProductId, productItem.VariantId);
                     }
 
-                    // Xác định giá và stock
-                    decimal finalPrice = productItem.Price ?? (variant?.Price ?? product?.BasePrice ?? 0);
+                    // ✅ XÁC ĐỊNH GIÁ GỐC VÀ GIÁ LIVESTREAM
+                    decimal originalPrice = (variant?.Price ?? product?.BasePrice ?? 0);
+                    decimal livestreamPrice = productItem.Price ?? originalPrice; // Mặc định giá livestream = giá gốc nếu không cung cấp
                     int finalStock = productItem.Stock ?? (variant?.Stock ?? product?.StockQuantity ?? 0);
 
-                    // ✅ FIX: Sử dụng đường dẫn đầy đủ để tránh namespace conflict
+                    // ✅ TẠO LIVESTREAM PRODUCT với giá gốc và giá livestream
                     var livestreamProduct = new LivestreamService.Domain.Entities.LivestreamProduct(
                         livestreamId,
                         productItem.ProductId,
                         productItem.VariantId ?? string.Empty,
-                        finalPrice,
+                        originalPrice,      // ✅ Giá gốc
+                        livestreamPrice,    // ✅ Giá livestream
                         finalStock,
                         productItem.IsPin,
                         sellerId.ToString()
@@ -200,7 +220,7 @@ namespace LivestreamService.Application.Handlers
 
                     await _livestreamProductRepository.InsertAsync(livestreamProduct);
 
-                    // Tạo DTO để trả về
+                    // ✅ TẠO DTO với thông tin giá đầy đủ
                     result.Add(new LivestreamProductDTO
                     {
                         Id = livestreamProduct.Id,
@@ -208,6 +228,7 @@ namespace LivestreamService.Application.Handlers
                         ProductId = livestreamProduct.ProductId,
                         VariantId = livestreamProduct.VariantId,
                         IsPin = livestreamProduct.IsPin,
+                        OriginalPrice = livestreamProduct.OriginalPrice,
                         Price = livestreamProduct.Price,
                         Stock = livestreamProduct.Stock,
                         CreatedAt = livestreamProduct.CreatedAt,

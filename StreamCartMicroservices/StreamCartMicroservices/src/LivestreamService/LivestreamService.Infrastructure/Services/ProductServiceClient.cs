@@ -36,6 +36,39 @@ namespace LivestreamService.Infrastructure.Services
                 }
             }
         }
+        public async Task<string?> GetCombinationStringByVariantIdAsyncs(Guid variantId)
+        {
+            try
+            {
+                var resp = await _httpClient.GetAsync($"https://brightpa.me/api/product-combinations/{variantId}");
+                var content = await resp.Content.ReadAsStringAsync();
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetCombinationString failed: {Status} {Body}", resp.StatusCode, content);
+                    return null;
+                }
+
+                var api = JsonSerializer.Deserialize<ApiResponse<List<ProductCombinationDto>>>(content,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (api?.Success == true && api.Data != null && api.Data.Any())
+                {
+                    // Ghép chuỗi: "Màu Đen , Model 509"
+                    var parts = api.Data
+                        .Select(d => $"{d.AttributeName} {d.ValueName}")
+                        .ToArray();
+                    return string.Join(" , ", parts);
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling product-combinations for variant {VariantId}", variantId);
+                return null;
+            }
+        }
 
         public async Task<ProductDTO?> GetProductByIdAsync(string productId)
         {
@@ -393,7 +426,38 @@ namespace LivestreamService.Infrastructure.Services
                 return null;
             }
         }
+        public async Task<ProductVariantWithDimensionsDTO?> GetProductVariantWithDimensionsAsync(string productId, string variantId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting product variant with dimensions: ProductId={ProductId}, VariantId={VariantId}",
+                    productId, variantId);
 
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to get product variant with dimensions {ProductId}/{VariantId}. Status: {StatusCode}",
+                        productId, variantId, response.StatusCode);
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+
+                // Deserialize trực tiếp sang DTO mới (API có thể trả dư fields)
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<ProductVariantWithDimensionsDTO>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return apiResponse?.Data;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product variant with dimensions: ProductId={ProductId}, VariantId={VariantId}",
+                    productId, variantId);
+                return null;
+            }
+        }
 
     }
 

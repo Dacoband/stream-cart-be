@@ -8,6 +8,7 @@ namespace LivestreamService.Application.Interfaces
 {
     public interface IProductServiceClient
     {
+        Task<string?> GetCombinationStringByVariantIdAsyncs(Guid variantId);
         /// <summary>
         /// Lấy thông tin sản phẩm theo ID
         /// </summary>
@@ -40,5 +41,22 @@ namespace LivestreamService.Application.Interfaces
         Task<bool> UpdateProductStatusAsync(Guid productId, bool isActive);
         Task<bool> CheckProductExistsAsync(Guid productId);
         Task<string?> GetCombinationStringByVariantIdAsync(Guid variantId);
+        Task<ProductVariantWithDimensionsDTO?> GetProductVariantWithDimensionsAsync(string productId, string variantId);
+
+    }
+    public class ProductVariantWithDimensionsDTO
+    {
+        public string? Id { get; set; }
+        public string? ProductId { get; set; }
+        public string? Name { get; set; }
+        public decimal Price { get; set; }
+        public int Stock { get; set; }
+        public string? SKU { get; set; }
+
+        // Bổ sung
+        public decimal? Weight { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
     }
 }

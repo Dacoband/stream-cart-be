@@ -36,13 +36,53 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
 
                 foreach (var lp in pinnedProducts)
                 {
-                    var product = await _productServiceClient.GetProductByIdAsync(lp.ProductId);
-                    if (product != null)
+                    try
                     {
-                        ProductVariantDTO? variant = null;
+                        var product = await _productServiceClient.GetProductByIdAsync(lp.ProductId);
+                        if (product == null)
+                        {
+                            _logger.LogWarning("Product {ProductId} not found when building pinned list", lp.ProductId);
+                            continue;
+                        }
+
+                        ProductVariantDTO? variantInfo = null;
+                        string variantName = string.Empty;
+                        string sku = string.Empty;
+                        int actualStock = 0;
+
                         if (!string.IsNullOrEmpty(lp.VariantId))
                         {
-                            variant = await _productServiceClient.GetProductVariantAsync(lp.ProductId, lp.VariantId);
+                            // Lấy thông tin variant cơ bản
+                            variantInfo = await _productServiceClient.GetProductVariantAsync(lp.ProductId, lp.VariantId);
+
+                            // Lấy combination string "Màu Đen , Model 509"
+                            string? combination = null;
+                            if (Guid.TryParse(lp.VariantId, out var variantGuid))
+                            {
+                                combination = await _productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(combination))
+                            {
+                                // Chuẩn hóa dấu phân cách theo yêu cầu
+                                combination = combination.Replace(" + ", " , ");
+                            }
+
+                            variantName = !string.IsNullOrWhiteSpace(combination)
+                                ? combination!
+                                : (!string.IsNullOrWhiteSpace(variantInfo?.Name)
+                                    ? variantInfo!.Name!
+                                    : $"Variant {lp.VariantId}");
+
+                            sku = variantInfo?.SKU ?? string.Empty;
+                            actualStock = variantInfo?.Stock ?? 0;
+                        }
+                        else
+                        {
+                            // Sản phẩm gốc không có variant
+                            variantName ="";
+                            sku = product.SKU ?? string.Empty;
+                            actualStock = product.StockQuantity;
                         }
 
                         result.Add(new LivestreamProductDTO
@@ -51,15 +91,39 @@ namespace LivestreamService.Application.Handlers.LivestreamProductHandlers
                             LivestreamId = lp.LivestreamId,
                             ProductId = lp.ProductId,
                             VariantId = lp.VariantId,
-                            //FlashSaleId = lp.FlashSaleId,
+                            OriginalPrice = product.BasePrice,
                             IsPin = lp.IsPin,
                             Price = lp.Price,
                             Stock = lp.Stock,
+                            ProductStock = actualStock,
                             CreatedAt = lp.CreatedAt,
                             LastModifiedAt = lp.LastModifiedAt,
-                            ProductName = product.ProductName,
-                            ProductImageUrl = product?.PrimaryImageUrl ?? string.Empty,
-                            VariantName = variant?.Name
+                            ProductName = product.ProductName ?? string.Empty,
+                            ProductImageUrl = product.PrimaryImageUrl ?? string.Empty,
+                            SKU = sku,
+                            VariantName = variantName
+                        });
+                    }
+                    catch (Exception exItem)
+                    {
+                        _logger.LogWarning(exItem, "Failed to process pinned item {LivestreamProductId}", lp.Id);
+
+                        result.Add(new LivestreamProductDTO
+                        {
+                            Id = lp.Id,
+                            LivestreamId = lp.LivestreamId,
+                            ProductId = lp.ProductId,
+                            VariantId = lp.VariantId,
+                            IsPin = lp.IsPin,
+                            Price = lp.Price,
+                            Stock = lp.Stock,
+                            ProductStock = 0,
+                            CreatedAt = lp.CreatedAt,
+                            LastModifiedAt = lp.LastModifiedAt,
+                            ProductName = "Unavailable",
+                            ProductImageUrl = "",
+                            SKU = "",
+                            VariantName = ""
                         });
                     }
                 }

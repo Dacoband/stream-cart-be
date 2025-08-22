@@ -448,18 +448,33 @@ namespace PaymentService.Api.Controllers
                 }
 
                 // Build redirect URL với order IDs
+                //string redirectUrl;
+
+                //if (orderIds.Count == 1)
+                //{
+                //    // Single order: append order ID directly to URL
+                //    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIds.First()}";
+                //}
+                //else
+                //{
+                //    // Multiple orders: use comma-separated list as path parameter
+                //    var orderIdsString = string.Join(",", orderIds);
+                //    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIdsString}";
+                //}
+                // Build redirect URL với order IDs
                 string redirectUrl;
                 if (orderIds.Count == 1)
                 {
-                    // Single order: append order ID directly to URL
-                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIds.First()}";
+                    // Single order: dùng query string với 1 id
+                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}?orders={orderIds.First()}";
                 }
                 else
                 {
-                    // Multiple orders: use comma-separated list as path parameter
+                    // Multiple orders: dùng query string với nhiều id, phân cách bằng dấu phẩy
                     var orderIdsString = string.Join(",", orderIds);
-                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}/{orderIdsString}";
+                    redirectUrl = $"{baseRedirectUrl.TrimEnd('/')}?orders={orderIdsString}";
                 }
+
 
                 _logger.LogInformation("Redirecting to: {RedirectUrl}", redirectUrl);
 

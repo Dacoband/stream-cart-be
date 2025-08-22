@@ -16,11 +16,12 @@ namespace ProductService.Application.Handlers.ProductHandlers
         private readonly IEmailService _emailService;
         private readonly IShopServiceClient _shopServiceClient;
 
-        public DeleteProductCommandHandler(IProductRepository productRepository, IEmailService emailService, IShopServiceClient shopServiceClient)
+        public DeleteProductCommandHandler(IProductRepository productRepository, IEmailService emailService, IShopServiceClient shopServiceClient,IAccountCLientService accountCLientService)
         {
             _productRepository = productRepository;
             _emailService = emailService;
             _shopServiceClient = shopServiceClient; 
+            _accountCLientService = accountCLientService;
         }
 
         public async Task<bool> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
@@ -33,7 +34,6 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 return false;
             }
 
-            // Thực hiện xóa mềm
             product.Delete(request.DeletedBy);
 
             if (!string.IsNullOrEmpty(request.DeletedBy))

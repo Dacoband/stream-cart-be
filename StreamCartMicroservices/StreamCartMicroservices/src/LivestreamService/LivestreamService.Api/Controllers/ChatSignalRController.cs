@@ -30,13 +30,12 @@ namespace LivestreamService.Api.Controllers
         private readonly IMediator _mediator;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<ChatSignalRController> _logger;
-        private readonly IChatNotificationServiceSignalR _signalRChatService;
-
+        private readonly ISignalRChatService _signalRChatService; 
         public ChatSignalRController(
             IMediator mediator,
             ICurrentUserService currentUserService,
             ILogger<ChatSignalRController> logger,
-            IChatNotificationServiceSignalR signalRChatService)
+            ISignalRChatService signalRChatService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;

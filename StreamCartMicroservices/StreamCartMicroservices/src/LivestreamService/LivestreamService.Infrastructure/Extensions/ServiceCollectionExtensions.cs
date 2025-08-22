@@ -1,13 +1,16 @@
 ﻿using LivestreamService.Application.Interfaces;
+using LivestreamService.Infrastructure.BackgroundServices;
+using LivestreamService.Infrastructure.Consumers;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Hubs;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using LivestreamService.Infrastructure.Settings;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using Quartz;
 namespace LivestreamService.Infrastructure.Extensions
 {
     public static class ServiceCollectionExtensions
@@ -87,8 +90,45 @@ namespace LivestreamService.Infrastructure.Extensions
             services.AddScoped<IChatNotificationServiceSignalR, ChatNotificationServiceSignalR>();
             services.AddScoped<ISignalRChatService, SignalRChatService>();
             services.AddScoped<IChatNotificationService, ChatNotificationService>();
-            return services;
 
+            services.AddScoped<ILivestreamCartRepository, LivestreamCartRepository>();
+            services.AddScoped<ILivestreamCartItemRepository, LivestreamCartItemRepository>();
+
+            // ✅ Background Services
+            services.AddHostedService<LivestreamCartCleanupService>();
+            services.AddQuartz(q =>
+            {
+                q.UseMicrosoftDependencyInjectionJobFactory();
+                var cartCleanupJobKey = new JobKey("LivestreamCartCleanupJob");
+                q.AddJob<LivestreamCartCleanupJob>(opts => opts.WithIdentity(cartCleanupJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(cartCleanupJobKey)
+                    .WithIdentity("LivestreamCartCleanupTrigger")
+                    .WithCronSchedule("0 0 * * * ?") // Every hour at minute 0
+                    .WithDescription("Cleanup expired livestream carts"));
+            });
+
+            services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+            services.AddScoped<LivestreamOrderStatsUpdatedConsumer>();
+            services.AddMassTransit(x =>
+            {
+                x.AddConsumer<LivestreamOrderStatsUpdatedConsumer>();
+
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    cfg.Host(configuration.GetConnectionString("RabbitMQ") ?? "rabbitmq", h =>
+                    {
+                        h.Username("guest");
+                        h.Password("guest");
+                    });
+
+                    cfg.ReceiveEndpoint("livestream-order-stats-updated", e =>
+                    {
+                        e.ConfigureConsumer<LivestreamOrderStatsUpdatedConsumer>(context);
+                    });
+                });
+            });
+            return services;
         }
 
         //public static IServiceCollection AddHttpClientFactory(this IServiceCollection services)

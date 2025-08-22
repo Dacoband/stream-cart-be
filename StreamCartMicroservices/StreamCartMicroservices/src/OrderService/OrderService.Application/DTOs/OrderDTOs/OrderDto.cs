@@ -22,6 +22,9 @@ namespace OrderService.Application.DTOs.OrderDTOs
         public DateTime? EstimatedDeliveryDate { get; set; }
         public DateTime? ActualDeliveryDate { get; set; }
         public string TrackingCode { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public DateTime? TimeForShop { get; set; }
+
 
         public ShippingAddressDto ShippingAddress { get; set; } = new ShippingAddressDto();
 

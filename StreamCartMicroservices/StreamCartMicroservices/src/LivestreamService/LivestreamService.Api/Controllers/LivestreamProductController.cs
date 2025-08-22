@@ -36,7 +36,7 @@ namespace LivestreamService.Api.Controllers
         /// Thêm sản phẩm vào livestream
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateLivestreamProduct([FromBody] CreateLivestreamProductDTO request)

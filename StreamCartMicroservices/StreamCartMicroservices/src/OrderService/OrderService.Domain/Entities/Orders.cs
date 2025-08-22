@@ -21,10 +21,14 @@ namespace OrderService.Domain.Entities
         public decimal CommissionFee { get;  set; }
         public decimal NetAmount { get;  set; }
         public PaymentStatus PaymentStatus { get; private set; }
+        public string PaymentMethod { get; private set; } = "COD"; 
+
         public string CustomerNotes { get; private set; }
         public DateTime? EstimatedDeliveryDate { get;  set; }
         public DateTime? ActualDeliveryDate { get; private set; }
         public string TrackingCode { get; private set; }
+        public DateTime? TimeForShop { get; private set; }
+
 
         #region Shipping From Information
         public string FromAddress { get; private set; }
@@ -135,7 +139,7 @@ namespace OrderService.Domain.Entities
             OrderCode = string.Empty;
             CustomerNotes = string.Empty;
             TrackingCode = string.Empty;
-
+            PaymentMethod = "COD"; 
             FromAddress = string.Empty;
             FromWard = string.Empty;
             FromDistrict = string.Empty;
@@ -196,7 +200,8 @@ namespace OrderService.Domain.Entities
             Guid shippingProviderId,
             string customerNotes = "",
             Guid? livestreamId = null,
-            Guid? createdFromCommentId = null
+            Guid? createdFromCommentId = null,
+            string paymentMethod = "COD"
              )
         {
             if (accountId == Guid.Empty)
@@ -213,7 +218,7 @@ namespace OrderService.Domain.Entities
             OrderDate = DateTime.UtcNow;
             OrderStatus = OrderStatus.Waiting;
             PaymentStatus = PaymentStatus.Pending;
-
+            PaymentMethod = paymentMethod ?? "COD"; 
             AccountId = accountId;
             ShopId = shopId;
             ShippingProviderId = shippingProviderId;
@@ -266,7 +271,11 @@ namespace OrderService.Domain.Entities
             RecalculateAmounts();
             SetModifier("System");
         }
-
+        public void SetPaymentMethod(string paymentMethod, string modifiedBy)
+        {
+            PaymentMethod = paymentMethod ?? throw new ArgumentNullException(nameof(paymentMethod));
+            SetModifier(modifiedBy);
+        }
         /// <summary>
         /// Adds multiple items to the order and recalculates totals
         /// </summary>
@@ -428,6 +437,21 @@ namespace OrderService.Domain.Entities
             }
             
             OrderStatus = OrderStatus.Cancelled;
+            SetModifier(modifiedBy);
+        }
+        public void SetTimeForShop(DateTime deadlineUtc, string modifiedBy)
+        {
+            TimeForShop = deadlineUtc;
+            SetModifier(modifiedBy);
+        }
+        public void ExtendTimeForShop(TimeSpan extension, string modifiedBy)
+        {
+            TimeForShop = (TimeForShop ?? DateTime.UtcNow).Add(extension);
+            SetModifier(modifiedBy);
+        }
+        public void ClearTimeForShop(string modifiedBy)
+        {
+            TimeForShop = null;
             SetModifier(modifiedBy);
         }
 

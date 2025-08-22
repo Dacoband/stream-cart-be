@@ -14,12 +14,13 @@ namespace LivestreamService.Application.DTOs
         public string? VariantId { get; set; }
         //public Guid? FlashSaleId { get; set; }
         public bool IsPin { get; set; }
+        public decimal OriginalPrice { get; set; }
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public int ProductStock { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastModifiedAt { get; set; }
-        public string SKU { get; set; }
+        public string? SKU { get; set; }
 
         // Product details from product service
         public string? ProductName { get; set; }

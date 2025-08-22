@@ -38,26 +38,19 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException($"Không tìm thấy sản phẩm với ID {request.Id}");
                 }
 
-                // Verify seller owns the livestream
+                // Verify livestream exists
                 var livestream = await _livestreamRepository.GetByIdAsync(livestreamProduct.LivestreamId.ToString());
                 if (livestream == null)
                 {
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.SellerId != request.SellerId)
-                {
-                    throw new UnauthorizedAccessException("You can only pin products in your own livestream");
-                }
-
-                // Handle pinning logic
+                // Handle pinning logic: ensure only one product is pinned
                 if (request.IsPin)
                 {
-                    // Check if there's already a pinned product
                     var currentPinnedProduct = await _livestreamProductRepository.GetCurrentPinnedProductAsync(livestreamProduct.LivestreamId);
                     if (currentPinnedProduct != null && currentPinnedProduct.Id != livestreamProduct.Id)
                     {
-                        // Unpin the current pinned product
                         currentPinnedProduct.SetPin(false, request.SellerId.ToString());
                         await _livestreamProductRepository.ReplaceAsync(currentPinnedProduct.Id.ToString(), currentPinnedProduct);
                     }
@@ -67,14 +60,48 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                 livestreamProduct.SetPin(request.IsPin, request.SellerId.ToString());
                 await _livestreamProductRepository.ReplaceAsync(livestreamProduct.Id.ToString(), livestreamProduct);
 
-                // Get product details for response
+                // Build response details from Product Service
                 var product = await _productServiceClient.GetProductByIdAsync(livestreamProduct.ProductId);
 
-                ProductVariantDTO? variant = null;
+                ProductVariantDTO? variantInfo = null;
+                string variantName = string.Empty;
+                string sku = string.Empty;
+                int productStock = 0;
+
                 if (!string.IsNullOrEmpty(livestreamProduct.VariantId))
                 {
-                    variant = await _productServiceClient.GetProductVariantAsync(
+                    // Get variant basic info (SKU, stock)
+                    variantInfo = await _productServiceClient.GetProductVariantAsync(
                         livestreamProduct.ProductId, livestreamProduct.VariantId);
+
+                    // Get combination string (e.g. "Màu Đen , Model 509")
+                    string? combination = null;
+                    if (Guid.TryParse(livestreamProduct.VariantId, out var variantGuid))
+                    {
+                        combination = await _productServiceClient.GetCombinationStringByVariantIdAsync(variantGuid);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(combination))
+                    {
+                        // Normalize delimiter to " , " per requirement
+                        combination = combination.Replace(" + ", " , ");
+                    }
+
+                    variantName = !string.IsNullOrWhiteSpace(combination)
+                        ? combination!
+                        : (!string.IsNullOrWhiteSpace(variantInfo?.Name)
+                            ? variantInfo!.Name!
+                            : $"Variant {livestreamProduct.VariantId}");
+
+                    sku = variantInfo?.SKU ?? product?.SKU ?? string.Empty;
+                    productStock = variantInfo?.Stock ?? 0;
+                }
+                else
+                {
+                    // Base product without variant
+                    variantName = product?.ProductName ?? "Unknown Product";
+                    sku = product?.SKU ?? string.Empty;
+                    productStock = product?.StockQuantity ?? 0;
                 }
 
                 return new LivestreamProductDTO
@@ -83,17 +110,16 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    SKU = variant?.SKU ?? product?.SKU ?? string.Empty,
+                    SKU = sku,
                     ProductName = product?.ProductName ?? "Unknown Product",
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,
-                    ProductStock = product?.StockQuantity ?? 0,
+                    ProductStock = productStock,
                     IsPin = livestreamProduct.IsPin,
                     CreatedAt = livestreamProduct.CreatedAt,
                     LastModifiedAt = livestreamProduct.LastModifiedAt,
-                    // ✅ Fix: Correct property mapping
-                    ProductImageUrl = product?.PrimaryImageUrl ?? string.Empty,
-                    VariantName = variant?.Name ?? string.Empty
+                    ProductImageUrl = product?.PrimaryImageUrl ?? product?.ImageUrl ?? string.Empty,
+                    VariantName = variantName
                 };
             }
             catch (Exception ex)

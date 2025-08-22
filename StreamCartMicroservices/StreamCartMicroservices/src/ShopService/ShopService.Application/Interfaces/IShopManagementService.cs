@@ -247,5 +247,7 @@ namespace ShopService.Application.Interfaces
         /// <returns>Shop đã cập nhật</returns>
         Task<ShopDto> SyncProductCountFromProductServiceAsync(Guid shopId);
         Task<ShopDto> UpdateRejectedShopAsync(UpdateRejectedShopDTO createShopDto, Guid createdByAccountId, string accessToken, Guid id);
+        Task<ShopDto?> UpdateShopRatingAsync(Guid shopId, decimal newRating, string? modifier = null);
+
     }
 }

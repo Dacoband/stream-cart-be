@@ -57,6 +57,7 @@ namespace ShopService.Application.Extensions
             services.AddScoped<IMembershipService, MembershipService>();
             services.AddScoped<IShopMembershipService, ShopMembershipService>();
             services.AddScoped<IAddressServiceClient, AddressServiceClient>();
+            services.AddScoped<IShopDashboardService, ShopDashboardService>();
             return services;
         }
     }

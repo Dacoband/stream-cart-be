@@ -59,10 +59,10 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     throw new KeyNotFoundException("Livestream not found");
                 }
 
-                if (livestream.SellerId != request.SellerId)
-                {
-                    throw new UnauthorizedAccessException("You can only pin/unpin products in your own livestream");
-                }
+                //if (livestream.LivestreamHostId != request.SellerId)
+                //{
+                //    throw new UnauthorizedAccessException("You can only pin/unpin products in your own livestream");
+                //}
 
                 // ✅ IMPLEMENT SMART PINNING LOGIC - Only one product can be pinned at a time
                 if (request.IsPin)

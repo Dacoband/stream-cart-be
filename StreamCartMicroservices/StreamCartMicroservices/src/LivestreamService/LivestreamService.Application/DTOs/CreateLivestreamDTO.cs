@@ -21,7 +21,7 @@ namespace LivestreamService.Application.DTOs
 
         [StringLength(500)]
         public string? Tags { get; set; }
-
+        public Guid LivestreamHostId { get; set; }
         // ✅ THÊM DANH SÁCH SẢN PHẨM
         public List<CreateLivestreamProductItemDTO>? Products { get; set; } = new();
     }
@@ -32,7 +32,7 @@ namespace LivestreamService.Application.DTOs
         public string ProductId { get; set; } = string.Empty;
 
         public string? VariantId { get; set; }
-
+        //public decimal? OriginalPrice { get; set; }
         [Range(0, double.MaxValue)]
         public decimal? Price { get; set; } // Null = dùng giá gốc
 

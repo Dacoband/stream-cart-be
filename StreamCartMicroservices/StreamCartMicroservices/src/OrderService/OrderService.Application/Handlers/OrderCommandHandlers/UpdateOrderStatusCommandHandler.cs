@@ -40,6 +40,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             _accountServiceClient = accountServiceClient;
             _deliveryClient = deliveryClient;
             _productServiceClient = productServiceClient;
+            _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
         }
 
         public async Task<OrderDto> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)

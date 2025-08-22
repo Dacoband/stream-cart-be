@@ -157,6 +157,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     OrderDate = order.OrderDate,
                     OrderStatus = order.OrderStatus,
                     PaymentStatus = order.PaymentStatus,
+                    PaymentMethod = order.PaymentMethod,
                     ShippingAddress = new ShippingAddressDto
                     {
                         FullName = fullName,

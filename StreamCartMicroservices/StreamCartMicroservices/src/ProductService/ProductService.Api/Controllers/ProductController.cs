@@ -140,11 +140,9 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString();
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest(ApiResponse<object>.ErrorResult("User ID is missing"));
+                var userId = _currentUserService.GetUserId();
 
-                var result = await _productService.DeleteProductAsync(id, userId, reason);
+                var result = await _productService.DeleteProductAsync(id, userId.ToString(), reason);
 
                 if (!result)
                     return NotFound(ApiResponse<object>.ErrorResult($"Product with ID {id} not found"));

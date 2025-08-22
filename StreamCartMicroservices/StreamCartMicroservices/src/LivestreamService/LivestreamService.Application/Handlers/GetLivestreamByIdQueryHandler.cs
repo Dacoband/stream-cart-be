@@ -34,6 +34,7 @@ namespace LivestreamService.Application.Handlers
 
             var shop = await _shopServiceClient.GetShopByIdAsync(livestream.ShopId);
             var seller = await _accountServiceClient.GetSellerByIdAsync(livestream.SellerId);
+            var livestreamHost = await _accountServiceClient.GetAccountByIdAsync(livestream.LivestreamHostId);
 
             return new LivestreamDTO
             {
@@ -44,6 +45,8 @@ namespace LivestreamService.Application.Handlers
                 SellerName = seller?.Fullname ?? seller?.Username ?? "Unknown Seller",
                 ShopId = livestream.ShopId,
                 ShopName = shop?.ShopName ?? "Unknown Shop",
+                LivestreamHostId = livestream.LivestreamHostId,
+                LivestreamHostName = livestreamHost?.Fullname ?? livestreamHost?.Username,
                 ScheduledStartTime = livestream.ScheduledStartTime,
                 ActualStartTime = livestream.ActualStartTime,
                 ActualEndTime = livestream.ActualEndTime,

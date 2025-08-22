@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace OrderService.Infrastructure.Data
 {
@@ -24,6 +27,7 @@ namespace OrderService.Infrastructure.Data
         /// Order items collection
         /// </summary>
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Review> Reviews { get; set; }
 
         /// <summary>
         /// Creates a new instance of OrderContext
@@ -39,6 +43,10 @@ namespace OrderService.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.HasPostgresEnum<OrderStatus>(); 
+
+
+
 
             // Configure Orders entity for PostgreSQL
             modelBuilder.Entity<Orders>(entity =>
@@ -61,8 +69,9 @@ namespace OrderService.Infrastructure.Data
                     .IsRequired();
 
                 entity.Property(e => e.OrderStatus)
-                    .HasColumnName("order_status")
-                    .IsRequired();
+               .HasColumnName("order_status")
+               .IsRequired();
+
 
                 entity.Property(e => e.TotalPrice)
                     .HasColumnName("total_price")
@@ -91,6 +100,10 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.PaymentStatus)
                     .HasColumnName("payment_status");
 
+                entity.Property(e => e.PaymentMethod)
+                   .HasColumnName("payment_method")
+                   .HasMaxLength(50);
+
                 entity.Property(e => e.CustomerNotes)
                     .HasColumnName("customer_notes")
                     .HasMaxLength(1000);
@@ -104,6 +117,9 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.TrackingCode)
                     .HasColumnName("tracking_code")
                     .HasMaxLength(100);
+
+                entity.Property(e => e.TimeForShop)
+                    .HasColumnName("time_for_shop");
 
                 // Shipping From Information
                 entity.Property(e => e.FromAddress)
@@ -302,10 +318,54 @@ namespace OrderService.Infrastructure.Data
 
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });
+            modelBuilder.Entity<Review>(entity =>
+            {
+                entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.ReviewText)
+                    .HasMaxLength(2000)
+                    .IsRequired();
+
+                entity.Property(e => e.Rating)
+                    .IsRequired();
+
+                entity.Property(e => e.ImageUrls)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                        v => JsonSerializer.Deserialize<List<string>>(v, JsonSerializerOptions.Default) ?? new List<string>())
+                    .HasColumnType("text");
+
+                entity.HasIndex(e => e.ProductID);
+                entity.HasIndex(e => e.OrderID);
+                entity.HasIndex(e => e.LivestreamId);
+                entity.HasIndex(e => e.AccountID);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.Rating);
+            });
             modelBuilder
-                .HasPostgresEnum<OrderStatus>()
                 .HasPostgresEnum<PaymentStatus>();
+        }
+        private static class EnumConverters
+        {
+            public static OrderStatus ToOrderStatus(string? raw)
+            {
+                if (string.IsNullOrWhiteSpace(raw)) return OrderStatus.Waiting;
+                var norm = raw.Trim();
+                if (Enum.TryParse<OrderStatus>(norm, true, out var parsed))
+                    return parsed;
+                return OrderStatus.Waiting;
+            }
+
+            public static PaymentStatus ToPaymentStatus(string? raw)
+            {
+                if (string.IsNullOrWhiteSpace(raw))
+                    return PaymentStatus.Pending;
+
+                if (Enum.TryParse<PaymentStatus>(raw.Trim(), true, out var parsed))
+                    return parsed;
+
+                return PaymentStatus.Pending;
+            }
         }
 
     }

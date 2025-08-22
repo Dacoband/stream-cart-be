@@ -67,6 +67,7 @@ namespace LivestreamService.Api.Controllers
                     Title = request.Title,
                     Description = request.Description,
                     ShopId =Guid.Parse(shopId),
+                    LivestreamHostId = request.LivestreamHostId,
                     ScheduledStartTime = request.ScheduledStartTime,
                     ThumbnailUrl = request.ThumbnailUrl,
                     Tags = request.Tags,
@@ -116,7 +117,7 @@ namespace LivestreamService.Api.Controllers
         /// Join a livestream (authenticated users)
         /// </summary>
         [HttpGet("{id}/join")]
-       // [Authorize]
+        // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -125,27 +126,49 @@ namespace LivestreamService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-                var isCustomer = User.IsInRole("Customer");
                 var isSeller = User.IsInRole("Seller");
+                var isModerator = User.IsInRole("Moderator");
 
-                // Fetch the livestream
+                // 1) Lấy livestream
                 var livestream = await _livestreamRepository.GetByIdAsync(id.ToString());
                 if (livestream == null)
-                {
                     return NotFound(ApiResponse<object>.ErrorResult("Livestream not found"));
+
+                // 2) Tính vai trò
+                var isHost = livestream.LivestreamHostId == userId;
+
+                // Kiểm tra thuộc shop để cho phép support
+                var hasShopAccess = false;
+                try
+                {
+                    hasShopAccess = await _shopServiceClient.IsShopMemberAsync(livestream.ShopId, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Skip IsShopMemberAsync check for user {UserId}", userId);
                 }
 
-                // Check if user is the owner of the livestream
-                bool isOwner = livestream.SellerId == userId;
+                var isSupport = !isHost && hasShopAccess && (isSeller || isModerator);
 
-                // Generate join token with appropriate permissions
+                // 3) Phân quyền publish:
+                // - Host: true
+                // - Support: false (FE không mic/cam, chỉ subscribe)
+                // - Viewer: false
+                var canPublish = isHost;
+
+                // 4) Identity theo vai trò để tránh đụng độ participant
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var rolePrefix = isHost ? "host" : isSupport ? "support" : "viewer";
+                var participantIdentity = $"{rolePrefix}-{userId}-{ts}";
+
+                // 5) Tạo token
                 var token = await _livekitService.GenerateJoinTokenAsync(
                     livestream.LivekitRoomId,
-                    userId.ToString(),
-                    isOwner || isSeller // Only sellers can publish
+                    participantIdentity,
+                    canPublish
                 );
 
-                // Get shop information
+                // 6) Thông tin shop
                 var shop = await _shopServiceClient.GetShopByIdAsync(livestream.ShopId);
 
                 var result = new LivestreamDTO
@@ -156,6 +179,7 @@ namespace LivestreamService.Api.Controllers
                     SellerId = livestream.SellerId,
                     ShopId = livestream.ShopId,
                     ShopName = shop?.ShopName,
+                    LivestreamHostId = livestream.LivestreamHostId,
                     ScheduledStartTime = livestream.ScheduledStartTime,
                     ActualStartTime = livestream.ActualStartTime,
                     ActualEndTime = livestream.ActualEndTime,
@@ -167,6 +191,9 @@ namespace LivestreamService.Api.Controllers
                     ThumbnailUrl = livestream.ThumbnailUrl,
                     Tags = livestream.Tags
                 };
+
+                _logger.LogInformation("Join livestream {LivestreamId}: user {UserId}, role={Role}, canPublish={CanPublish}, identity={Identity}",
+                    id, userId, rolePrefix, canPublish, participantIdentity);
 
                 return Ok(ApiResponse<LivestreamDTO>.SuccessResult(result, "Join token generated successfully"));
             }
@@ -273,7 +300,7 @@ namespace LivestreamService.Api.Controllers
         /// Update a livestream (Seller only)
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Seller")]
+       // [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -320,7 +347,7 @@ namespace LivestreamService.Api.Controllers
         /// Start a livestream (Seller only)
         /// </summary>
         [HttpPost("{id}/start")]
-        [Authorize(Roles = "Seller")]
+        //[Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -343,10 +370,6 @@ namespace LivestreamService.Api.Controllers
             {
                 return NotFound(ApiResponse<object>.ErrorResult(ex.Message));
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid();
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error starting livestream");
@@ -358,7 +381,7 @@ namespace LivestreamService.Api.Controllers
         /// End a livestream (Seller only)
         /// </summary>
         [HttpPost("{id}/end")]
-        [Authorize(Roles = "Seller")]
+        //[Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -432,7 +455,7 @@ namespace LivestreamService.Api.Controllers
         /// Approve or reject livestream content (Admin or Moderator only)
         /// </summary>
         [HttpPost("{id}/approve-content")]
-        [Authorize(Roles = "Admin,Moderator")]
+        //[Authorize(Roles = "Admin,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -468,7 +491,7 @@ namespace LivestreamService.Api.Controllers
         /// Delete a livestream (Seller who owns it or Admin)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Seller,Admin")]
+        //[Authorize(Roles = "Seller,Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]

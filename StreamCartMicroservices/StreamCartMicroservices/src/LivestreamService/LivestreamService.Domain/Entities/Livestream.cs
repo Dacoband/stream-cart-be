@@ -9,6 +9,7 @@ namespace LivestreamService.Domain.Entities
         public string Description { get; private set; }
         public Guid SellerId { get; private set; }
         public Guid ShopId { get; private set; }
+        public Guid LivestreamHostId { get; private set; }
         public DateTime ScheduledStartTime { get; private set; }
         public DateTime? ActualStartTime { get; private set; }
         public DateTime? ActualEndTime { get; private set; }
@@ -35,6 +36,7 @@ namespace LivestreamService.Domain.Entities
             string description,
             Guid sellerId,
             Guid shopId,
+            Guid livestreamHostId,
             DateTime scheduledStartTime,
             string livekitRoomId,
             string streamKey = "",
@@ -47,6 +49,7 @@ namespace LivestreamService.Domain.Entities
             Description = description;
             SellerId = sellerId;
             ShopId = shopId;
+            LivestreamHostId = livestreamHostId;
             ScheduledStartTime = scheduledStartTime;
             LivekitRoomId = livekitRoomId;
             StreamKey = streamKey;
@@ -60,13 +63,20 @@ namespace LivestreamService.Domain.Entities
             SetModifier(createdBy);
         }
 
-        public void UpdateDetails(string title, string description, DateTime scheduledStartTime, string thumbnailUrl, string tags, string modifiedBy)
+        public void UpdateDetails(string title, string description, DateTime scheduledStartTime,
+             string thumbnailUrl, string tags, string modifiedBy, Guid requestingUserId)
         {
-            Title = title;
-            Description = description;
+            // ✅ KIỂM TRA QUYỀN: Chỉ chủ shop (SellerId) mới được update
+            if (requestingUserId != SellerId)
+            {
+                throw new UnauthorizedAccessException("Only the shop owner can update livestream details");
+            }
+
+            Title = title ?? throw new ArgumentNullException(nameof(title));
+            Description = description ?? string.Empty;
             ScheduledStartTime = scheduledStartTime;
-            ThumbnailUrl = thumbnailUrl;
-            Tags = tags;
+            ThumbnailUrl = thumbnailUrl ?? string.Empty;
+            Tags = tags ?? string.Empty;
             SetModifier(modifiedBy);
         }
 
@@ -78,17 +88,52 @@ namespace LivestreamService.Domain.Entities
                 SetModifier(modifiedBy);
             }
         }
-        public void Start(string modifiedBy)
+        public void Start(string modifiedBy, Guid requestingUserId)
         {
-            ActualStartTime = DateTime.UtcNow;
+            if (requestingUserId != LivestreamHostId)
+            {
+                throw new UnauthorizedAccessException("Only the designated livestream host can start the livestream");
+            }
+
+            if (Status)
+            {
+                throw new InvalidOperationException("Livestream has already started");
+            }
+
             Status = true;
+            ActualStartTime = DateTime.UtcNow;
             SetModifier(modifiedBy);
         }
+        //public void Start(string modifiedBy)
+        //{
+        //    ActualStartTime = DateTime.UtcNow;
+        //    Status = true;
+        //    SetModifier(modifiedBy);
+        //}
+        public void UpdateLivestreamHost(Guid newLivestreamHostId, string modifiedBy, Guid requestingUserId)
+        {
+            if (requestingUserId != SellerId)
+            {
+                throw new UnauthorizedAccessException("Only the shop owner can change the livestream host");
+            }
 
+            if (Status)
+            {
+                throw new InvalidOperationException("Cannot change host while livestream is active");
+            }
+
+            LivestreamHostId = newLivestreamHostId;
+            SetModifier(modifiedBy);
+        }
         public void End(string modifiedBy)
         {
-            ActualEndTime = DateTime.UtcNow;
+            if (!Status)
+            {
+                throw new InvalidOperationException("Livestream is not currently active");
+            }
+
             Status = false;
+            ActualEndTime = DateTime.UtcNow;
             SetModifier(modifiedBy);
         }
         public void SetPlaybackUrl(string playbackUrl)
@@ -122,6 +167,7 @@ namespace LivestreamService.Domain.Entities
             return !string.IsNullOrWhiteSpace(Title) &&
                    SellerId != Guid.Empty &&
                    ShopId != Guid.Empty &&
+                   LivestreamHostId != Guid.Empty &&
                    !string.IsNullOrWhiteSpace(LivekitRoomId);
         }
     }

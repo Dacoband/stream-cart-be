@@ -77,13 +77,11 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                 {
                     variant = await _productServiceClient.GetProductVariantAsync(request.ProductId, request.VariantId);
                 }
-
-                // ✅ LOẠI BỎ HOÀN TOÀN logic FlashSale vì field đã bị xóa
-                // Tạo LivestreamProduct entity với constructor đã được cập nhật
                 var livestreamProduct = new LivestreamService.Domain.Entities.LivestreamProduct(
                     request.LivestreamId,
                     request.ProductId,
                     request.VariantId ?? string.Empty,
+                    variant?.Price ?? product?.BasePrice ?? 0,
                     request.Price,
                     request.Stock,
                     request.IsPin,
@@ -100,8 +98,8 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                     LivestreamId = livestreamProduct.LivestreamId,
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    // ✅ LOẠI BỎ FlashSaleId vì đã bị xóa khỏi entity
                     IsPin = livestreamProduct.IsPin,
+                    OriginalPrice = livestreamProduct.OriginalPrice,
                     Price = livestreamProduct.Price,
                     Stock = livestreamProduct.Stock,
                     CreatedAt = livestreamProduct.CreatedAt,

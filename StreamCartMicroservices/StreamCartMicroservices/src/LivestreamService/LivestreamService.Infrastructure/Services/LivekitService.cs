@@ -114,7 +114,9 @@ namespace LivestreamService.Infrastructure.Services
                         room = roomName,
                         roomJoin = true,
                         canPublish = canPublish,
-                        canSubscribe = true
+                        canSubscribe = true,
+                        canPublishData = true,
+                        canUpdateOwnMetadata = true
                     }
                 };
 

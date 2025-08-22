@@ -232,6 +232,12 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("order_status")
                         .HasColumnName("order_status");
 
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("payment_method");
+
                     b.Property<PaymentStatus>("PaymentStatus")
                         .HasColumnType("payment_status")
                         .HasColumnName("payment_status");
@@ -247,6 +253,10 @@ namespace OrderService.Infrastructure.Migrations
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid")
                         .HasColumnName("shop_id");
+
+                    b.Property<DateTime?>("TimeForShop")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("time_for_shop");
 
                     b.Property<string>("ToAddress")
                         .IsRequired()
@@ -326,6 +336,87 @@ namespace OrderService.Infrastructure.Migrations
                         .HasDatabaseName("ix_orders_shop_id");
 
                     b.ToTable("orders", (string)null);
+                });
+
+            modelBuilder.Entity("OrderService.Domain.Entities.Review", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountID")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVerifiedPurchase")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("LivestreamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrderID")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProductID")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewText")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UnhelpfulCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountID");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("LivestreamId");
+
+                    b.HasIndex("OrderID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("Rating");
+
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>

@@ -1,5 +1,7 @@
 ﻿using LivestreamService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 
 namespace LivestreamService.Infrastructure.Data
 {
@@ -14,9 +16,17 @@ namespace LivestreamService.Infrastructure.Data
         public DbSet<StreamEvent> StreamEvents { get; set; }
         public DbSet<StreamView> StreamViews { get; set; }
 
+        public DbSet<LivestreamCart> LivestreamCarts { get; set; }
+        public DbSet<LivestreamCartItem> LivestreamCartItems { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            var jsonOptions = new JsonSerializerOptions(); 
+            var dictToJsonConverter = new ValueConverter<Dictionary<string, string>?, string?>(
+                v => v == null || v.Count == 0 ? null : JsonSerializer.Serialize(v, jsonOptions),
+                v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(v, jsonOptions)!
+            );
 
             // Configure Livestream entity
             modelBuilder.Entity<Livestream>(entity =>
@@ -82,7 +92,55 @@ namespace LivestreamService.Infrastructure.Data
 
                 entity.HasIndex(e => e.LivestreamId);
                 entity.HasIndex(e => e.UserId);
-            });           
+            });
+            modelBuilder.Entity<LivestreamCart>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LivestreamId).IsRequired();
+                entity.Property(e => e.ViewerId).IsRequired();
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                // Indexes
+                entity.HasIndex(e => new { e.LivestreamId, e.ViewerId }).IsUnique();
+                entity.HasIndex(e => e.ExpiresAt);
+
+                // Relationships
+                entity.HasOne(e => e.Livestream)
+                      .WithMany()
+                      .HasForeignKey(e => e.LivestreamId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // LivestreamCartItem configuration
+            modelBuilder.Entity<LivestreamCartItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProductId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.VariantId).HasMaxLength(50);
+                entity.Property(e => e.ProductName).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ShopName).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.PrimaryImage).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.LivestreamPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.OriginalPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Attributes)
+                       .HasColumnType("jsonb")
+                       .HasConversion(dictToJsonConverter);
+
+                // Indexes
+                entity.HasIndex(e => e.LivestreamCartId);
+                entity.HasIndex(e => e.LivestreamProductId);
+                entity.HasIndex(e => new { e.LivestreamCartId, e.LivestreamProductId, e.VariantId }).IsUnique();
+
+                // Relationships
+                entity.HasOne(e => e.LivestreamCart)
+                      .WithMany(c => c.Items)
+                      .HasForeignKey(e => e.LivestreamCartId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.LivestreamProduct)
+              .WithMany()
+              .HasForeignKey(e => e.LivestreamProductId)
+              .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }
