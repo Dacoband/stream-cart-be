@@ -433,7 +433,7 @@ namespace LivestreamService.Infrastructure.Services
                 _logger.LogInformation("Getting product variant with dimensions: ProductId={ProductId}, VariantId={VariantId}",
                     productId, variantId);
 
-                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/product-variants/{variantId}/dimensions");
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Failed to get product variant with dimensions {ProductId}/{VariantId}. Status: {StatusCode}",

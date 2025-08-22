@@ -9,6 +9,8 @@ namespace ProductService.Application.Interfaces
     {
         Task<IEnumerable<ProductVariantDto>> GetAllAsync();
         Task<ProductVariantDto?> GetByIdAsync(Guid id);
+        Task<ProductVariantDto1?> GetByIdAsync1(Guid id);
+
         Task<ProductVariantDto> CreateAsync(CreateProductVariantDto dto, string createdBy);
         Task<ProductVariantDto> UpdateAsync(Guid id, UpdateProductVariantDto dto, string updatedBy);
         Task<bool> DeleteAsync(Guid id, string deletedBy);
