@@ -343,5 +343,10 @@ namespace OrderService.Infrastructure.Repositories
                 .Where(o => o.OrderStatus == status && o.LastModifiedAt < cutoff)
                 .ToListAsync();
         }
+
+        public Task<Orders?> GetOrderDetailById(Guid id)
+        {
+            return _orderContext.Orders.Include(x => x.Items).Where(x=> x.Id == id).FirstOrDefaultAsync();
+        }
     }
 }
