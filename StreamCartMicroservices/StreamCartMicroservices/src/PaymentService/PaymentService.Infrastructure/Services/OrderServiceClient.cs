@@ -79,7 +79,26 @@ namespace PaymentService.Infrastructure.Services
                 throw;
             }
         }
-
+        public async Task UpdateOrderStatusAsync(Guid orderId, OrderStatus orderStatus)
+        {
+            try
+            {
+                ForwardUserToken();
+                var updateOrderStatusDto = new 
+                {
+                    Status = orderStatus
+                };
+                var response = await _httpClient.PutAsJsonAsync(
+                    $"api/orders/{orderId}/status",
+                    updateOrderStatusDto);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating status for order {OrderId}", orderId);
+                throw;
+            }
+        }
         public async Task<OrderDto?> GetOrderByIdAsync(Guid orderId)
         {
             try
