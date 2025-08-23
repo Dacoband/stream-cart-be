@@ -14,6 +14,6 @@ namespace ProductService.Infrastructure.Interfaces
             );
         public Task<List<FlashSale>> GetAllActiveFlashSalesAsync();
 
-
+        Task<List<FlashSale>> GetByShopIdAsync(Guid shopId);
     }
 }

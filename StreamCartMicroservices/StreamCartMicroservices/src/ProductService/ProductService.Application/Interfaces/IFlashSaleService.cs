@@ -16,5 +16,7 @@ namespace ProductService.Application.Interfaces
         public Task<ApiResponse<List<DetailFlashSaleDTO>>> FilterFlashSale(FilterFlashSaleDTO filterFlashSale);
         public Task<ApiResponse<DetailFlashSaleDTO>> GetFlashSaleById(string id);
         public Task<ApiResponse<bool>> DeleteFlashsale(string id, string userId, string shopId);
+        Task<ApiResponse<List<DetailFlashSaleDTO>>> GetFlashSalesByShopIdAsync(string shopId, FilterFlashSaleDTO filter);
+
     }
 }

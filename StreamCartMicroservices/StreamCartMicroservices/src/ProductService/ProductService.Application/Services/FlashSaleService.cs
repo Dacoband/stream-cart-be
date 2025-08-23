@@ -43,6 +43,7 @@ namespace ProductService.Application.Services
                 response.Message = "Không tìm thấy sản phẩm cần áp dụng FlashSale";
                 return response;
             }
+            request.ConvertToUtc();
 
             if (existingProduct.ShopId.ToString() != shopId)
             {
@@ -68,13 +69,18 @@ namespace ProductService.Application.Services
                 }
 
                 var existingFlashSale  = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, null);
-                if (existingFlashSale != null && existingFlashSale.Count > 0)
+                var activeConflictingSales = existingFlashSale.Where(fs => !fs.IsDeleted).ToList();
+
+                if (activeConflictingSales.Any())
                 {
+                    var conflictDetails = activeConflictingSales.Select(fs =>
+                        $"FlashSale ID: {fs.Id} (từ {TimeZoneInfo.ConvertTimeFromUtc(fs.StartTime, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")):dd/MM/yyyy HH:mm} đến {TimeZoneInfo.ConvertTimeFromUtc(fs.EndTime, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")):dd/MM/yyyy HH:mm})"
+                    ).ToList();
+
                     response.Success = false;
-                    response.Message = "Chỉ có thể áp dụng 1 FlashSale cho cùng 1 thời điểm";
+                    response.Message = $"Sản phẩm này đã có FlashSale trong khoảng thời gian trùng lặp:\n{string.Join("\n", conflictDetails)}\n\nVui lòng chọn thời gian khác cho FlashSale mới.";
                     return response;
                 }
-                request.ConvertToUtc();
                 var flashSaleCreated = new FlashSale()
                 {
                     ProductId = request.ProductId,
@@ -126,9 +132,15 @@ namespace ProductService.Application.Services
                     }
 
                     var existingFlashSale = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, request.ProductId, existingVariant.Id);
-                    if (existingFlashSale.Count > 0)
+                    var activeConflictingSales = existingFlashSale.Where(fs => !fs.IsDeleted).ToList();
+
+                    if (activeConflictingSales.Any())
                     {
-                        errorMessages.Add($"Phân loại {variantId} đã có FlashSale trong cùng thời điểm.");
+                        var conflictDetails = activeConflictingSales.Select(fs =>
+                            $"FlashSale ID: {fs.Id} (từ {TimeZoneInfo.ConvertTimeFromUtc(fs.StartTime, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")):dd/MM/yyyy HH:mm} đến {TimeZoneInfo.ConvertTimeFromUtc(fs.EndTime, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")):dd/MM/yyyy HH:mm})"
+                        ).ToList();
+
+                        errorMessages.Add($"Phân loại {variantId} đã có FlashSale trong khoảng thời gian trùng lặp:\n{string.Join("\n", conflictDetails)}");
                         continue;
                     }
 
@@ -475,6 +487,123 @@ namespace ProductService.Application.Services
                 return response;
             }
         }
+        public async Task<ApiResponse<List<DetailFlashSaleDTO>>> GetFlashSalesByShopIdAsync(string shopId, FilterFlashSaleDTO filter)
+        {
+            var response = new ApiResponse<List<DetailFlashSaleDTO>>
+            {
+                Success = true,
+                Message = "Lấy danh sách FlashSale của shop thành công",
+                Data = new List<DetailFlashSaleDTO>()
+            };
 
+            try
+            {
+                if (!Guid.TryParse(shopId, out Guid shopGuid))
+                {
+                    response.Success = false;
+                    response.Message = "Shop ID không hợp lệ";
+                    return response;
+                }
+
+                // Lấy tất cả FlashSale của shop
+                var shopFlashSales = await _flashSaleRepository.GetByShopIdAsync(shopGuid);
+                var query = shopFlashSales.AsQueryable();
+
+                var nowUtc = DateTime.UtcNow;
+
+                // Lọc theo IsActive
+                if (filter.IsActive.HasValue)
+                {
+                    if (filter.IsActive.Value)
+                    {
+                        // Lọc FlashSale đang hoạt động: không bị xóa, trong thời gian hiệu lực (UTC)
+                        query = query.Where(f => !f.IsDeleted &&
+                                                f.StartTime <= nowUtc &&
+                                                f.EndTime >= nowUtc);
+                    }
+                    else
+                    {
+                        // Lọc FlashSale không hoạt động: bị xóa hoặc ngoài thời gian hiệu lực (UTC)
+                        query = query.Where(f => f.IsDeleted ||
+                                                f.StartTime > nowUtc ||
+                                                f.EndTime < nowUtc);
+                    }
+                }
+                if (filter.ProductId != null && filter.ProductId.Any())
+                {
+                    query = query.Where(f => filter.ProductId.Contains(f.ProductId));
+                }
+
+                // Lọc theo VariantId
+                if (filter.VariantId != null && filter.VariantId.Any())
+                {
+                    query = query.Where(f => f.VariantId.HasValue && filter.VariantId.Contains(f.VariantId.Value));
+                }
+
+                // Lọc thời gian với UTC
+                if (filter.StartDate.HasValue)
+                {
+                    var startUtc = filter.StartDate.Value.Kind == DateTimeKind.Utc
+                        ? filter.StartDate.Value
+                        : TimeZoneInfo.ConvertTimeToUtc(filter.StartDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+                    query = query.Where(f => f.EndTime >= startUtc);
+                }
+
+                if (filter.EndDate.HasValue)
+                {
+                    var endUtc = filter.EndDate.Value.Kind == DateTimeKind.Utc
+                        ? filter.EndDate.Value
+                        : TimeZoneInfo.ConvertTimeToUtc(filter.EndDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+                    query = query.Where(f => f.StartTime <= endUtc);
+                }
+                switch (filter.OrderBy)
+                {
+                    case FlashSaleOrderBy.EndDate:
+                        query = filter.OrderDirection == OrderDirection.Desc
+                            ? query.OrderByDescending(f => f.EndTime)
+                            : query.OrderBy(f => f.EndTime);
+                        break;
+
+                    case FlashSaleOrderBy.StartDate:
+                    default:
+                        query = filter.OrderDirection == OrderDirection.Desc
+                            ? query.OrderByDescending(f => f.StartTime)
+                            : query.OrderBy(f => f.StartTime);
+                        break;
+                }
+
+                // Phân trang
+                var pageIndex = filter.PageIndex ?? 0;
+                var pageSize = filter.PageSize ?? 10;
+                query = query.Skip(pageIndex * pageSize).Take(pageSize);
+
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+                // Map DTO với timezone conversion
+                response.Data = query.Select(f => new DetailFlashSaleDTO
+                {
+                    Id = f.Id,
+                    ProductId = f.ProductId,
+                    VariantId = f.VariantId != Guid.Empty ? f.VariantId : null,
+                    FlashSalePrice = f.FlashSalePrice,
+                    QuantityAvailable = f.QuantityAvailable,
+                    QuantitySold = f.QuantitySold,
+                    IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
+                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
+                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
+                }).ToList();
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi lấy danh sách FlashSale của shop: " + ex.Message;
+                return response;
+            }
+        }
     }
+
 }

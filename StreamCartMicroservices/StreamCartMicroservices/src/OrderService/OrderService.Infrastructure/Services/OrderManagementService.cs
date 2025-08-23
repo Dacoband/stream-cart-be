@@ -604,6 +604,10 @@ namespace OrderService.Infrastructure.Services
                         }
 
                         break;
+                    case OrderStatus.Shipped:
+                        order.UpdateStatus(OrderStatus.Shipped, request.ModifiedBy);
+                        message = "Đơn hàng đã được giao cho đơn vị vận chuyển";
+                        break;
 
                     case OrderStatus.Packed:
                         order.UpdateStatus(OrderStatus.Packed, request.ModifiedBy);
