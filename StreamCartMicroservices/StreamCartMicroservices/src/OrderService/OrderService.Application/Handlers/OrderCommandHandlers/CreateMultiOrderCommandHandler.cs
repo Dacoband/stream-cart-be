@@ -112,6 +112,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     else
                     {
                        order.OrderStatus = Domain.Enums.OrderStatus.Waiting;
+
                     }
                     // Lưu đơn hàng ban đầu
                     await _orderRepository.InsertAsync(order);    

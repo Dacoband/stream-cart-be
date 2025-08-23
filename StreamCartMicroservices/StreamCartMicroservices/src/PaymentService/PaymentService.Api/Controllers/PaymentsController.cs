@@ -432,7 +432,7 @@ namespace PaymentService.Api.Controllers
 
                 // Xử lý callback
                 var result = await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
-
+                
                 // LUÔN REDIRECT về frontend (bỏ check header)
                 // Lấy URL base từ cấu hình
                 string baseRedirectUrl = status == "success"
