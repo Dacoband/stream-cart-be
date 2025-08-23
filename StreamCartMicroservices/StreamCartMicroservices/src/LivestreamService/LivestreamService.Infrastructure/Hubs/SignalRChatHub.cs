@@ -70,7 +70,8 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 _logger.LogInformation("User {UserId} with role {Role} started viewing livestream {LivestreamId}",
                     userId, userRole, livestreamId);
-
+                var groupName = $"livestream_viewers_{livestreamId}";
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
                 // Add to the livestream group for targeted updates
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
 
@@ -78,7 +79,18 @@ namespace LivestreamService.Infrastructure.Hubs
                 await UpdateMaxCustomerViewerCount(livestreamGuid);
 
                 // Broadcast updated viewer stats
+
                 await BroadcastViewerStats(livestreamGuid);
+                await Clients.Caller.SendAsync("ViewingStarted", new
+                {
+                    LivestreamId = livestreamId,
+                    UserId = userId,
+                    Role = userRole,
+                    GroupName = groupName,
+                    ConnectionId = Context.ConnectionId,
+                    Message = "✅ Successfully started viewing livestream",
+                    Timestamp = DateTime.UtcNow
+                });
             }
             catch (Exception ex)
             {
@@ -1337,21 +1349,45 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 if (result != null)
                 {
-                    await Clients.Group($"livestream_viewers_{result.LivestreamId}")
-                        .SendAsync("LivestreamProductStockUpdated", new
+                    var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                .GetRequiredService<ILivestreamCartItemRepository>();
+
+                    if (cartItemRepository != null)
+                    {
+                        try
                         {
-                            Id = id,
-                            LivestreamId = result.LivestreamId,
-                            ProductId = result.ProductId,
-                            VariantId = result.VariantId,
-                            NewStock = newStock,
-                            OriginalPrice = result.OriginalPrice,
-                            Price = result.Price,
-                            ProductName = result.ProductName,
-                            UpdatedBy = userId,
-                            Timestamp = DateTime.UtcNow,
-                            Message = $"📦 {result.ProductName} - Stock được cập nhật: {newStock} sản phẩm còn lại"
-                        });
+                            await cartItemRepository.UpdateStockForLivestreamProductAsync(result.Id, newStock);
+                            _logger.LogInformation("✅ Updated cart items stock for livestream product {ProductId}", result.Id);
+                        }
+                        catch (Exception cartEx)
+                        {
+                            _logger.LogWarning(cartEx, "⚠️ Failed to update cart items stock for livestream product {ProductId}", result.Id);
+                        }
+                    }
+                    var stockUpdateData = new
+                    {
+                        Id = id,
+                        LivestreamId = result.LivestreamId,
+                        ProductId = result.ProductId,
+                        VariantId = result.VariantId,
+                        NewStock = newStock,
+                        OriginalPrice = result.OriginalPrice,
+                        Price = result.Price,
+                        ProductName = result.ProductName,
+                        UpdatedBy = userId,
+                        Timestamp = DateTime.UtcNow,
+                        Message = $"📦 {result.ProductName} - Stock được cập nhật: {newStock} sản phẩm còn lại"
+                    };
+
+                    var groupName = $"livestream_viewers_{result.LivestreamId}";
+
+                    // ✅ Broadcast multiple event names for better compatibility
+                    await Clients.Group(groupName).SendAsync("LivestreamProductStockUpdated", stockUpdateData);
+                    await Clients.Group(groupName).SendAsync("ProductStockUpdated", stockUpdateData); // Legacy support
+                    await Clients.Group(groupName).SendAsync("StockUpdated", stockUpdateData); // Generic support
+
+                    await Clients.Group($"livestream_{result.LivestreamId}")
+                        .SendAsync("LivestreamProductStockUpdated", stockUpdateData);
 
                     await Clients.Caller.SendAsync("UpdateSuccess", new
                     {
