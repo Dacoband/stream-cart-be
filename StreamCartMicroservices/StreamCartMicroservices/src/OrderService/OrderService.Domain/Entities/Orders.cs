@@ -86,14 +86,18 @@ namespace OrderService.Domain.Entities
             // Danh sách các trạng thái chuyển hợp lệ
             var validTransitions = new Dictionary<OrderStatus, List<OrderStatus>>
     {
-        { OrderStatus.Waiting, new() { OrderStatus.Pending, OrderStatus.Cancelled } },
-        { OrderStatus.Pending, new() { OrderStatus.Processing, OrderStatus.Cancelled, OrderStatus.Waiting } },
-        { OrderStatus.Processing, new() { OrderStatus.Packed } },
-        { OrderStatus.Packed, new() { OrderStatus.OnDelivere } },
-        { OrderStatus.Cancelled, new() { OrderStatus.Delivered } },
-        { OrderStatus.Delivered, new() { OrderStatus.Completed, OrderStatus.Returning } },
-        { OrderStatus.Returning, new() { OrderStatus.Refunded, OrderStatus.Completed } },
-    };
+                { OrderStatus.Waiting, new() { OrderStatus.Pending, OrderStatus.Cancelled } },
+                { OrderStatus.Pending, new() { OrderStatus.Processing, OrderStatus.Cancelled, OrderStatus.Waiting } },
+                { OrderStatus.Processing, new() { OrderStatus.Packed, OrderStatus.Shipped, OrderStatus.Cancelled } }, // ✅ THÊM Shipped
+                { OrderStatus.Packed, new() { OrderStatus.OnDelivere, OrderStatus.Shipped } }, // ✅ THÊM Shipped cho Packed
+                { OrderStatus.Shipped, new() { OrderStatus.OnDelivere, OrderStatus.Delivered } }, // ✅ THÊM Shipped -> Delivered
+                { OrderStatus.OnDelivere, new() { OrderStatus.Delivered, OrderStatus.Returning } }, // ✅ THÊM OnDelivere
+                { OrderStatus.Delivered, new() { OrderStatus.Completed, OrderStatus.Returning } },
+                { OrderStatus.Returning, new() { OrderStatus.Refunded, OrderStatus.Completed } },
+                { OrderStatus.Refunded, new() { OrderStatus.Completed } }, // ✅ THÊM Refunded
+                { OrderStatus.Completed, new() { } }, // ✅ Completed không thể chuyển sang trạng thái khác
+                { OrderStatus.Cancelled, new() { } }, // ✅ Cancelled không thể chuyển sang trạng thái khác (trừ một số trường hợp đặc biệt)
+            };
 
             // Không được hủy nếu đã giao hàng
             if (newStatus == OrderStatus.Cancelled && OrderStatus == OrderStatus.Delivered)

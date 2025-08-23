@@ -88,6 +88,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     OrderStatus = order.OrderStatus,
                     PaymentStatus = order.PaymentStatus,
                     ShippingAddress = shippingAddressDto,
+                    TimeForShop = order.TimeForShop,
                     ShippingProviderId = order.ShippingProviderId,
                     PaymentMethod = order.PaymentMethod,
                     ShippingFee = order.ShippingFee,
