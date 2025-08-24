@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CartService.Application.Command
 {
-    public class AddToCartCommand : IRequest<ApiResponse<CreateCartDTO>>
+    public class AddToCartCommand : IRequest<ApiResponse<CreateCartResponseDTO>>
     {
         public string UserId { get; set; }
         public string ProductId { get; set; }

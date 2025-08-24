@@ -61,6 +61,13 @@ namespace DeliveryService.Application.Services
                 {
                     throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
                 }
+                int? selectedServiceTypeId = serviceList
+    .OrderByDescending(s => s.ServiceTypeId == 3) // Ưu tiên 3
+    .ThenByDescending(s => s.ServiceTypeId == 2) // rồi 2
+    .ThenByDescending(s => s.ServiceTypeId == 1) // cuối cùng 1
+    .Select(s => (int?)s.ServiceTypeId)
+    .FirstOrDefault();
+
                 //Tính ngày giao dự kiến
                 var expectedDeliveryTime = await GetLeadTimeAsync(client,fromDistrictId,fromWardCode!,toDistrictId,toWardCode!,input.ServiceTypeId);
                 expectedDeliveryTime = expectedDeliveryTime.AddDays(1);
@@ -97,7 +104,7 @@ namespace DeliveryService.Application.Services
                     FromWardName = input.FromWard,
                     FromAddress = input.FromAddress,
 
-                    ServiceTypeId = input.ServiceTypeId,
+                    ServiceTypeId = (int)selectedServiceTypeId,
                     PaymentTypeId = 1,
                     RequiredNote = DeliveryNoteEnum.KHONGCHOXEMHANG,
                     Items = ghnItems,
@@ -301,6 +308,12 @@ namespace DeliveryService.Application.Services
                     var serviceList = await GetServiceIdAsync(client, fromDistrictId, toDistrictId);
                     if (serviceList == null )
                         throw new Exception("Không tìm thấy dịch vụ vận chuyển phù hợp.");
+                    int? selectedServiceTypeId = serviceList
+    .OrderByDescending(s => s.ServiceTypeId == 3) // Ưu tiên 3
+    .ThenByDescending(s => s.ServiceTypeId == 2) // rồi 2
+    .ThenByDescending(s => s.ServiceTypeId == 1) // cuối cùng 1
+    .Select(s => (int?)s.ServiceTypeId)
+    .FirstOrDefault();
 
                     // 5. Tính khối lượng, kích thước đơn hàng
                     var ghnItems = shopId.Items.Select(i => new GHNItem
@@ -326,7 +339,7 @@ namespace DeliveryService.Application.Services
                             ToDistrictId = toDistrictId,
                             FromWardCode = fromWardCode,
                             ToWardCode = toWardCode,
-                            ServiceTypeId = serviceList[0].ServiceTypeId,
+                            ServiceTypeId = (int)selectedServiceTypeId,
                             Items = ghnItems,
                             Weight = totalWeight,
                             Length = totalLength,

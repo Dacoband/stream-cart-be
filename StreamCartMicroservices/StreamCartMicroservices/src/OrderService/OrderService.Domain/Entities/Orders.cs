@@ -26,7 +26,7 @@ namespace OrderService.Domain.Entities
         public string CustomerNotes { get; private set; }
         public DateTime? EstimatedDeliveryDate { get;  set; }
         public DateTime? ActualDeliveryDate { get; private set; }
-        public string TrackingCode { get; private set; }
+        public string TrackingCode { get;  set; }
         public DateTime? TimeForShop { get; private set; }
 
 

@@ -10,7 +10,7 @@ namespace CartService.Application.Interfaces
 {
     public interface ICartService
     {
-        public Task<ApiResponse<CreateCartDTO>> AddToCart(CreateCartDTO cart, string userId);
+        public Task<ApiResponse<CreateCartResponseDTO>> AddToCart(CreateCartDTO cart, string userId);
         public Task<ApiResponse<CartResponeDTO>> GetMyCart(string userId);
         public Task<ApiResponse<PreviewOrderResponseDTO>> PreviewOrder(PreviewOrderRequestDTO order);
         public Task<ApiResponse<bool>> DeleteCart(List<Guid> cartItemId);
