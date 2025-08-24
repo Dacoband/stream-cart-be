@@ -26,7 +26,7 @@ namespace ShopService.Application.DTOs.Membership
         public int Duration { get; set; } // in days, weeks, etc.
 
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng sản phẩm tối đa phải lớn hơn 0")]
-        public int MaxProduct { get; set; }
+        public int MaxModerator { get; set; }
 
         [Range(0, int.MaxValue, ErrorMessage = "Thời gian Livestream tối đa phải lớn hơn 0(phút)")]
         public int MaxLivestream { get; set; }
