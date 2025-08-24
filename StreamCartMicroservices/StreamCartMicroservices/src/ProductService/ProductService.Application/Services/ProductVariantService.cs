@@ -27,6 +27,10 @@ namespace ProductService.Application.Services
         {
             return await _mediator.Send(new GetProductVariantByIdQuery { Id = id });
         }
+        public async Task<ProductVariantDto1?> GetByIdAsync1(Guid id)
+        {
+            return await _mediator.Send(new GetProductVariantById1Query { Id = id });
+        }
 
         public async Task<ProductVariantDto> CreateAsync(CreateProductVariantDto dto, string createdBy)
         {

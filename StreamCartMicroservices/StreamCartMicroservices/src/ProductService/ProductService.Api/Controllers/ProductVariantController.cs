@@ -195,5 +195,24 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Error updating product variant stocks: {ex.Message}"));
             }
         }
+        [HttpGet("{id}/dimensions")]
+        [ProducesResponseType(typeof(ApiResponse<ProductVariantDto1>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetVariantWithDimensions(Guid id)
+        {
+            try
+            {
+                // You'll need to implement this in your service or use the existing GetByIdAsync
+                var variant = await _service.GetByIdAsync1(id);
+                if (variant == null)
+                    return NotFound(ApiResponse<object>.ErrorResult($"Product variant with ID {id} not found"));
+                return Ok(ApiResponse<ProductVariantDto1>.SuccessResult(variant));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Error getting product variant with dimensions: {ex.Message}"));
+            }
+        }
+
     }
 }

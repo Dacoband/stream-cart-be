@@ -64,7 +64,41 @@ namespace ProductService.Api.Controllers
 
 
         }
+        [HttpGet("my-shop")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetMyShopFlashSales([FromQuery] FilterFlashSaleDTO filterFlashSaleDTO)
+        {
+            try
+            {
+                string shopId = User.FindFirst("ShopId")?.Value;
+                if (string.IsNullOrEmpty(shopId))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop trong token"));
+                }
 
+                var query = new GetFlashSalesByShopIdQuery()
+                {
+                    ShopId = shopId,
+                    Filter = filterFlashSaleDTO
+                };
+
+                var shopFlashSales = await _mediator.Send(query);
+                if (shopFlashSales.Success)
+                {
+                    return Ok(shopFlashSales);
+                }
+                else
+                {
+                    return BadRequest(shopFlashSales);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy danh sách FlashSale của shop: {ex.Message}"));
+            }
+        }
         [HttpPut("{id}")]
         [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<FlashSale>), 200)]

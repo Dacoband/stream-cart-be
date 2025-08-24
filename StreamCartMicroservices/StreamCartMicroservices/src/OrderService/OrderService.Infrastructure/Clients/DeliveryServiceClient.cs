@@ -31,7 +31,7 @@ namespace OrderService.Infrastructure.Clients
 
                 var content = new StringContent(JsonSerializer.Serialize(deliveryCode), Encoding.UTF8, "application/json");
 
-               
+
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -62,14 +62,27 @@ namespace OrderService.Infrastructure.Clients
             {
                 var url = "https://brightpa.me/api/deliveries/create-ghn-order";
 
-                var json = JsonSerializer.Serialize(request);
+                // ✅ Log request payload để debug
+                _logger.LogInformation("Creating GHN order with request: {@Request}", request);
+
+                var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                });
+
+                _logger.LogDebug("GHN Request JSON: {Json}", json);
+
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-               
+                _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await _httpClient.PostAsync(url, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
+
+                _logger.LogInformation("GHN Response: Status={StatusCode}, Content={Content}",
+                    response.StatusCode, responseContent);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -89,4 +102,4 @@ namespace OrderService.Infrastructure.Clients
             }
         }
     }
-}
+ }

@@ -28,8 +28,10 @@ namespace LivestreamService.Infrastructure.Hubs
         private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId, string role, DateTime startTime)> _activeViewers = new();
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IMediator _mediator; // ✅ ADD: For handling commands
+        private readonly ILivestreamProductRepository _livestreamProductRepository;
 
-        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository, ILivestreamRepository livestreamRepository, IAccountServiceClient accountServiceClient,IMediator mediator)
+
+        public SignalRChatHub(ILogger<SignalRChatHub> logger, ICurrentUserService currentUserService, IStreamViewRepository streamViewRepository, ILivestreamRepository livestreamRepository, IAccountServiceClient accountServiceClient, IMediator mediator, ILivestreamProductRepository livestreamProductRepository)
         {
             _logger = logger;
             _currentUserService = currentUserService;
@@ -37,6 +39,7 @@ namespace LivestreamService.Infrastructure.Hubs
             _livestreamRepository = livestreamRepository;
             _accountServiceClient = accountServiceClient;
             _mediator = mediator;
+            _livestreamProductRepository = livestreamProductRepository;
         }
 
         public async Task StartViewingLivestream(string livestreamId)
@@ -67,7 +70,8 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 _logger.LogInformation("User {UserId} with role {Role} started viewing livestream {LivestreamId}",
                     userId, userRole, livestreamId);
-
+                var groupName = $"livestream_viewers_{livestreamId}";
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
                 // Add to the livestream group for targeted updates
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
 
@@ -75,7 +79,18 @@ namespace LivestreamService.Infrastructure.Hubs
                 await UpdateMaxCustomerViewerCount(livestreamGuid);
 
                 // Broadcast updated viewer stats
+
                 await BroadcastViewerStats(livestreamGuid);
+                await Clients.Caller.SendAsync("ViewingStarted", new
+                {
+                    LivestreamId = livestreamId,
+                    UserId = userId,
+                    Role = userRole,
+                    GroupName = groupName,
+                    ConnectionId = Context.ConnectionId,
+                    Message = "✅ Successfully started viewing livestream",
+                    Timestamp = DateTime.UtcNow
+                });
             }
             catch (Exception ex)
             {
@@ -1334,21 +1349,45 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 if (result != null)
                 {
-                    await Clients.Group($"livestream_viewers_{result.LivestreamId}")
-                        .SendAsync("LivestreamProductStockUpdated", new
+                    var cartItemRepository = Context.GetHttpContext()?.RequestServices
+                .GetRequiredService<ILivestreamCartItemRepository>();
+
+                    if (cartItemRepository != null)
+                    {
+                        try
                         {
-                            Id = id,
-                            LivestreamId = result.LivestreamId,
-                            ProductId = result.ProductId,
-                            VariantId = result.VariantId,
-                            NewStock = newStock,
-                            OriginalPrice = result.OriginalPrice,
-                            Price = result.Price,
-                            ProductName = result.ProductName,
-                            UpdatedBy = userId,
-                            Timestamp = DateTime.UtcNow,
-                            Message = $"📦 {result.ProductName} - Stock được cập nhật: {newStock} sản phẩm còn lại"
-                        });
+                            await cartItemRepository.UpdateStockForLivestreamProductAsync(result.Id, newStock);
+                            _logger.LogInformation("✅ Updated cart items stock for livestream product {ProductId}", result.Id);
+                        }
+                        catch (Exception cartEx)
+                        {
+                            _logger.LogWarning(cartEx, "⚠️ Failed to update cart items stock for livestream product {ProductId}", result.Id);
+                        }
+                    }
+                    var stockUpdateData = new
+                    {
+                        Id = id,
+                        LivestreamId = result.LivestreamId,
+                        ProductId = result.ProductId,
+                        VariantId = result.VariantId,
+                        NewStock = newStock,
+                        OriginalPrice = result.OriginalPrice,
+                        Price = result.Price,
+                        ProductName = result.ProductName,
+                        UpdatedBy = userId,
+                        Timestamp = DateTime.UtcNow,
+                        Message = $"📦 {result.ProductName} - Stock được cập nhật: {newStock} sản phẩm còn lại"
+                    };
+
+                    var groupName = $"livestream_viewers_{result.LivestreamId}";
+
+                    // ✅ Broadcast multiple event names for better compatibility
+                    await Clients.Group(groupName).SendAsync("LivestreamProductStockUpdated", stockUpdateData);
+                    await Clients.Group(groupName).SendAsync("ProductStockUpdated", stockUpdateData); // Legacy support
+                    await Clients.Group(groupName).SendAsync("StockUpdated", stockUpdateData); // Generic support
+
+                    await Clients.Group($"livestream_{result.LivestreamId}")
+                        .SendAsync("LivestreamProductStockUpdated", stockUpdateData);
 
                     await Clients.Caller.SendAsync("UpdateSuccess", new
                     {
@@ -1378,6 +1417,67 @@ namespace LivestreamService.Infrastructure.Hubs
         /// Real-time xóa sản phẩm khỏi livestream bằng ID
         /// </summary>
         /// <param name="id">ID của livestream product</param>
+        //public async Task DeleteLivestreamProductById(string id)
+        //{
+        //    if (!IsUserAuthenticated())
+        //    {
+        //        await Clients.Caller.SendAsync("Error", "Authentication required");
+        //        return;
+        //    }
+
+        //    try
+        //    {
+        //        var userId = GetCurrentUserId();
+        //        if (string.IsNullOrEmpty(userId))
+        //        {
+        //            await Clients.Caller.SendAsync("Error", "User ID not found");
+        //            return;
+        //        }
+
+        //        var userGuid = Guid.Parse(userId);
+
+        //        // Execute delete command
+        //        var command = new DeleteLivestreamProductByIdCommand
+        //        {
+        //            Id = Guid.Parse(id),
+        //            SellerId = userGuid
+        //        };
+
+        //        var result = await _mediator.Send(command);
+
+        //        if (result)
+        //        {
+        //            // ✅ BROADCAST real-time product removal to all viewers
+        //            await Clients.Group($"livestream_viewers_*")
+        //                .SendAsync("LivestreamProductDeleted", new
+        //                {
+        //                    Id = id,
+        //                    DeletedBy = userId,
+        //                    Timestamp = DateTime.UtcNow,
+        //                    Message = "🗑️ Một sản phẩm đã được gỡ khỏi livestream"
+        //                });
+
+        //            await Clients.Caller.SendAsync("UpdateSuccess", new
+        //            {
+        //                Action = "LivestreamProductDeleted",
+        //                Id = id,
+        //                Message = "Sản phẩm đã được xóa khỏi livestream"
+        //            });
+
+        //            _logger.LogInformation("✅ Real-time livestream product delete: Product ID {Id} removed",
+        //                id);
+        //        }
+        //        else
+        //        {
+        //            await Clients.Caller.SendAsync("Error", "Failed to delete livestream product");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error deleting livestream product real-time");
+        //        await Clients.Caller.SendAsync("Error", $"Delete product failed: {ex.Message}");
+        //    }
+        //}
         public async Task DeleteLivestreamProductById(string id)
         {
             if (!IsUserAuthenticated())
@@ -1395,47 +1495,107 @@ namespace LivestreamService.Infrastructure.Hubs
                     return;
                 }
 
-                var userGuid = Guid.Parse(userId);
+                if (!Guid.TryParse(id, out var productGuid))
+                {
+                    await Clients.Caller.SendAsync("Error", "Invalid livestream product id");
+                    return;
+                }
 
-                // Execute delete command
+                // 1. Load current livestream product BEFORE deleting to know which group to broadcast
+                var lsProduct = await _livestreamProductRepository.GetByIdAsync(id);
+                if (lsProduct == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Livestream product not found");
+                    return;
+                }
+
+                var livestreamId = lsProduct.LivestreamId;
+                var wasPinned = lsProduct.IsPin;
+                var productId = lsProduct.ProductId;
+                var variantId = lsProduct.VariantId;
+
+                // 2. Execute delete command
                 var command = new DeleteLivestreamProductByIdCommand
                 {
-                    Id = Guid.Parse(id),
-                    SellerId = userGuid
+                    Id = productGuid,
+                    SellerId = Guid.Parse(userId)
                 };
-
                 var result = await _mediator.Send(command);
-
-                if (result)
-                {
-                    // ✅ BROADCAST real-time product removal to all viewers
-                    await Clients.Group($"livestream_viewers_*")
-                        .SendAsync("LivestreamProductDeleted", new
-                        {
-                            Id = id,
-                            DeletedBy = userId,
-                            Timestamp = DateTime.UtcNow,
-                            Message = "🗑️ Một sản phẩm đã được gỡ khỏi livestream"
-                        });
-
-                    await Clients.Caller.SendAsync("UpdateSuccess", new
-                    {
-                        Action = "LivestreamProductDeleted",
-                        Id = id,
-                        Message = "Sản phẩm đã được xóa khỏi livestream"
-                    });
-
-                    _logger.LogInformation("✅ Real-time livestream product delete: Product ID {Id} removed",
-                        id);
-                }
-                else
+                if (!result)
                 {
                     await Clients.Caller.SendAsync("Error", "Failed to delete livestream product");
+                    return;
                 }
+
+                var group = $"livestream_viewers_{livestreamId}";
+
+                // 3. Broadcast deletion to the correct livestream group
+                await Clients.Group(group).SendAsync("LivestreamProductDeleted", new
+                {
+                    Id = id,
+                    LivestreamId = livestreamId,
+                    ProductId = productId,
+                    VariantId = variantId,
+                    WasPinned = wasPinned,
+                    DeletedBy = userId,
+                    Timestamp = DateTime.UtcNow,
+                    Message = "🗑️ Sản phẩm đã được gỡ khỏi livestream"
+                });
+
+                // 4. Send success ack to caller
+                await Clients.Caller.SendAsync("UpdateSuccess", new
+                {
+                    Action = "LivestreamProductDeleted",
+                    Id = id,
+                    LivestreamId = livestreamId,
+                    Message = "Xóa sản phẩm livestream thành công"
+                });
+                // 5. If it was pinned, refresh pinned list (non-blocking)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (wasPinned)
+                        {
+                            var pinned = (await _mediator.Send(new GetPinnedProductsQuery
+                            {
+                                LivestreamId = livestreamId,
+                                Limit = 5
+                            }))?.ToList() ?? new List<LivestreamProductDTO>();
+
+                            await Clients.Group(group).SendAsync("PinnedProductsUpdated", new
+                            {
+                                LivestreamId = livestreamId,
+                                PinnedProducts = pinned,
+                                Count = pinned.Count,
+                                Timestamp = DateTime.UtcNow
+                            });
+                        }
+
+                        // 6. Refresh full product list so FE doesn’t need manual reload
+                        var refreshed = (await _mediator.Send(new GetLivestreamProductsQuery
+                        {
+                            LivestreamId = livestreamId
+                        }))?.ToList() ?? new List<LivestreamProductDTO>();
+
+                        await Clients.Group(group).SendAsync("LivestreamProductsRefreshed", new
+                        {
+                            LivestreamId = livestreamId,
+                            Products = refreshed,
+                            Count = refreshed.Count,
+                            Timestamp = DateTime.UtcNow
+                        });
+                    }
+                    catch (Exception innerEx)
+                    {
+                        _logger.LogWarning(innerEx, "Post-delete refresh failed for livestream {LivestreamId}", livestreamId);
+                    }
+                });
+                _logger.LogInformation("✅ Deleted livestream product {ProductId} (LivestreamId={LivestreamId})", id, livestreamId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting livestream product real-time");
+                _logger.LogError(ex, "Error deleting livestream product real-time (Id={Id})", id);
                 await Clients.Caller.SendAsync("Error", $"Delete product failed: {ex.Message}");
             }
         }

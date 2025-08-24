@@ -52,7 +52,7 @@ namespace PaymentService.Application.Handlers
                         await _orderServiceClient.UpdateOrderPaymentStatusAsync(
                             payment.OrderId,
                             Domain.Enums.PaymentStatus.Paid);
-
+                      
                         _logger.LogInformation("Order {OrderId} payment status updated to Paid (idempotent)", payment.OrderId);
                     }
                     catch (Exception ex)
@@ -119,7 +119,9 @@ namespace PaymentService.Application.Handlers
                         await _orderServiceClient.UpdateOrderPaymentStatusAsync(
                             payment.OrderId,
                             Domain.Enums.PaymentStatus.Paid);
-
+                        await _orderServiceClient.UpdateOrderStatusAsync(
+                            payment.OrderId,
+                            Domain.Enums.OrderStatus.Pending);
                         _logger.LogInformation("Order {OrderId} payment status updated to Paid", payment.OrderId);
                     }
                     catch (Exception ex)

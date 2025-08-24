@@ -24,5 +24,7 @@ namespace PaymentService.Application.Interfaces
         /// <param name="orderId">Order ID</param>
         /// <returns>Order details if found</returns>
         Task<OrderDto?> GetOrderByIdAsync(Guid orderId);
+
+        Task UpdateOrderStatusAsync(Guid orderId, OrderStatus orderStatus);
     }
 }

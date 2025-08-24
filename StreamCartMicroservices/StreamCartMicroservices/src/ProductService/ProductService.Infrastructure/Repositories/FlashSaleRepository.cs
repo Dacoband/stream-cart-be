@@ -41,5 +41,18 @@ namespace ProductService.Infrastructure.Repositories
             }
             return flashSlae;
         }
+        public async Task<List<FlashSale>> GetByShopIdAsync(Guid shopId)
+        {
+            var shopProductIds = _dbContext.Products
+                .Where(p => p.ShopId == shopId && !p.IsDeleted)
+                .Select(p => p.Id)
+                .ToList();
+
+            // Sau đó lấy tất cả FlashSale của những sản phẩm đó
+            return await Task.FromResult(_dbSet
+                .Where(fs => shopProductIds.Contains(fs.ProductId) && !fs.IsDeleted)
+                .OrderByDescending(fs => fs.CreatedAt)
+                .ToList());
+        }
     }
 }
