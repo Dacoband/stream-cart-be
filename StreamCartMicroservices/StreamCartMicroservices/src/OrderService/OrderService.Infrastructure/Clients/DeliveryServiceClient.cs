@@ -56,7 +56,7 @@ namespace OrderService.Infrastructure.Clients
             }
         }
 
-        public async Task<ApiResponse<object>> CreateGhnOrderAsync(UserCreateOrderRequest request)
+        public async Task<ApiResponse<CreateOrderResult>> CreateGhnOrderAsync(UserCreateOrderRequest request)
         {
             try
             {
@@ -74,18 +74,18 @@ namespace OrderService.Infrastructure.Clients
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError("GHN order creation failed: {StatusCode} - {Content}", response.StatusCode, responseContent);
-                    return new ApiResponse<object> { Success = false, Message = "Tạo đơn hàng GHN thất bại" };
+                    return new ApiResponse<CreateOrderResult> { Success = false, Message = "Tạo đơn hàng GHN thất bại" };
                 }
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<object>>(responseContent, options);
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<CreateOrderResult>>(responseContent, options);
 
-                return apiResponse ?? new ApiResponse<object> { Success = false, Message = "Phản hồi không hợp lệ từ GHN" };
+                return apiResponse ?? new ApiResponse<CreateOrderResult> { Success = false, Message = "Phản hồi không hợp lệ từ GHN" };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception while calling create-ghn-order");
-                return new ApiResponse<object> { Success = false, Message = "Lỗi khi gọi GHN API" };
+                return new ApiResponse<CreateOrderResult> { Success = false, Message = "Lỗi khi gọi GHN API" };
             }
         }
     }

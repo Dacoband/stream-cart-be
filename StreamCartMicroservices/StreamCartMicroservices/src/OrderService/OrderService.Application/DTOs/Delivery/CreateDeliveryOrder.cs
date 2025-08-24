@@ -45,4 +45,9 @@ namespace OrderService.Application.DTOs.Delivery
         public int Width { get; set; }
         public int Height { get; set; }
     }
+    public class CreateOrderResult
+    {
+        public string DeliveryId { get; set; }
+        public DateTime ExpectedDeliveryDate { get; set; }
+    }
 }

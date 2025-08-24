@@ -3,6 +3,7 @@ using CartService.Application.Interfaces;
 using CartService.Domain.Entities;
 using CartService.Infrastructure.Interfaces;
 using MassTransit;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Common.Models;
 using System;
@@ -25,15 +26,21 @@ namespace CartService.Application.Services
             _cartItemRepository = cartItemRepo;
             _cartRepository = cartRepo;
         }
-        public async Task<ApiResponse<CreateCartDTO>> AddToCart(CreateCartDTO cart, string userId)
+        public async Task<ApiResponse<CreateCartResponseDTO>> AddToCart(CreateCartDTO cart, string userId)
         {
             //Initiate Result
-            var result = new ApiResponse<CreateCartDTO>()
+            var result = new ApiResponse<CreateCartResponseDTO>()
             {
                 Message = "Thêm sản phẩm vào giỏ hàng thành công",
                 Success = true,
             };
             var cartItem = new CartItem();
+            var resultData = new CreateCartResponseDTO()
+            {
+                ProductId = cart.ProductId,
+                VariantId = cart.VariantId,
+                Quantity = cart.Quantity,
+            };
             //Check Cart
             var existingCart = await _cartRepository.FindOneAsync(x => x.CreatedBy == userId);
             if (existingCart == null)
@@ -87,10 +94,12 @@ namespace CartService.Application.Services
                     return result;
                 }
                 existingCartItem.SetModifier(userId);
+                
+                resultData.CartItemId = existingCartItem.Id.ToString();
                 try
                 {
                      await _cartItemRepository.ReplaceAsync(existingCartItem.Id.ToString(), existingCartItem);
-                    result.Data = cart;
+                    result.Data = resultData;
                     return result;
                 }
                 catch (Exception ex)
@@ -123,10 +132,11 @@ namespace CartService.Application.Services
 
             };
             addToCartItem.SetCreator(userId);
+            resultData.CartItemId = addToCartItem.Id.ToString();
             try
             {
                 await _cartItemRepository.InsertAsync(addToCartItem);
-                result.Data = cart;
+                result.Data = resultData;
                 return result;
             }
             catch (Exception ex)
@@ -305,8 +315,9 @@ namespace CartService.Application.Services
 
             var totalItem = cartItems.Sum(ci => ci.Quantity);
             var totalAmount = cartItems.Sum(ci => ci.PriceCurrent * ci.Quantity);
-            var discount = cartItems.Sum(x => x.PriceSnapShot - x.PriceCurrent);
             var subTotal = cartItems.Sum(x => x.PriceSnapShot * x.Quantity);
+            var discount = subTotal - totalAmount;
+
 
             result.Data = new PreviewOrderResponseDTO
             {

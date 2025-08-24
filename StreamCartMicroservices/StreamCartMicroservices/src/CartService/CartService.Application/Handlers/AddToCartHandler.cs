@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CartService.Application.Handlers
 {
-    public class AddToCartHandler : IRequestHandler<AddToCartCommand, ApiResponse<CreateCartDTO>>
+    public class AddToCartHandler : IRequestHandler<AddToCartCommand, ApiResponse<CreateCartResponseDTO>>
     {
         private  readonly ICartService _cartService;
         public AddToCartHandler(ICartService cartService)
@@ -20,7 +20,7 @@ namespace CartService.Application.Handlers
             _cartService = cartService;
         }
 
-        public async Task<ApiResponse<CreateCartDTO>> Handle(AddToCartCommand request, CancellationToken cancellationToken)
+        public async Task<ApiResponse<CreateCartResponseDTO>> Handle(AddToCartCommand request, CancellationToken cancellationToken)
         {
             CreateCartDTO createCartDTO = new CreateCartDTO()
             {

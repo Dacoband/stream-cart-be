@@ -37,5 +37,6 @@ namespace OrderService.Application.DTOs.OrderDTOs
         public string? VoucherCode { get; set; }
 
         public List<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
+        public decimal NetAmount { get; set; } = 0;
     }
 }

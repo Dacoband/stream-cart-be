@@ -10,7 +10,7 @@ namespace OrderService.Application.Interfaces
 {
     public interface IDeliveryClient
     {
-         Task<ApiResponse<object>> CreateGhnOrderAsync(UserCreateOrderRequest request);
+         Task<ApiResponse<CreateOrderResult>> CreateGhnOrderAsync(UserCreateOrderRequest request);
         Task<ApiResponse<bool>> CancelDeliveryOrderAsync(string deliveryCode);
     }
 }

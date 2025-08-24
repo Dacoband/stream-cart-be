@@ -185,7 +185,8 @@ namespace OrderService.Infrastructure.Services
                 {
                     ShopId = shopId,
                     PageNumber = filter.PageIndex,
-                    PageSize = filter.PageSize
+                    PageSize = filter.PageSize,
+                    Status = filter.Status,
                 };
                 return await _mediator.Send(query);
             }
@@ -589,7 +590,7 @@ namespace OrderService.Infrastructure.Services
                             _logger.LogWarning("Không thể tạo đơn GHN cho đơn hàng {OrderId}", order.Id);
                             throw new ApplicationException("Tạo đơn giao hàng thất bại: " + ghnResponse.Message);
                         }
-
+                        order.TrackingCode = ghnResponse.Data.DeliveryId;
                         break;
 
                     case OrderStatus.Packed:
