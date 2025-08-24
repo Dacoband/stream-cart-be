@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Shared.Common.Models;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OrderService.Infrastructure.Clients
 {
@@ -38,10 +39,15 @@ namespace OrderService.Infrastructure.Clients
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<LivestreamInfoDTO>>(json, new JsonSerializerOptions
+
+                // ✅ FIX: Use custom converter to handle Status field properly
+                var options = new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new BooleanToStringConverter() }
+                };
+
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<LivestreamInfoDTO>>(json, options);
 
                 return apiResponse?.Data;
             }
@@ -129,6 +135,31 @@ namespace OrderService.Infrastructure.Clients
                 _logger.LogError(ex, "Error getting livestream basic info {LivestreamId}", livestreamId);
                 return null;
             }
+        }
+
+    }
+    public class BooleanToStringConverter : JsonConverter<string>
+    {
+        public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.String:
+                    return reader.GetString();
+                case JsonTokenType.True:
+                    return "Active"; // or "true"
+                case JsonTokenType.False:
+                    return "Inactive"; // or "false"
+                case JsonTokenType.Null:
+                    return null;
+                default:
+                    throw new JsonException($"Cannot convert {reader.TokenType} to string");
+            }
+        }
+
+        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
         }
     }
 }

@@ -105,11 +105,8 @@ namespace AccountService.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var accountId))
-                return BadRequest(ApiResponse<object>.ErrorResult("User identity not found"));
-
-            var result = await _authService.ChangePasswordAsync(accountId, changePasswordDto);
+            var userIdClaim = _currentUserService.GetUserId();
+            var result = await _authService.ChangePasswordAsync(userIdClaim, changePasswordDto);
 
             if (!result)
                 return BadRequest(ApiResponse<object>.ErrorResult("Password change failed"));
