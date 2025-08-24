@@ -31,7 +31,7 @@ using CartService.Application.Services;
                 services.AddScoped<ICartService, CartService.Application.Services.CartService>();
 
                 // Inside AddApplicationServices method
-                services.AddScoped<IRequestHandler<AddToCartCommand, ApiResponse<CreateCartDTO>>, AddToCartHandler>();
+                services.AddScoped<IRequestHandler<AddToCartCommand, ApiResponse<CreateCartResponseDTO>>, AddToCartHandler>();
             services.AddScoped<IRequestHandler<GetMyCartQuery, ApiResponse<CartResponeDTO>>, GetMyCartHandler>();
             services.AddScoped<IRequestHandler<PreviewOrderQuery, ApiResponse<PreviewOrderResponseDTO>>, PreviewOrderHandler>();
             services.AddScoped<IRequestHandler<DeleteCartItemCommand, ApiResponse<bool>>, DeleteCartItemHandler>();
