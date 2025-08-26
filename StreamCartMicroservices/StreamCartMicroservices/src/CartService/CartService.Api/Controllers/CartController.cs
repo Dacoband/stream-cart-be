@@ -21,7 +21,7 @@ namespace CartService.Api.Controllers
         }
         [HttpPost]
         [Authorize(Roles = "Customer")]
-        [ProducesResponseType(typeof(ApiResponse<CreateCartDTO>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<CreateCartResponseDTO>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> AddToCart([FromBody] CreateCartDTO request)
         {
