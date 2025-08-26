@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using ShopService.Application.Commands;
 using ShopService.Application.DTOs.Membership;
 using ShopService.Application.Handlers.MembershipHandler;
@@ -15,9 +16,11 @@ namespace ShopService.Api.Controllers
     public class MembershipController : ControllerBase
     {
         private readonly IMediator _mediator;
-        public MembershipController(IMediator mediator)
+        private readonly ICurrentUserService _currentUserService;
+        public MembershipController(IMediator mediator,ICurrentUserService currentUserService)
         {
             _mediator = mediator;
+            _currentUserService = currentUserService;
         }
         [HttpPost]
         [Authorize(Roles = "OperationManager")]
@@ -30,7 +33,7 @@ namespace ShopService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
                 CreateMembershipCommand command = new CreateMembershipCommand()
                 {
                    command = request,
@@ -61,7 +64,7 @@ namespace ShopService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
 
                 var command = new UpdateMembershipCommand()
                 {
@@ -93,7 +96,7 @@ namespace ShopService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
 
                 var command = new DeleteMemershipCommand
                 {

@@ -33,7 +33,7 @@ namespace ShopService.Application.Services
                 Description = request.Description,
                 Commission = request.Commission,
                 MaxLivestream = request.MaxLivestream,
-                MaxProduct = request.MaxProduct,
+                MaxProduct = request.MaxModerator,
                 Duration = request.Duration,
                 Price = request.Price,
                 Type =request.Type.ToString(),

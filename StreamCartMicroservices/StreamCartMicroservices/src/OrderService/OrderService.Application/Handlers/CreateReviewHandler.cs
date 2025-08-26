@@ -118,7 +118,7 @@ namespace OrderService.Application.Handlers
                     throw new ArgumentException($"Livestream với ID {request.LivestreamId} không tồn tại");
                 }
                 // Có thể lấy ShopId từ livestream nếu có
-                // shopId = livestream.ShopId;
+                 shopId = livestream.ShopId;
             }
 
             return shopId;

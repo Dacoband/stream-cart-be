@@ -124,6 +124,18 @@ namespace LivestreamService.Api.Controllers
                                 height = variant.Height;
                             }
                         }
+                       else
+                        {
+                            var product = await _productServiceClient.GetProductByIdAsync(ci.ProductId);
+                            if (product != null)
+                            {
+                                weight = product.Weight;
+                                length = product.Length;
+                                width = product.Width;
+                                height = product.Height;
+                            }
+                        }
+
 
                         productList.Add(new ProductCart
                         {

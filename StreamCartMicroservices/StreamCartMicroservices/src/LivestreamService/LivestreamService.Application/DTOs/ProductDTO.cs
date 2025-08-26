@@ -22,5 +22,10 @@ namespace LivestreamService.Application.DTOs
         public string? SKU { get; set; }
         public string? PrimaryImageUrl { get; set; }  // ✅ Thêm property này để map từ API
 
+        public decimal? Weight { get; set; }
+        public decimal? Length { get; set; }
+        public decimal? Width { get; set; }
+        public decimal? Height { get; set; }
+
     }
 }
