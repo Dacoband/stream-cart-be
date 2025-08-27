@@ -789,7 +789,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/wallets/{everything}",
+      "UpstreamPathTemplate": "/api/shop-wallet/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
       "SwaggerKey": "shop"
     },
