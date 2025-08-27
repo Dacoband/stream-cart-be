@@ -126,12 +126,14 @@ namespace ShopService.Application.Services
                 // Ghi nhận giao dịch
                 var transaction = new WalletTransaction
                 {
-                    Type = "Membership_Purchase",
-                    Amount = membership.Price,
+                    Type = "System",
+                    Amount = membership.Price * -1,
                     Target = "System",
                     Status = "Success",
                     WalletId = wallet.Id,
-                    ShopMembershipId = membership.Id
+                    ShopMembershipId = membership.Id,
+                    BankAccount = wallet.BankName,
+                    BankNumber = wallet.BankAccountNumber,
                 };
                 transaction.SetCreator(userId);
 

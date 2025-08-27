@@ -29,7 +29,7 @@ namespace OrderService.Infrastructure.Clients
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
+         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 var notification = await _notificationQueue.DequeueAsync(stoppingToken);
