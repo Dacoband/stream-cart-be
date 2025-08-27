@@ -32,6 +32,82 @@ namespace ShopService.Api.Controllers
             _currentUserService = currentUserService;
             _logger = logger;
         }
+        [HttpPost("vouchers/available")]
+        [AllowAnonymous] // Customer không cần đăng nhập để xem voucher
+        [ProducesResponseType(typeof(ApiResponse<List<CustomerVoucherResponseDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<ActionResult<List<CustomerVoucherResponseDto>>> GetAvailableVouchersForCustomer([FromBody] CustomerVoucherRequestDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+
+                _logger.LogInformation("Customer requesting available vouchers for amount: {OrderAmount}đ, ShopId: {ShopId}",
+                    request.OrderAmount, request.ShopId);
+
+                var query = new GetAvailableVouchersForCustomerQuery
+                {
+                    OrderAmount = request.OrderAmount,
+                    ShopId = request.ShopId,
+                    Limit = request.Limit,
+                    VoucherType = request.VoucherType,
+                    SortByDiscountDesc = request.SortByDiscountDesc
+                };
+
+                var result = await _mediator.Send(query);
+
+                var message = result.Any()
+                    ? $"Tìm thấy {result.Count} voucher khả dụng cho đơn hàng {request.OrderAmount:N0}đ"
+                    : $"Không có voucher nào khả dụng cho đơn hàng {request.OrderAmount:N0}đ";
+
+                return Ok(ApiResponse<List<CustomerVoucherResponseDto>>.SuccessResult(result, message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting available vouchers for customer");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        [HttpGet("vouchers/available")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<List<CustomerVoucherResponseDto>>), 200)]
+        public async Task<ActionResult<List<CustomerVoucherResponseDto>>> GetAvailableVouchersForCustomerGet(
+            [FromQuery] decimal orderAmount,
+            [FromQuery] Guid? shopId = null,
+            [FromQuery] int limit = 10,
+            [FromQuery] VoucherType? voucherType = null,
+            [FromQuery] bool sortByDiscountDesc = true)
+        {
+            try
+            {
+                if (orderAmount <= 0)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Số tiền đơn hàng phải lớn hơn 0"));
+
+                var query = new GetAvailableVouchersForCustomerQuery
+                {
+                    OrderAmount = orderAmount,
+                    ShopId = shopId,
+                    Limit = Math.Min(limit, 50), 
+                    VoucherType = voucherType,
+                    SortByDiscountDesc = sortByDiscountDesc
+                };
+
+                var result = await _mediator.Send(query);
+
+                var message = result.Any()
+                    ? $"Tìm thấy {result.Count} voucher khả dụng"
+                    : "Không có voucher nào khả dụng";
+
+                return Ok(ApiResponse<List<CustomerVoucherResponseDto>>.SuccessResult(result, message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting available vouchers for customer");
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
 
         /// <summary>
         /// Lấy danh sách voucher active của shop

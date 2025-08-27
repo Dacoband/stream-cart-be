@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Shared.Common.Data.Repositories;
 using Shared.Common.Domain.Bases;
 using ShopService.Application.Interfaces;
@@ -15,10 +16,13 @@ namespace ShopService.Infrastructure.Repositories
     public class ShopVoucherRepository : EfCoreGenericRepository<ShopVoucher>, IShopVoucherRepository
     {
         private readonly ShopContext _context;
+        private readonly ILogger<ShopVoucherRepository> _logger;
 
-        public ShopVoucherRepository(ShopContext context) : base(context)
+        public ShopVoucherRepository(ShopContext context, ILogger<ShopVoucherRepository> logger) : base(context)
         {
             _context = context;
+            _logger = logger;
+
         }
 
         public async Task<ShopVoucher?> GetByCodeAsync(string code)
@@ -114,20 +118,46 @@ namespace ShopService.Infrastructure.Repositories
             };
         }
 
-        public async Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid shopId, decimal orderAmount)
+        public async Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid? shopId, decimal orderAmount)
         {
-            var now = DateTime.UtcNow;
-            return await _context.Set<ShopVoucher>()
-                .Include(v => v.Shop)
-                .Where(v => v.ShopId == shopId &&
-                           v.IsActive &&
-                           !v.IsDeleted &&
-                           v.StartDate <= now &&
-                           v.EndDate >= now &&
-                           v.UsedQuantity < v.AvailableQuantity &&
-                           v.MinOrderAmount <= orderAmount)
-                .OrderByDescending(v => v.Value)
-                .ToListAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+
+                _logger.LogInformation("🎫 Getting valid vouchers for order amount: {OrderAmount}đ, ShopId: {ShopId}",
+                    orderAmount, shopId?.ToString() ?? "ALL_SHOPS");
+
+                // Tạo query cơ bản
+                var query = _context.Set<ShopVoucher>()
+                    .Include(v => v.Shop)
+                    .Where(v => v.IsActive &&
+                               !v.IsDeleted &&
+                               v.StartDate <= now &&
+                               v.EndDate >= now &&
+                               v.UsedQuantity < v.AvailableQuantity &&
+                               v.MinOrderAmount <= orderAmount);
+
+                if (shopId.HasValue)
+                {
+                    query = query.Where(v => v.ShopId == shopId.Value);
+                }
+
+                var result = await query
+                    .OrderByDescending(v => v.Value) 
+                    .ThenBy(v => v.EndDate) 
+                    .ToListAsync();
+
+                _logger.LogInformation("✅ Found {Count} valid vouchers for order amount {OrderAmount}đ, ShopId: {ShopId}",
+                    result.Count, orderAmount, shopId?.ToString() ?? "ALL_SHOPS");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting valid vouchers for order amount {OrderAmount}, ShopId: {ShopId}",
+                    orderAmount, shopId);
+                throw;
+            }
         }
 
         public async Task<int> GetUsageStatisticsAsync(Guid voucherId)
