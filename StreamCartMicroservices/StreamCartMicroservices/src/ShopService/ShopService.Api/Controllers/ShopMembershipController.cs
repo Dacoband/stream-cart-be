@@ -111,10 +111,10 @@ namespace ShopService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật gói thành viên của cửa hàng  {ex.Message}"));
             }
         }
-        [HttpGet]
+        [HttpGet("{id}")]
         [ProducesResponseType(typeof(ApiResponse<DetailShopMembershipDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> GetShopMembershipById([FromQuery] string id)
+        public async Task<IActionResult> GetShopMembershipById([FromRoute] string id)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));

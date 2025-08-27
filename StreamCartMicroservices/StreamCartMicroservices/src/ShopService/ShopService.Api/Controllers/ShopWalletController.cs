@@ -55,7 +55,7 @@ namespace ShopService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tạo giao dịch ví: {ex.Message}"));
             }
         }
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles = "OperationManager,Seller")]
         [ProducesResponseType(typeof(ApiResponse<WalletTransaction>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]

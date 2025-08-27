@@ -25,5 +25,13 @@ namespace ShopService.Infrastructure.Repositories
         {
             return await _context.ShopMembership.Include(x => x.Membership).Where(x => x.ShopID.ToString() == shopId && x.StartDate <= DateTime.Now && x.EndDate >= DateTime.Now && x.Membership.Type == "New" && x.IsDeleted==false && x.Status != "Canceled").FirstOrDefaultAsync();
         }
+        public async Task<ShopMembership?> GetById(string id)
+        {
+            return await _context.ShopMembership.Where(x => x.Id.ToString() == id).FirstOrDefaultAsync();
+        }
+        public async Task<List<ShopMembership>> GetAll()
+        {
+            return await _context.ShopMembership.ToListAsync();
+        }
     }
 }
