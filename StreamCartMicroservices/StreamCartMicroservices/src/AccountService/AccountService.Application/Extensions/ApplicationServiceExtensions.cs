@@ -5,6 +5,8 @@ using AccountService.Application.Interfaces;
 using AccountService.Application.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using ShopService.Application.Interfaces;
+using ShopService.Application.Services;
 using System.Reflection;
 
 namespace AccountService.Application.Extensions
@@ -28,6 +30,7 @@ namespace AccountService.Application.Extensions
             services.AddScoped<IAccountManagementService, AccountManagementService>();
             services.AddScoped<IAddressManagementService, AddressManagementService>();
             services.AddScoped<IAuthService, AuthService>();
+            
             services.AddHttpClient<IShopServiceClient, ShopServiceClient>();
             return services;
         }
