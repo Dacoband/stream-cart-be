@@ -20,15 +20,16 @@ namespace ProductService.Application.Services
         private readonly IFlashSaleRepository _flashSaleRepository; 
         private readonly IProductRepository _productRepository;
         private readonly IProductVariantRepository _productVariantRepository;
-        private readonly IHttpClientFactory _httpClientFactory; 
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IProductImageRepository _productImageRepository; 
 
-
-        public FlashSaleService(IFlashSaleRepository flashSaleRepository, IProductRepository productRepository, IProductVariantRepository productVariantRepository,IHttpClientFactory httpClientFactory)
+        public FlashSaleService(IFlashSaleRepository flashSaleRepository, IProductRepository productRepository, IProductVariantRepository productVariantRepository,IHttpClientFactory httpClientFactory, IProductImageRepository productImageRepository )
         {
             _flashSaleRepository = flashSaleRepository;
             _productRepository = productRepository; 
             _productVariantRepository = productVariantRepository;
             _httpClientFactory = httpClientFactory;
+            _productImageRepository = productImageRepository;
         }
         public async Task<ApiResponse<List<int>>> GetAvailableSlotsAsync(DateTime startTime, DateTime endTime)
         {
@@ -197,6 +198,17 @@ namespace ProductService.Application.Services
                 flashSale.SetCreator(userId);
 
                 await _flashSaleRepository.InsertAsync(flashSale);
+                string? productImageUrl = null;
+                try
+                {
+                    var primaryImage = await _productImageRepository.GetPrimaryImageAsync(productId, variantId);
+                    productImageUrl = primaryImage?.ImageUrl;
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the entire operation
+                    // _logger?.LogWarning(ex, "Failed to get primary image for product {ProductId}, variant {VariantId}", productId, variantId);
+                }
 
                 var result = new DetailFlashSaleDTO()
                 {
@@ -211,7 +223,9 @@ namespace ProductService.Application.Services
                     Slot = flashSale.Slot,
                     IsActive = true,
                     ProductName = productName,
-                    VariantName = variantName
+                    VariantName = variantName,
+                    ProductImageUrl = productImageUrl
+
                 };
                 results.Add(result);
             }
@@ -380,22 +394,45 @@ namespace ProductService.Application.Services
                 var pageIndex = filter.PageIndex ?? 0;
                 var pageSize = filter.PageSize ?? 10;
                 query = query.Skip(pageIndex * pageSize).Take(pageSize);
+                var flashSaleList = query.ToList();
+                var detailFlashSales = new List<DetailFlashSaleDTO>();
 
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                response.Data = query.Select(f => new DetailFlashSaleDTO
+                foreach (var f in flashSaleList)
                 {
-                    Id = f.Id,
-                    ProductId = f.ProductId,
-                    VariantId = f.VariantId != Guid.Empty ? f.VariantId : null,
-                    FlashSalePrice = f.FlashSalePrice,
-                    QuantityAvailable = f.QuantityAvailable,
-                    QuantitySold = f.QuantitySold,
-                    IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
-                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
-                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
-                }).ToList();
+                    string? productImageUrl = null;
+                    string productName = "Unknown Product";
 
+                    try
+                    {
+                        var product = await _productRepository.GetByIdAsync(f.ProductId.ToString());
+                        productName = product?.ProductName ?? productName;
+
+                        var primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, f.VariantId);
+                        productImageUrl = primaryImage?.ImageUrl;
+                    }
+                    catch (Exception)
+                    {
+                    }
+
+                    detailFlashSales.Add(new DetailFlashSaleDTO
+                    {
+                        Id = f.Id,
+                        ProductId = f.ProductId,
+                        VariantId = f.VariantId != Guid.Empty ? f.VariantId : null,
+                        FlashSalePrice = f.FlashSalePrice,
+                        QuantityAvailable = f.QuantityAvailable,
+                        QuantitySold = f.QuantitySold,
+                        IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
+                        StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
+                        EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
+                        ProductName = productName, 
+                        ProductImageUrl = productImageUrl 
+                    });
+                }
+
+                response.Data = detailFlashSales;
                 return response;
             }
             catch (Exception ex)
@@ -443,20 +480,44 @@ namespace ProductService.Application.Services
 
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                response.Data = query.Select(f => new DetailFlashSaleDTO
-                {
-                    Id = f.Id,
-                    ProductId = f.ProductId,
-                    VariantId = f.VariantId,
-                    FlashSalePrice = f.FlashSalePrice,
-                    QuantityAvailable = f.QuantityAvailable,
-                    QuantitySold = f.QuantitySold,
-                    Slot = f.Slot,
-                    IsActive = f.IsValid(),
-                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
-                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
-                }).ToList();
+                var flashSaleList = query.ToList();
+                var detailFlashSales = new List<DetailFlashSaleDTO>();
 
+                foreach (var f in flashSaleList)
+                {
+                    string? productImageUrl = null;
+                    string productName = "Unknown Product";
+
+                    try
+                    {
+                        var product = await _productRepository.GetByIdAsync(f.ProductId.ToString());
+                        productName = product?.ProductName ?? productName;
+
+                        var primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, f.VariantId);
+                        productImageUrl = primaryImage?.ImageUrl;
+                    }
+                    catch (Exception)
+                    {
+                        // Silent fail
+                    }
+
+                    detailFlashSales.Add(new DetailFlashSaleDTO
+                    {
+                        Id = f.Id,
+                        ProductId = f.ProductId,
+                        VariantId = f.VariantId,
+                        FlashSalePrice = f.FlashSalePrice,
+                        QuantityAvailable = f.QuantityAvailable,
+                        QuantitySold = f.QuantitySold,
+                        Slot = f.Slot,
+                        IsActive = f.IsValid(),
+                        StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
+                        EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
+                        ProductName = productName, 
+                        ProductImageUrl = productImageUrl 
+                    });
+                }
+                response.Data = detailFlashSales;
                 return response;
             }
             catch (Exception ex)
@@ -471,15 +532,36 @@ namespace ProductService.Application.Services
             var response = new ApiResponse<DetailFlashSaleDTO>
             {
                 Success = true,
-                Message = "Lọc danh sách FlashSale thành công",
-               
+                Message = "Lấy FlashSale thành công", // ✅ Fix message
             };
+
             var flashSale = await _flashSaleRepository.GetByIdAsync(id);
-            if (flashSale == null) {
+            if (flashSale == null)
+            {
                 response.Success = false;
                 response.Message = "Không tìm thấy FlashSale";
                 return response;
-            
+            }
+
+            // ✅ GET PRODUCT INFO AND IMAGE
+            var product = await _productRepository.GetByIdAsync(flashSale.ProductId.ToString());
+            string? productImageUrl = null;
+            string productName = product?.ProductName ?? "Unknown Product";
+            string variantName = "";
+
+            try
+            {
+                var primaryImage = await _productImageRepository.GetPrimaryImageAsync(flashSale.ProductId, flashSale.VariantId);
+                productImageUrl = primaryImage?.ImageUrl;
+
+                if (flashSale.VariantId.HasValue)
+                {
+                    variantName = await GetVariantNameAsync(flashSale.VariantId.Value) ?? "";
+                }
+            }
+            catch (Exception)
+            {
+                // Silent fail for image/variant name
             }
             var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
@@ -495,6 +577,9 @@ namespace ProductService.Application.Services
                 Slot = flashSale.Slot,
                 IsActive = flashSale.IsValid(),
                 QuantitySold = flashSale.QuantitySold,
+                ProductName = productName, 
+                VariantName = variantName, 
+                ProductImageUrl = productImageUrl 
             };
             response.Data = result;
             return response;
@@ -703,20 +788,45 @@ namespace ProductService.Application.Services
 
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                response.Data = query.Select(f => new DetailFlashSaleDTO
-                {
-                    Id = f.Id,
-                    ProductId = f.ProductId,
-                    VariantId = f.VariantId != Guid.Empty ? f.VariantId : null,
-                    FlashSalePrice = f.FlashSalePrice,
-                    QuantityAvailable = f.QuantityAvailable,
-                    QuantitySold = f.QuantitySold,
-                    Slot = f.Slot, 
-                    IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
-                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
-                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
-                }).ToList();
+                var flashSaleList = query.ToList();
+                var detailFlashSales = new List<DetailFlashSaleDTO>();
 
+                foreach (var f in flashSaleList)
+                {
+                    string? productImageUrl = null;
+                    string productName = "Unknown Product";
+
+                    try
+                    {
+                        var product = await _productRepository.GetByIdAsync(f.ProductId.ToString());
+                        productName = product?.ProductName ?? productName;
+
+                        var primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, f.VariantId);
+                        productImageUrl = primaryImage?.ImageUrl;
+                    }
+                    catch (Exception)
+                    {
+                        // Silent fail
+                    }
+
+                    detailFlashSales.Add(new DetailFlashSaleDTO
+                    {
+                        Id = f.Id,
+                        ProductId = f.ProductId,
+                        VariantId = f.VariantId != Guid.Empty ? f.VariantId : null,
+                        FlashSalePrice = f.FlashSalePrice,
+                        QuantityAvailable = f.QuantityAvailable,
+                        QuantitySold = f.QuantitySold,
+                        Slot = f.Slot,
+                        IsActive = !f.IsDeleted && f.StartTime <= nowUtc && f.EndTime >= nowUtc,
+                        StartTime = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz),
+                        EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
+                        ProductName = productName, 
+                        ProductImageUrl = productImageUrl 
+                    });
+                }
+
+                response.Data = detailFlashSales;
                 return response;
             }
             catch (Exception ex)
