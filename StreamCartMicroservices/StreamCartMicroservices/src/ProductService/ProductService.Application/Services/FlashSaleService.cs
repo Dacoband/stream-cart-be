@@ -86,7 +86,7 @@ namespace ProductService.Application.Services
                     continue;
                 }
 
-                if (productRequest.VariantIds == null || !productRequest.VariantIds.Any())
+                if (productRequest.VariantIds == null || !productRequest.VariantIds.Any() || productRequest.VariantIds.All(v => v == null))
                 {
                     await CreateFlashSaleForProduct(
                         productRequest.ProductId,
