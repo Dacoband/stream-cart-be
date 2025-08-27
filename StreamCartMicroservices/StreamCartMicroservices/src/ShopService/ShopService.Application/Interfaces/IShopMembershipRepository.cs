@@ -11,5 +11,9 @@ namespace ShopService.Application.Interfaces
     public interface IShopMembershipRepository : IGenericRepository<ShopMembership>
     {
         Task<ShopMembership?> GetActiveMembership(string shopId);
+        Task<List<ShopMembership>> GetAll();
+        Task<ShopMembership?> GetById(string id);
+
+
     }
 }

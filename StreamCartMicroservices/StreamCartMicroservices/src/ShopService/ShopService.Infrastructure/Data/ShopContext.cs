@@ -188,8 +188,7 @@ namespace ShopService.Infrastructure.Data
                     .HasDatabaseName("ix_wallets_shop_id")
                     .IsUnique(); // Ensure each shop has only one wallet
 
-                // Soft delete filter
-                entity.HasQueryFilter(e => !e.IsDeleted);
+                
             });
 
 
@@ -412,8 +411,7 @@ namespace ShopService.Infrastructure.Data
                 // Index
                 entity.HasIndex(e => new { e.ShopID, e.MembershipID }).HasDatabaseName("ix_shop_memberships_unique");
 
-                // Soft delete filter
-                entity.HasQueryFilter(e => !e.IsDeleted);
+               
             });
             modelBuilder.Entity<WalletTransaction>(entity =>
             {
@@ -474,8 +472,7 @@ namespace ShopService.Infrastructure.Data
 
                 // Indexes
                 entity.HasIndex(e => e.WalletId).HasDatabaseName("ix_wallet_transactions_wallet_id");
-                // Soft delete filter
-                entity.HasQueryFilter(e => !e.IsDeleted);
+               
             });
             modelBuilder.Entity<ShopDashboard>(entity =>
             {

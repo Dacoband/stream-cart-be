@@ -780,6 +780,19 @@
       "UpstreamHttpMethod": [ "GET" ],
       "SwaggerKey": "shop"
     },
+    {
+      "DownstreamPathTemplate": "/api/shop-wallet/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "shop-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/wallets/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "SwaggerKey": "shop"
+    },
     //order
     {
       "DownstreamPathTemplate": "/api/orders/{everything}",

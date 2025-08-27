@@ -3,6 +3,7 @@ using Appwrite.Models;
 using Appwrite.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Shared.Common.Extensions;
 using Shared.Common.Models;
 using ShopService.Application.DTOs.Membership;
 using ShopService.Application.Interfaces;
@@ -126,12 +127,14 @@ namespace ShopService.Application.Services
                 // Ghi nhận giao dịch
                 var transaction = new WalletTransaction
                 {
-                    Type = "Membership_Purchase",
-                    Amount = membership.Price,
+                    Type = "System",
+                    Amount = membership.Price * -1,
                     Target = "System",
                     Status = "Success",
                     WalletId = wallet.Id,
-                    ShopMembershipId = membership.Id
+                    ShopMembershipId = membership.Id,
+                    BankAccount = wallet.BankName,
+                    BankNumber = wallet.BankAccountNumber,
                 };
                 transaction.SetCreator(userId);
 
@@ -236,7 +239,8 @@ namespace ShopService.Application.Services
             try
             {
                 // Bắt đầu từ toàn bộ danh sách
-                var query = await _shopMembershipRepository.GetAllAsync(); // Giả sử bạn có IQueryable
+                var shopmembershipList = await _shopMembershipRepository.GetAll();
+                var query = shopmembershipList.AsQueryable();
                 // Áp dụng các bộ lọc nếu có
                 if (!string.IsNullOrWhiteSpace(filter.ShopId))
                     query = query.Where(x => x.ShopID.ToString() == filter.ShopId);
@@ -256,7 +260,7 @@ namespace ShopService.Application.Services
                 // Paging
                 int pageIndex = filter.PageIndex ?? 1;
                 int pageSize = filter.PageSize ?? 10;
-                query = query.OrderByDescending(x => x.CreatedAt)
+                shopmembershipList = query.OrderByDescending(x => x.CreatedAt)
                              .Skip((pageIndex - 1) * pageSize)
                              .Take(pageSize).ToList();
 
@@ -269,7 +273,7 @@ namespace ShopService.Application.Services
                 result.Data = new ListShopMembershipDTO
                 {
                     TotalItem = totalItems,
-                    DetailShopMembership = query.Select(x => new DetailShopMembershipDTO
+                    DetailShopMembership = shopmembershipList.Select(x => new DetailShopMembershipDTO
                     {
                         Id = x.Id.ToString(),
                         ShopID = x.ShopID,
@@ -282,6 +286,7 @@ namespace ShopService.Application.Services
                         IsDeleted = x.IsDeleted,
                         MaxProduct = x.MaxProduct,
                         Commission = x.Commission,
+                        CreatedBy = x.CreatedBy,
                     }).ToList()
                 };
 
@@ -304,7 +309,7 @@ namespace ShopService.Application.Services
             };
             try
             {
-                var existingShopMembership = await _shopMembershipRepository.GetByIdAsync(id);
+                var existingShopMembership = await _shopMembershipRepository.GetById(id);
                 if (existingShopMembership == null)
                 {
                     result.Success = false;
@@ -313,7 +318,12 @@ namespace ShopService.Application.Services
 
                 }
                 var createdBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.CreatedBy));
-                var modifiedBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.LastModifiedBy));
+                var modifiedByName = "N/A";
+                if (!existingShopMembership.LastModifiedBy.IsNullOrEmpty())
+                {
+                   var  modifiedBy = await _accountServiceClient.GetAccountByAccountIdAsync(Guid.Parse(existingShopMembership.LastModifiedBy));
+                    modifiedByName = modifiedBy.Fullname;
+                }
                 result.Data = new DetailShopMembershipDTO()
                 {
                     Id = existingShopMembership.Id.ToString(),
@@ -324,7 +334,7 @@ namespace ShopService.Application.Services
                     Status = existingShopMembership.Status,
                     CreatedBy = createdBy.Fullname ?? "N/A",
                     CreatedAt = existingShopMembership.CreatedAt,
-                    ModifiedBy = modifiedBy.Fullname ?? "N/A",
+                    ModifiedBy = modifiedByName,
                     ModifiedAt = existingShopMembership.LastModifiedAt,
                     IsDeleted = existingShopMembership.IsDeleted,
                     MaxProduct = existingShopMembership.MaxProduct,
