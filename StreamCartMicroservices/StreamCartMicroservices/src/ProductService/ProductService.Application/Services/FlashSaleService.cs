@@ -57,8 +57,6 @@ namespace ProductService.Application.Services
             var errorMessages = new List<string>();
 
             request.ConvertToUtc();
-
-            // ✅ Check if slot is available
             var isSlotAvailable = await _flashSaleRepository.IsSlotAvailableAsync(request.Slot, request.StartTime, request.EndTime);
             if (!isSlotAvailable)
             {
@@ -67,7 +65,6 @@ namespace ProductService.Application.Services
                 return response;
             }
 
-            // ✅ Process each product
             foreach (var productRequest in request.Products)
             {
                 var existingProduct = await _productRepository.GetByIdAsync(productRequest.ProductId.ToString());
@@ -82,18 +79,33 @@ namespace ProductService.Application.Services
                     errorMessages.Add($"Bạn không có quyền tạo FlashSale cho sản phẩm {productRequest.ProductId}");
                     continue;
                 }
-                // ✅ Process variants or base product
+
                 if (productRequest.VariantIds == null || !productRequest.VariantIds.Any())
                 {
-                    // Create FlashSale for base product
-                    await CreateFlashSaleForProduct(productRequest.ProductId, null, request, userId, response.Data, errorMessages);
+                    await CreateFlashSaleForProduct(
+                        productRequest.ProductId,
+                        null,
+                        productRequest.FlashSalePrice,
+                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                        request,
+                        userId,
+                        response.Data,
+                        errorMessages);
                 }
                 else
                 {
                     // Create FlashSale for each variant
                     foreach (var variantId in productRequest.VariantIds)
                     {
-                        await CreateFlashSaleForProduct(productRequest.ProductId, variantId, request, userId, response.Data, errorMessages);
+                        await CreateFlashSaleForProduct(
+                            productRequest.ProductId,
+                            variantId,
+                            productRequest.FlashSalePrice, 
+                            productRequest.QuantityAvailable ?? request.QuantityAvailable, 
+                            request,
+                            userId,
+                            response.Data,
+                            errorMessages);
                     }
                 }
             }
@@ -112,7 +124,8 @@ namespace ProductService.Application.Services
 
             return response;
         }
-        private async Task CreateFlashSaleForProduct(Guid productId, Guid? variantId, CreateFlashSaleDTO request, string userId, List<DetailFlashSaleDTO> results, List<string> errorMessages)
+        private async Task CreateFlashSaleForProduct(Guid productId, Guid? variantId, decimal flashSalePrice,    
+            int? quantityAvailable, CreateFlashSaleDTO request, string userId, List<DetailFlashSaleDTO> results, List<string> errorMessages)
         {
             try
             {
@@ -141,16 +154,17 @@ namespace ProductService.Application.Services
                     maxPrice = product.BasePrice;
                 }
 
-                // Validate stock and price
-                if (request.QuantityAvailable > maxStock)
+                var finalQuantityAvailable = quantityAvailable ?? maxStock;
+
+                if (finalQuantityAvailable > maxStock)
                 {
-                    errorMessages.Add($"Sản phẩm {productName} không đủ tồn kho để áp dụng FlashSale");
+                    errorMessages.Add($"Sản phẩm {productName} không đủ tồn kho để áp dụng FlashSale (yêu cầu: {finalQuantityAvailable}, có: {maxStock})");
                     return;
                 }
 
-                if (request.FlashSalePrice > maxPrice)
+                if (flashSalePrice >= maxPrice)
                 {
-                    errorMessages.Add($"Giá FlashSale phải thấp hơn giá gốc của {productName}");
+                    errorMessages.Add($"Giá FlashSale ({flashSalePrice:N0}đ) phải thấp hơn giá gốc ({maxPrice:N0}đ) của {productName}");
                     return;
                 }
                 var existingFlashSales = await _flashSaleRepository.GetByTimeAndProduct(request.StartTime, request.EndTime, productId, variantId);
@@ -167,8 +181,8 @@ namespace ProductService.Application.Services
                 {
                     ProductId = productId,
                     VariantId = variantId,
-                    FlashSalePrice = request.FlashSalePrice,
-                    QuantityAvailable = request.QuantityAvailable ?? maxStock,
+                    FlashSalePrice = flashSalePrice,                   
+                    QuantityAvailable = finalQuantityAvailable,       
                     QuantitySold = 0,
                     StartTime = request.StartTime,
                     EndTime = request.EndTime,
@@ -260,41 +274,36 @@ namespace ProductService.Application.Services
 
                 var nowUtc = DateTime.UtcNow;
 
-                // ✅ FIX: Lọc theo IsActive với logic chính xác
                 if (filter.IsActive.HasValue)
                 {
                     if (filter.IsActive.Value)
                     {
-                        // Lọc FlashSale đang hoạt động: không bị xóa, trong thời gian hiệu lực (UTC)
+                     
                         query = query.Where(f => !f.IsDeleted &&
                                                 f.StartTime <= nowUtc &&
                                                 f.EndTime >= nowUtc);
                     }
                     else
                     {
-                        // Lọc FlashSale không hoạt động: bị xóa hoặc ngoài thời gian hiệu lực (UTC)
+                       
                         query = query.Where(f => f.IsDeleted ||
                                                 f.StartTime > nowUtc ||
                                                 f.EndTime < nowUtc);
                     }
                 }
 
-                // Lọc theo ProductId
                 if (filter.ProductId != null && filter.ProductId.Any())
                 {
                     query = query.Where(f => filter.ProductId.Contains(f.ProductId));
                 }
 
-                // Lọc theo VariantId
                 if (filter.VariantId != null && filter.VariantId.Any())
                 {
                     query = query.Where(f => f.VariantId.HasValue && filter.VariantId.Contains(f.VariantId.Value));
                 }
 
-                // ✅ FIX: Lọc thời gian với UTC
                 if (filter.StartDate.HasValue)
                 {
-                    // Convert local time to UTC for comparison
                     var startUtc = filter.StartDate.Value.Kind == DateTimeKind.Utc
                         ? filter.StartDate.Value
                         : TimeZoneInfo.ConvertTimeToUtc(filter.StartDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
@@ -304,7 +313,6 @@ namespace ProductService.Application.Services
 
                 if (filter.EndDate.HasValue)
                 {
-                    // Convert local time to UTC for comparison
                     var endUtc = filter.EndDate.Value.Kind == DateTimeKind.Utc
                         ? filter.EndDate.Value
                         : TimeZoneInfo.ConvertTimeToUtc(filter.EndDate.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
@@ -312,7 +320,6 @@ namespace ProductService.Application.Services
                     query = query.Where(f => f.StartTime <= endUtc);
                 }
 
-                // Sắp xếp
                 switch (filter.OrderBy)
                 {
                     case FlashSaleOrderBy.EndDate:
@@ -329,14 +336,12 @@ namespace ProductService.Application.Services
                         break;
                 }
 
-                // Phân trang
                 var pageIndex = filter.PageIndex ?? 0;
                 var pageSize = filter.PageSize ?? 10;
                 query = query.Skip(pageIndex * pageSize).Take(pageSize);
 
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                // ✅ Map DTO với timezone conversion nhất quán
                 response.Data = query.Select(f => new DetailFlashSaleDTO
                 {
                     Id = f.Id,
@@ -380,7 +385,6 @@ namespace ProductService.Application.Services
                 var shopFlashSales = await _flashSaleRepository.GetByShopIdAsync(shopGuid);
                 var query = shopFlashSales.AsQueryable();
 
-                // Filter by date if provided
                 if (date.HasValue)
                 {
                     var startOfDay = date.Value.Date;
@@ -389,7 +393,6 @@ namespace ProductService.Application.Services
                     query = query.Where(f => f.StartTime >= startOfDay && f.StartTime <= endOfDay);
                 }
 
-                // Filter by slot if provided
                 if (slot.HasValue)
                 {
                     query = query.Where(f => f.Slot == slot.Value);

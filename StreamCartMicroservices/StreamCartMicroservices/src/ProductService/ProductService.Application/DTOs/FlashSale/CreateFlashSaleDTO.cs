@@ -9,9 +9,6 @@ namespace ProductService.Application.DTOs.FlashSale
         [Range(1, 8, ErrorMessage = "Slot phải từ 1 đến 8")]
         public int Slot { get; set; }
 
-        [Range(0, 100, ErrorMessage = "Phần trăm FlashSale cho sản phẩm phải nằm trong khoảng 0%-100%")]
-        public decimal FlashSalePrice { get; set; }
-
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm áp dụng FlashSale phải lớn hơn 0")]
         public int? QuantityAvailable { get; set; }
 
@@ -40,6 +37,17 @@ namespace ProductService.Application.DTOs.FlashSale
                     "Phải có ít nhất một sản phẩm để tạo FlashSale",
                     new[] { nameof(Products) });
             }
+
+            for (int i = 0; i < Products.Count; i++)
+            {
+                var product = Products[i];
+                if (product.FlashSalePrice <= 0)
+                {
+                    yield return new ValidationResult(
+                        $"Sản phẩm thứ {i + 1} phải có giá FlashSale hợp lệ (> 0)",
+                        new[] { $"Products[{i}].FlashSalePrice" });
+                }
+            }
         }
 
         public void ConvertToUtc()
@@ -53,9 +61,14 @@ namespace ProductService.Application.DTOs.FlashSale
             EndTime = TimeZoneInfo.ConvertTimeToUtc(localEndTime, vnTimeZone);
         }
     }
+
     public class CreateFlashSaleProductDTO
     {
         public Guid ProductId { get; set; }
         public List<Guid>? VariantIds { get; set; }
+        [Range(100, double.MaxValue, ErrorMessage = "Giá FlashSale phải từ 100đ trở lên")]
+        public decimal FlashSalePrice { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Số lượng FlashSale phải từ 1 trở lên")]
+        public int? QuantityAvailable { get; set; }
     }
 }
