@@ -317,17 +317,66 @@ namespace ProductService.Infrastructure.Data
             {
                 entity.ToTable("Flash-Sales");
                 entity.HasKey(e => e.Id);
-           
-                // Relationship: FlashSale -> Product
+
+                // Configure Slot column with constraints
+                entity.Property(e => e.Slot)
+                      .HasColumnName("Slot")
+                      .IsRequired()
+                      .HasDefaultValue(1);
+
+                // Add check constraint for Slot range (1-8)
+                entity.HasCheckConstraint("CK_FlashSales_Slot", "\"Slot\" >= 1 AND \"Slot\" <= 8");
+
+                // Configure other properties
+                entity.Property(e => e.ProductId)
+                      .HasColumnName("ProductID")
+                      .IsRequired();
+
+                entity.Property(e => e.VariantId)
+                      .HasColumnName("VariantID");
+
+                entity.Property(e => e.FlashSalePrice)
+                      .HasColumnName("FlashSalePrice")
+                      .HasColumnType("decimal(10,2)")
+                      .IsRequired();
+
+                entity.Property(e => e.QuantityAvailable)
+                      .HasColumnName("QuantityAvailable")
+                      .IsRequired();
+
+                entity.Property(e => e.QuantitySold)
+                      .HasColumnName("QuantitySold")
+                      .IsRequired();
+
+                entity.Property(e => e.StartTime)
+                      .HasColumnName("StartTime")
+                      .IsRequired();
+
+                entity.Property(e => e.EndTime)
+                      .HasColumnName("EndTime")
+                      .IsRequired();
+
+                entity.Property(e => e.NotificationSent)
+                      .HasDefaultValue(false);
+
                 entity.HasOne(e => e.Product)
                       .WithMany(p => p.FlashSales)
                       .HasForeignKey(e => e.ProductId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .HasConstraintName("FK_FlashSales_Products");
-               
 
+                // Indexes for performance
+                entity.HasIndex(e => e.Slot)
+                      .HasDatabaseName("IX_FlashSales_Slot");
 
+                entity.HasIndex(e => new { e.Slot, e.StartTime, e.EndTime })
+                      .HasDatabaseName("IX_FlashSales_Slot_StartTime_EndTime");
 
+                entity.HasIndex(e => new { e.ProductId, e.VariantId, e.StartTime, e.EndTime })
+                      .HasDatabaseName("IX_FlashSales_Product_Variant_Time");
+
+                entity.HasIndex(e => new { e.StartTime, e.EndTime })
+                      .HasDatabaseName("IX_FlashSales_TimeRange");
             });
 
             base.OnModelCreating(modelBuilder);
