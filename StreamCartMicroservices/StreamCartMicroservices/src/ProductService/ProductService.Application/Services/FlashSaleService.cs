@@ -1,4 +1,5 @@
 ﻿using Appwrite.Models;
+using ProductService.Application.DTOs.Combinations;
 using ProductService.Application.DTOs.FlashSale;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
@@ -7,7 +8,9 @@ using Shared.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace ProductService.Application.Services
@@ -17,12 +20,15 @@ namespace ProductService.Application.Services
         private readonly IFlashSaleRepository _flashSaleRepository; 
         private readonly IProductRepository _productRepository;
         private readonly IProductVariantRepository _productVariantRepository;
+        private readonly IHttpClientFactory _httpClientFactory; 
 
-        public FlashSaleService(IFlashSaleRepository flashSaleRepository, IProductRepository productRepository, IProductVariantRepository productVariantRepository)
+
+        public FlashSaleService(IFlashSaleRepository flashSaleRepository, IProductRepository productRepository, IProductVariantRepository productVariantRepository,IHttpClientFactory httpClientFactory)
         {
             _flashSaleRepository = flashSaleRepository;
             _productRepository = productRepository; 
             _productVariantRepository = productVariantRepository;
+            _httpClientFactory = httpClientFactory;
         }
         public async Task<ApiResponse<List<int>>> GetAvailableSlotsAsync(DateTime startTime, DateTime endTime)
         {
@@ -146,12 +152,13 @@ namespace ProductService.Application.Services
                     }
                     maxStock = variant.Stock;
                     maxPrice = variant.Price;
-                    variantName = variant.SKU ?? $"Variant {variantId}";
+                    variantName = await GetVariantNameAsync(variantId.Value) ?? variant.SKU ?? $"Variant {variantId}";
                 }
                 else
                 {
                     maxStock = product.StockQuantity;
                     maxPrice = product.BasePrice;
+                    variantName = "";
                 }
 
                 var finalQuantityAvailable = quantityAvailable ?? maxStock;
@@ -176,7 +183,6 @@ namespace ProductService.Application.Services
                     return;
                 }
 
-                // Create FlashSale
                 var flashSale = new FlashSale()
                 {
                     ProductId = productId,
@@ -214,6 +220,41 @@ namespace ProductService.Application.Services
                 errorMessages.Add($"Lỗi khi tạo FlashSale cho sản phẩm {productId}: {ex.Message}");
             }
         }
+        private async Task<string?> GetVariantNameAsync(Guid variantId)
+        {
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient();
+                var response = await httpClient.GetAsync($"https://brightpa.me/api/product-combinations/{variantId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<ProductCombinationDto>>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (apiResponse?.Success == true && apiResponse.Data != null && apiResponse.Data.Any())
+                {
+                    // ✅ Ghép chuỗi: "Màu Đen , Model 509"
+                    var parts = apiResponse.Data
+                        .Select(d => $"{d.AttributeName} {d.ValueName}")
+                        .ToArray();
+                    return string.Join(" , ", parts);
+                }
+
+                return null;
+            }
+            catch (Exception)
+            {
+                return null; // Silent fail
+            }
+        }
+
         public async Task<ApiResponse<bool>> DeleteFlashsale(string id, string userId, string shopId)
         {
             var response = new ApiResponse<bool>()
@@ -762,6 +803,8 @@ namespace ProductService.Application.Services
                 return response;
             }
         }
+
     }
 
 }
+

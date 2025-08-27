@@ -142,10 +142,18 @@ namespace ShopService.Infrastructure.Repositories
                     query = query.Where(v => v.ShopId == shopId.Value);
                 }
 
-                var result = await query
-                    .OrderByDescending(v => v.Value) 
-                    .ThenBy(v => v.EndDate) 
-                    .ToListAsync();
+                var vouchers = await query.ToListAsync();
+
+                
+                var result = vouchers
+                    .Select(v => new {
+                        Voucher = v,
+                        DiscountAmount = CalculateDiscountAmount(v, orderAmount)
+                    })
+                    .OrderByDescending(x => x.DiscountAmount) 
+                    .ThenBy(x => x.Voucher.EndDate) 
+                    .Select(x => x.Voucher)
+                    .ToList();
 
                 _logger.LogInformation("✅ Found {Count} valid vouchers for order amount {OrderAmount}đ, ShopId: {ShopId}",
                     result.Count, orderAmount, shopId?.ToString() ?? "ALL_SHOPS");
@@ -159,7 +167,25 @@ namespace ShopService.Infrastructure.Repositories
                 throw;
             }
         }
+        private decimal CalculateDiscountAmount(ShopVoucher voucher, decimal orderAmount)
+        {
+            decimal discountAmount = 0;
 
+            if (voucher.Type == VoucherType.Percentage)
+            {
+                discountAmount = orderAmount * (voucher.Value / 100);
+                if (voucher.MaxValue.HasValue && discountAmount > voucher.MaxValue.Value)
+                {
+                    discountAmount = voucher.MaxValue.Value;
+                }
+            }
+            else if (voucher.Type == VoucherType.FixedAmount)
+            {
+                discountAmount = voucher.Value;
+            }
+
+            return discountAmount;
+        }
         public async Task<int> GetUsageStatisticsAsync(Guid voucherId)
         {
             var voucher = await _context.Set<ShopVoucher>()

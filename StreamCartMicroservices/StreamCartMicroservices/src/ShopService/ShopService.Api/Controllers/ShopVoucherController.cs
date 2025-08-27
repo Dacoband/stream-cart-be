@@ -50,8 +50,6 @@ namespace ShopService.Api.Controllers
                 {
                     OrderAmount = request.OrderAmount,
                     ShopId = request.ShopId,
-                    Limit = request.Limit,
-                    VoucherType = request.VoucherType,
                     SortByDiscountDesc = request.SortByDiscountDesc
                 };
 
@@ -89,8 +87,6 @@ namespace ShopService.Api.Controllers
                 {
                     OrderAmount = orderAmount,
                     ShopId = shopId,
-                    Limit = Math.Min(limit, 50), 
-                    VoucherType = voucherType,
                     SortByDiscountDesc = sortByDiscountDesc
                 };
 

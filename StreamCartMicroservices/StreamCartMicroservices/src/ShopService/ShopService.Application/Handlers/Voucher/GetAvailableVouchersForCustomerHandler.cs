@@ -32,13 +32,6 @@ namespace ShopService.Application.Handlers.Voucher
 
                 // Lấy danh sách voucher khả dụng
                 var vouchers = await _voucherRepository.GetValidVouchersForOrderAsync((Guid)request.ShopId, request.OrderAmount);
-
-                // Lọc thêm theo type nếu có
-                if (request.VoucherType.HasValue)
-                {
-                    vouchers = vouchers.Where(v => v.Type == request.VoucherType.Value);
-                }
-
                 var result = new List<CustomerVoucherResponseDto>();
 
                 foreach (var voucher in vouchers)
@@ -89,7 +82,7 @@ namespace ShopService.Application.Handlers.Voucher
                                   .ThenBy(v => v.DiscountPercentage)
                                   .ToList();
                 }
-                result = result.Take(request.Limit).ToList();
+               // result = result.Take(request.Limit).ToList();
 
                 _logger.LogInformation("✅ Found {Count} available vouchers for order amount {OrderAmount}đ",
                     result.Count, request.OrderAmount);

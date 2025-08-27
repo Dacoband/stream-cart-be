@@ -10,7 +10,9 @@ namespace ProductService.Application.DTOs.FlashSale
         public int Slot { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm áp dụng FlashSale phải lớn hơn 0")]
-        public int? QuantityAvailable { get; set; }
+        public int? QuantityAvailable => Products?.Sum(p => p.QuantityAvailable ?? 0) > 0
+            ? Products.Sum(p => p.QuantityAvailable ?? 0)
+            : null;
 
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
