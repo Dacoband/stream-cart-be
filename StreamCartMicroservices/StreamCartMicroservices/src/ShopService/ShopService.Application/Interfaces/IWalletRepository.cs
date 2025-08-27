@@ -14,5 +14,6 @@ namespace ShopService.Application.Interfaces
         Task<Wallet> InsertAsync(Wallet wallet);
         Task<bool> ReplaceAsync(string id, Wallet wallet);
         Task<bool> AddFundsAsync(string walletId, decimal amount, string modifiedBy);
+        Task<List<Wallet>> GetListByShopID(Guid shopId);
     }
 }

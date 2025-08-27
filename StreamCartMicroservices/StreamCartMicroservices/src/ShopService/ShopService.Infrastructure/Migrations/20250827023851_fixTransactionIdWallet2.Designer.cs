@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ShopService.Domain.Entities;
@@ -13,9 +14,11 @@ using ShopService.Infrastructure.Data;
 namespace ShopService.Infrastructure.Migrations
 {
     [DbContext(typeof(ShopContext))]
-    partial class ShopContextModelSnapshot : ModelSnapshot
+    [Migration("20250827023851_fixTransactionIdWallet2")]
+    partial class fixTransactionIdWallet2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -670,8 +673,7 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnName("target");
 
                     b.Property<string>("TransactionId")
-                        .HasColumnType("text")
-                        .HasColumnName("transaction_id");
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()

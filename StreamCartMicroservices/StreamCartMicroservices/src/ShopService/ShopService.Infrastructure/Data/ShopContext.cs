@@ -456,6 +456,7 @@ namespace ShopService.Infrastructure.Data
 
                 entity.Property(e => e.RefundId)
                     .HasColumnName("refund_id");
+                entity.Property(e => e.TransactionId).HasColumnName("transaction_id");
 
                 // Base entity fields
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");

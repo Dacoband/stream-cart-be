@@ -143,5 +143,10 @@ namespace ShopService.Infrastructure.Repositories
                 return false;
             }
         }
+
+        public Task<List<Wallet>> GetListByShopID(Guid shopId)
+        {
+            return _context.Wallets.Where(x => x.ShopId == shopId).ToListAsync();
+        }
     }
 }
