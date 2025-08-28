@@ -63,7 +63,11 @@ namespace ShopService.Application.Services
                     request.Amount = request.Amount * -1;
                 walletTransaction.Target = Guid.Empty.ToString();
             }
+            if (request.Status == WalletTransactionStatus.Success && request.Type ==    WalletTransactionType.Deposit) { 
+                wallet.Balance += request.Amount;
+                wallet.SetModifier("system");
             
+            }
             
             walletTransaction.Type = request.Type.ToString();
             walletTransaction.Amount = request.Amount;
@@ -112,6 +116,7 @@ namespace ShopService.Application.Services
             try
             {
                 await _walletTransactionRepository.InsertAsync(walletTransaction);
+                await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
                 response.Data = walletTransaction;
                 return response;
             }
@@ -313,11 +318,17 @@ namespace ShopService.Application.Services
                 return ApiResponse<WalletTransaction>.ErrorResult("Không thể cập nhật giao dịch sang Pending");
 
             // Thực hiện cập nhật trạng thái
+            if(status == WalletTransactionStatus.Success && tx.Type == WalletTransactionType.Withdraw.ToString())
+            {
+               wallet.Balance = wallet.Balance + tx.Amount;
+               wallet.SetModifier("system");
+            }
             tx.Status = status.ToString();
             tx.SetModifier(userid);
             try
             {
                 await _walletTransactionRepository.ReplaceAsync(tx.Id.ToString(),tx);
+                await _walletRepository.ReplaceAsync(wallet.Id.ToString(),wallet);
                 return ApiResponse<WalletTransaction>.SuccessResult(tx, $"Cập nhật trạng thái giao dịch thành {status} thành công");
             }
             catch (Exception ex)
