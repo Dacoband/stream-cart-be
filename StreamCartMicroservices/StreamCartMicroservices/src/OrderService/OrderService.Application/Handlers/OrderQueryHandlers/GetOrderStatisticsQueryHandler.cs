@@ -66,6 +66,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     AverageOrderValue = statistics.AverageOrderValue,
                     TotalItemsSold = statistics.TotalItemsSold,
                     OrdersByStatus = statistics.OrdersByStatus
+                    
                 };
 
                 return statisticsDto;

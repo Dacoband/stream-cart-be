@@ -125,7 +125,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         var voucherResult = await ApplyVoucherAsync(order, shopOrder.VoucherCode, accessToken, shopOrder.ShopId);
                         if (!voucherResult.Success)
                         {
-                            _logger.LogWarning("❌ Voucher application failed: {Message}", voucherResult.Message);
+                            _logger.LogWarning("Lỗi khi dùng voucher", voucherResult.Message);
                             return Fail(voucherResult.Message);
                         }
 
@@ -263,7 +263,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             ApiResponse<List<OrderItem>> Success(List<OrderItem> data) => new() { Success = true, Data = data };
         }
 
-        private async Task<ApiResponse<Orders>> ApplyVoucherAsync(Orders order, string code, string accessToken, Guid shopId)
+        private async Task<ApiResponse<VoucherApplicationDto>> ApplyVoucherAsync(Orders order, string code, string accessToken, Guid shopId)
         {
             try
             {
@@ -274,7 +274,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 if (validation == null || !validation.IsValid)
                 {
                     _logger.LogWarning("❌ Voucher validation failed: {Message}", validation?.Message ?? "Unknown error");
-                    return new ApiResponse<Orders> { Success = false, Message = validation?.Message ?? "Không thể áp dụng voucher" };
+                    return new ApiResponse<VoucherApplicationDto> { Success = false, Message = validation?.Message ?? "Không thể áp dụng voucher" };
                 }
 
                 _logger.LogInformation("✅ Voucher validation passed. Discount: {Discount}đ", validation.DiscountAmount);
@@ -284,19 +284,19 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 {
                     _logger.LogInformation("🎉 Voucher applied successfully! Code: {Code}, Discount: {Discount}đ, Final: {Final}đ",
                         applied.VoucherCode, applied.DiscountAmount, applied.FinalAmount);
-                    return new ApiResponse<Orders> { Success = true, Data = order, Message = "Voucher applied successfully" };
+                    return new ApiResponse<VoucherApplicationDto> { Success = true, Data = applied, Message = "Voucher applied successfully" };
                 }
                 else
                 {
                     _logger.LogWarning("❌ Voucher application failed: IsApplied={IsApplied}, Message={Message}",
                         applied?.IsApplied, applied?.Message ?? "Unknown error");
-                    return new ApiResponse<Orders> { Success = false, Message = applied?.Message ?? "Không thể áp dụng voucher" };
+                    return new ApiResponse<VoucherApplicationDto> { Success = false, Message = applied?.Message ?? "Không thể áp dụng voucher" };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error applying voucher {Code} for order {OrderId}", code, order.Id);
-                return new ApiResponse<Orders> { Success = false, Message = "Lỗi hệ thống khi áp dụng voucher" };
+                return new ApiResponse<VoucherApplicationDto> { Success = false, Message = "Lỗi hệ thống khi áp dụng voucher" };
             }
         }
         private async Task PublishOrderEventsAsync(Orders order, string paymentMethod, Guid userId)
@@ -399,7 +399,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 ActualDeliveryDate = order.ActualDeliveryDate,
                 LivestreamId = order.LivestreamId,
                 TimeForShop = order.TimeForShop, 
-
+                NetAmount = order.NetAmount,
                 Items = itemDtos
             };
         }
