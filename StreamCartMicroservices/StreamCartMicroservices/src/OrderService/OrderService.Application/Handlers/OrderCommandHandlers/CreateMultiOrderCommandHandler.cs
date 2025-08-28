@@ -115,18 +115,36 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     }
                     // Lưu đơn hàng ban đầu
-                    await _orderRepository.InsertAsync(order);    
-                    
+                    await _orderRepository.InsertAsync(order);
+
                     if (!string.IsNullOrEmpty(shopOrder.VoucherCode))
                     {
-                        var voucherResult = await ApplyVoucherAsync(order, shopOrder.VoucherCode, accessToken, shopOrder.ShopId);
-                        if (!voucherResult.Success) return Fail(voucherResult.Message);
+                        _logger.LogInformation("🎫 Applying voucher {Code} for shop {ShopId}, order amount: {Amount}đ",
+                            shopOrder.VoucherCode, shopOrder.ShopId, order.FinalAmount);
 
-                        order = voucherResult.Data;
-                        voucherDiscount = voucherResult.Data.DiscountAmount - itemResult.Data.Sum(x => x.DiscountAmount);
+                        var voucherResult = await ApplyVoucherAsync(order, shopOrder.VoucherCode, accessToken, shopOrder.ShopId);
+                        if (!voucherResult.Success)
+                        {
+                            _logger.LogWarning("❌ Voucher application failed: {Message}", voucherResult.Message);
+                            return Fail(voucherResult.Message);
+                        }
+
+                        _logger.LogInformation("✅ Voucher applied successfully. Discount: {Discount}đ",
+                            voucherResult.Data.DiscountAmount);
+
+                        // ✅ FIX: Proper voucher discount calculation
+                        var itemDiscountTotal = itemResult.Data.Sum(x => x.DiscountAmount);
+                        voucherDiscount = voucherResult.Data.DiscountAmount;
+
+                        // ✅ Update order with voucher info
+                        order.DiscountAmount = itemDiscountTotal + voucherDiscount;
+                        order.VoucherCode = voucherResult.Data.VoucherCode;
+                        order.FinalAmount = voucherResult.Data.FinalAmount;
+
+                        _logger.LogInformation("📊 Order totals - Item Discount: {ItemDiscount}đ, Voucher Discount: {VoucherDiscount}đ, Final: {Final}đ",
+                            itemDiscountTotal, voucherDiscount, order.FinalAmount);
 
                         // Cập nhật lại sau khi áp dụng voucher
-                        CalculateOrderTotals(order, commissionRate, voucherDiscount);
                         await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
                     }
 

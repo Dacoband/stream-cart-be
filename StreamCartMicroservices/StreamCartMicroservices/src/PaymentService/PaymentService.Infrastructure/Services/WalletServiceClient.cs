@@ -46,25 +46,34 @@ namespace PaymentService.Infrastructure.Services
             {
                 var requestBody = new
                 {
-                    type = request.Type,
+                    type = MapTypeToEnum(request.Type),          
                     amount = request.Amount,
-                    shopId = request.ShopId, 
                     description = request.Description,
-                    status = request.Status,
+                    status = MapStatusToEnum(request.Status),    
                     transactionId = request.TransactionId,
-                    createdBy = request.CreatedBy
+                    shopMembershipId = (Guid?)null,             
+                    orderId = (Guid?)null,
+                    refundId = (Guid?)null
                 };
 
                 var json = JsonSerializer.Serialize(requestBody, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync(
-                    $"{_walletServiceBaseUrl}/api/shop-wallet",
-                    content);
+                var request_message = new HttpRequestMessage(HttpMethod.Post, $"{_walletServiceBaseUrl}/api/shop-wallet")
+                {
+                    Content = content
+                };
+
+                request_message.Headers.Add("X-Shop-Id", request.ShopId.ToString());
+                request_message.Headers.Add("X-User-Id", request.CreatedBy);
+
+                var response = await _httpClient.SendAsync(request_message);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Tạo wallet transaction thành công cho shop {ShopId}", request.ShopId);
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation("Tạo wallet transaction thành công cho shop {ShopId}. Response: {Response}",
+                        request.ShopId, responseContent);
                     return true;
                 }
 
@@ -99,7 +108,6 @@ namespace PaymentService.Infrastructure.Services
         {
             try
             {
-                // ✅ Sử dụng _walletServiceBaseUrl để có URL đầy đủ
                 var response = await _httpClient.GetAsync($"{_walletServiceBaseUrl}/api/shop-wallet/{transactionId}");
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
@@ -108,7 +116,6 @@ namespace PaymentService.Infrastructure.Services
                 response.EnsureSuccessStatusCode();
 
                 var json = await response.Content.ReadAsStringAsync();
-                // ✅ Sử dụng _jsonOptions đã được khởi tạo
                 var apiResponse = JsonSerializer.Deserialize<ApiResponse<WalletTransactionDto>>(json, _jsonOptions);
 
                 return apiResponse?.Data;
@@ -131,12 +138,9 @@ namespace PaymentService.Infrastructure.Services
                     ModifiedBy = modifiedBy ?? "System"
                 };
 
-                // ✅ Sử dụng _jsonOptions đã được khởi tạo
                 var json = JsonSerializer.Serialize(requestBody, _jsonOptions);
-                // ✅ Fix StringContent constructor
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                // ✅ Sử dụng _walletServiceBaseUrl để có URL đầy đủ
                 var response = await _httpClient.PatchAsync($"{_walletServiceBaseUrl}/api/shop-wallet/{transactionId}", content);
 
                 return response.IsSuccessStatusCode;
@@ -146,6 +150,28 @@ namespace PaymentService.Infrastructure.Services
                 _logger.LogError(ex, "Error updating wallet transaction status {TransactionId}", transactionId);
                 return false;
             }
+        }
+        private static string MapTypeToEnum(int type)
+        {
+            return type switch
+            {
+                0 => "Withdraw",    // WalletTransactionType.Withdraw
+                1 => "Deposit",     // WalletTransactionType.Deposit  
+                2 => "Commission",  // WalletTransactionType.Commission
+                3 => "System",      // WalletTransactionType.System
+                _ => "Deposit"      // Default to Deposit
+            };
+        }
+        private static string MapStatusToEnum(int status)
+        {
+            return status switch
+            {
+                0 => "Success",     // WalletTransactionStatus.Success
+                1 => "Failed",      // WalletTransactionStatus.Failed
+                2 => "Pending",     // WalletTransactionStatus.Pending
+                3 => "Canceled",    // WalletTransactionStatus.Canceled
+                _ => "Pending"      // Default to Pending
+            };
         }
     }
 }

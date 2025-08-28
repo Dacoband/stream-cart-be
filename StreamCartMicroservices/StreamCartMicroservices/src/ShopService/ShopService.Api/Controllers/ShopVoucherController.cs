@@ -154,8 +154,11 @@ namespace ShopService.Api.Controllers
         /// <summary>
         /// Áp dụng voucher cho đơn hàng
         /// </summary>
+        /// <summary>
+        /// Áp dụng voucher cho đơn hàng
+        /// </summary>
         [HttpPost("vouchers/{code}/apply")]
-        [Authorize]
+       // [Authorize]
         [ProducesResponseType(typeof(ApiResponse<VoucherApplicationDto>), 200)]
         public async Task<ActionResult<VoucherApplicationDto>> ApplyVoucher(string code, [FromBody] ApplyVoucherDto request)
         {
@@ -168,7 +171,7 @@ namespace ShopService.Api.Controllers
                     OrderAmount = request.OrderAmount,
                     OrderId = request.OrderId,
                     UserId = userId,
-                    ShopId = _currentUserService.GetShopId() != null ? Guid.Parse(_currentUserService.GetShopId()) : null
+                    ShopId = request.ShopId ?? (_currentUserService.GetShopId() != null ? Guid.Parse(_currentUserService.GetShopId()) : null)
                 };
 
                 var result = await _mediator.Send(command);

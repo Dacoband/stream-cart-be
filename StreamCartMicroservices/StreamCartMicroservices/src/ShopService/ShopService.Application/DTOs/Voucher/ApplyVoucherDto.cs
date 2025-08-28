@@ -13,5 +13,7 @@ namespace ShopService.Application.DTOs.Voucher
         public decimal OrderAmount { get; set; }
 
         public Guid? OrderId { get; set; }
+        public Guid? ShopId { get; set; }
+
     }
 }

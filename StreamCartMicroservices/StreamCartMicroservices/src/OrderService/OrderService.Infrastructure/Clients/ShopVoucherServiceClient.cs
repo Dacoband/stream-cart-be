@@ -42,7 +42,7 @@ namespace OrderService.Infrastructure.Clients
                 {
                     OrderId = orderId,
                     OrderAmount = orderAmount,
-                    ShopId = shopId // ✅ FIX: Add shopId to request body
+                    ShopId = shopId 
                 };
 
                 var json = JsonSerializer.Serialize(requestBody);
