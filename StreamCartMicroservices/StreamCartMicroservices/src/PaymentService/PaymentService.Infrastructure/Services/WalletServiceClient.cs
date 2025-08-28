@@ -48,9 +48,11 @@ namespace PaymentService.Infrastructure.Services
                 {
                     type = request.Type,
                     amount = request.Amount,
+                    shopId = request.ShopId, 
                     description = request.Description,
                     status = request.Status,
-                    transactionId = request.TransactionId
+                    transactionId = request.TransactionId,
+                    createdBy = request.CreatedBy
                 };
 
                 var json = JsonSerializer.Serialize(requestBody, _jsonOptions);
