@@ -218,7 +218,8 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     // Kiểm tra null và tránh chia cho 0
                     if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
                     {
-                        discount = unitPrice * (variant.FlashSalePrice.Value / 100m);
+                        unitPrice = variant.FlashSalePrice.Value;
+                        discount = variant.Price - variant.FlashSalePrice.Value;
                     }
                 }
                 else
@@ -227,7 +228,8 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
                     {
-                        discount = unitPrice * (product.DiscountPrice.Value / 100m);
+                        unitPrice = product.FinalPrice;
+                        discount = (decimal)(product.BasePrice - product.DiscountPrice);
                     }
                 }
 

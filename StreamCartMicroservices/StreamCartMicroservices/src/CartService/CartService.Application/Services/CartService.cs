@@ -122,7 +122,7 @@ namespace CartService.Application.Services
                 ShopId = productInfo.ShopId,
                 ShopName = productInfo.ShopName,
                 PriceCurrent = productInfo.PriceCurrent,
-                PriceSnapShot = productInfo.PriceCurrent,
+                PriceSnapShot = productInfo.PriceOriginal,
                 Stock = productInfo.Stock,
                 Quantity = cart.Quantity,
                 PrimaryImage = productInfo.PrimaryImage,

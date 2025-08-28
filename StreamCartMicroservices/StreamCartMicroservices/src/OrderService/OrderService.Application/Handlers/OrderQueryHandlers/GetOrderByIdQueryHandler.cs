@@ -120,6 +120,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                     LivestreamId = order.LivestreamId,
                     Items = orderItemDtos,
                     VoucherCode = order.VoucherCode,
+                    NetAmount = order.NetAmount,
                 };
 
                 _logger.LogInformation("Successfully retrieved order {OrderId} with {ItemCount} items",
