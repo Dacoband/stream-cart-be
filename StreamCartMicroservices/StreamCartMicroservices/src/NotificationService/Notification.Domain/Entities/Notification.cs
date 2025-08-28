@@ -18,7 +18,7 @@ namespace Notification.Domain.Entities
         public string RecipientUserID { get; set; }
 
         [BsonRepresentation(BsonType.String)]
-        public string OrderCode { get; set; }
+        public string? OrderCode { get; set; }
 
         [BsonRepresentation(BsonType.String)]
         public Guid? ProductId { get; set; }
@@ -30,7 +30,7 @@ namespace Notification.Domain.Entities
         public Guid? LivestreamId { get; set; }
 
         [BsonElement("Type")]
-        public string Type { get; set; }
+        public string? Type { get; set; }
 
         public string Message { get; set; }
 
