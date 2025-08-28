@@ -51,6 +51,7 @@ namespace PaymentService.Infrastructure.Extensions
             services.AddScoped<IPaymentService, PaymentService.Infrastructure.Services.PaymentService>();
             services.AddScoped<IPaymentRepository, PaymentService.Infrastructure.Repositories.PaymentRepository>();
             services.AddScoped<IQrCodeService, QrCodeService>();
+            services.AddScoped<IWalletServiceClient, WalletServiceClient>();
 
 
             return services;
