@@ -124,7 +124,8 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                         EstimatedDeliveryDate = order.EstimatedDeliveryDate,
                         ActualDeliveryDate = order.ActualDeliveryDate,
                         LivestreamId = order.LivestreamId,
-                        Items = orderItemDtos
+                        Items = orderItemDtos,
+                        NetAmount = order.NetAmount,
                     };
 
                     orderDtos.Add(orderDto);

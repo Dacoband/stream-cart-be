@@ -2,6 +2,7 @@
 using ShopService.Application.DTOs.Wallet;
 using ShopService.Application.Interfaces;
 using ShopService.Domain.Entities;
+using ShopService.Domain.Enums;
 using System;
 using System.Threading.Tasks;
 
@@ -12,15 +13,19 @@ namespace ShopService.Application.Services
         private readonly IWalletRepository _walletRepository;
         private readonly ILogger<WalletService> _logger;
         private readonly IShopRepository _shopRepository;
+        private readonly IWalletTransactionRepository _walletTransactionRepository;
 
         public WalletService(
             IWalletRepository walletRepository,
             IShopRepository shopRepository,
+            IWalletTransactionRepository walletTransactionRepository,
             ILogger<WalletService> logger)
         {
             _walletRepository = walletRepository;
             _shopRepository = shopRepository;
+            _walletTransactionRepository = walletTransactionRepository;
             _logger = logger;
+            
         }
 
         public async Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDTO, string createdBy, string ShopId)
@@ -109,8 +114,23 @@ namespace ShopService.Application.Services
                 wallet.BankAccountNumber = updateWalletDTO.BankAccountNumber ?? wallet.BankAccountNumber;
                 wallet.UpdatedAt = DateTime.UtcNow;
                 wallet.SetModifier(updatedBy);
+                var walletTransaction = await _walletTransactionRepository.GetAllAsync();
+                walletTransaction =  walletTransaction.Where(x => x.WalletId == id && x.Status == WalletTransactionStatus.Pending.ToString() && x.IsDeleted != false).ToList();
 
+                
                 await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
+                if(walletTransaction.Count() > 0)
+                {
+                    foreach (var transaction in walletTransaction)
+                    {
+                        transaction.BankAccount = wallet.BankName;
+                        transaction.BankNumber = wallet.BankAccountNumber;
+                        transaction.SetModifier("system");
+                        await _walletTransactionRepository.ReplaceAsync(transaction.Id.ToString(), transaction);
+
+                    }
+                }
+              
 
                 _logger.LogInformation("Đã cập nhật thông tin ngân hàng cho ví {WalletId}", id);
 
