@@ -46,12 +46,12 @@ namespace PaymentService.Infrastructure.Services
             {
                 var requestBody = new
                 {
-                    type = MapTypeToEnum(request.Type),          
+                    type = request.Type,                    
                     amount = request.Amount,
                     description = request.Description,
-                    status = MapStatusToEnum(request.Status),    
+                    status = request.Status,                
                     transactionId = request.TransactionId,
-                    shopMembershipId = (Guid?)null,             
+                    shopMembershipId = (Guid?)null,
                     orderId = (Guid?)null,
                     refundId = (Guid?)null
                 };
