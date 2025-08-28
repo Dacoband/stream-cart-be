@@ -11,6 +11,7 @@ using Shared.Common.Domain.Bases;
 using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace PaymentService.Api.Controllers
@@ -1089,7 +1090,7 @@ namespace PaymentService.Api.Controllers
                 }
 
                 // ✅ DETERMINE CALLBACK TYPE BASED ON ORDERCODE AND TRANSFERTYPE
-                var callbackType = DetermineCallbackType(orderCode, transferType);
+                var callbackType = DetermineCallbackTypeEnhanced(orderCode, transferType, request.Content);
                 _logger.LogInformation("🎯 Detected callback type: {CallbackType}", callbackType);
 
                 return callbackType switch
@@ -1109,11 +1110,45 @@ namespace PaymentService.Api.Controllers
 
         #region Private Helper Methods
 
-        /// <summary>
-        /// Determines the type of callback based on order code and transfer type
-        /// </summary>
-        private CallbackType DetermineCallbackType(string orderCode, string transferType)
+        ///// <summary>
+        ///// Determines the type of callback based on order code and transfer type
+        ///// </summary>
+        //private CallbackType DetermineCallbackType(string orderCode, string transferType)
+        //{
+        //    // For money OUT (withdrawals)
+        //    if (transferType == "out")
+        //    {
+        //        if (orderCode.StartsWith("WITHDRAW_", StringComparison.OrdinalIgnoreCase) ||
+        //            orderCode.StartsWith("WITHDRAW_CONFIRM_", StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            return CallbackType.Withdrawal;
+        //        }
+        //        // Manual withdrawal without proper prefix - check content for GUID pattern
+        //        if (Guid.TryParse(ExtractGuidFromString(orderCode), out _))
+        //        {
+        //            return CallbackType.Withdrawal;
+        //        }
+        //    }
+
+        //    // For money IN (deposits and orders)
+        //    if (orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        return CallbackType.Deposit;
+        //    }
+
+        //    if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        return CallbackType.Order;
+        //    }
+
+        //    // Default fallback based on transferType
+        //    return transferType == "out" ? CallbackType.Withdrawal : CallbackType.Order;
+        //}
+        private CallbackType DetermineCallbackTypeEnhanced(string orderCode, string transferType, string? content)
         {
+            _logger.LogInformation("🔍 Analyzing callback - OrderCode: {OrderCode}, TransferType: {TransferType}, Content: {Content}",
+                orderCode, transferType, content);
+
             // For money OUT (withdrawals)
             if (transferType == "out")
             {
@@ -1122,28 +1157,45 @@ namespace PaymentService.Api.Controllers
                 {
                     return CallbackType.Withdrawal;
                 }
-                // Manual withdrawal without proper prefix - check content for GUID pattern
-                if (Guid.TryParse(ExtractGuidFromString(orderCode), out _))
+
+                // Check content for withdrawal patterns
+                if (!string.IsNullOrEmpty(content) &&
+                    (content.Contains("WITHDRAW", StringComparison.OrdinalIgnoreCase) ||
+                     Regex.IsMatch(content, @"[0-9a-fA-F]{32}", RegexOptions.IgnoreCase)))
                 {
                     return CallbackType.Withdrawal;
                 }
             }
-
-            // For money IN (deposits and orders)
-            if (orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
+            if (transferType == "in")
             {
-                return CallbackType.Deposit;
+                if (orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
+                {
+                    return CallbackType.Deposit;
+                }
+
+                if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
+                {
+                    return CallbackType.Order;
+                }
+
+                // ✅ Additional check for content-based detection
+                if (!string.IsNullOrEmpty(content))
+                {
+                    if (content.Contains("DEPOSIT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return CallbackType.Deposit;
+                    }
+
+                    if (content.Contains("ORDER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return CallbackType.Order;
+                    }
+                }
             }
 
-            if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))
-            {
-                return CallbackType.Order;
-            }
-
-            // Default fallback based on transferType
+            // Fallback based on transferType
             return transferType == "out" ? CallbackType.Withdrawal : CallbackType.Order;
         }
-
         /// <summary>
         /// Processes order payment callbacks (single and bulk orders)
         /// </summary>
@@ -1198,49 +1250,130 @@ namespace PaymentService.Api.Controllers
         /// </summary>
         private async Task<IActionResult> ProcessDepositCallbackInternal(SePayCallbackRequest request)
         {
-            var shopId = ExtractShopIdFromOrderCode(request.OrderCode!);
-            if (shopId == Guid.Empty)
+            try
             {
-                return BadRequest(new { success = false, error = "ShopId không hợp lệ" });
+                var shopId = ExtractShopIdFromOrderCodeEnhanced(request.OrderCode!, request.Content);
+                if (shopId == Guid.Empty)
+                {
+                    _logger.LogWarning("❌ Could not extract valid ShopId from OrderCode: {OrderCode}, Content: {Content}",
+                        request.OrderCode, request.Content);
+
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = "ShopId không hợp lệ",
+                        orderCode = request.OrderCode,
+                        content = request.Content,
+                        extractedShopId = shopId
+                    });
+                }
+
+                _logger.LogInformation("✅ Extracted ShopId: {ShopId} from OrderCode: {OrderCode}", shopId, request.OrderCode);
+
+                var payments = await _paymentService.GetPaymentsByOrderIdAsync(shopId);
+                var payment = payments?.FirstOrDefault();
+
+                if (payment == null)
+                {
+                    _logger.LogWarning("❌ Payment not found for deposit ShopId: {ShopId}", shopId);
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = "Không tìm thấy giao dịch payment",
+                        shopId = shopId,
+                        orderCode = request.OrderCode
+                    });
+                }
+
+                // Process payment callback
+                var callbackDto = new PaymentCallbackDto
+                {
+                    IsSuccessful = request.Status == "success",
+                    QrCode = payment.QrCode,
+                    RawResponse = System.Text.Json.JsonSerializer.Serialize(request)
+                };
+
+                await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
+
+                // Create wallet transaction if successful
+                if (request.Status == "success")
+                {
+                    await CreateDepositWalletTransaction(shopId, request.Amount, request.TransactionId!);
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    type = "DEPOSIT",
+                    message = "Xử lý deposit callback thành công",
+                    paymentId = payment.Id,
+                    shopId = shopId,
+                    status = request.Status == "success" ? "SUCCESS" : "FAILED",
+                    transactionId = request.TransactionId,
+                    amount = request.Amount
+                });
             }
-
-            var payments = await _paymentService.GetPaymentsByOrderIdAsync(shopId);
-            var payment = payments?.FirstOrDefault();
-
-            if (payment == null)
+            catch (Exception ex)
             {
-                return BadRequest(new { success = false, error = "Không tìm thấy giao dịch payment" });
+                _logger.LogError(ex, "💥 Error processing deposit callback");
+                throw;
             }
-
-            // Process payment callback
-            var callbackDto = new PaymentCallbackDto
-            {
-                IsSuccessful = request.Status == "success",
-                QrCode = payment.QrCode,
-                RawResponse = System.Text.Json.JsonSerializer.Serialize(request)
-            };
-
-            await _paymentService.ProcessPaymentCallbackAsync(payment.Id, callbackDto);
-
-            // Create wallet transaction if successful
-            if (request.Status == "success")
-            {
-                await CreateDepositWalletTransaction(shopId, request.Amount, request.TransactionId!);
-            }
-
-            return Ok(new
-            {
-                success = true,
-                type = "DEPOSIT",
-                message = "Xử lý deposit callback thành công",
-                paymentId = payment.Id,
-                shopId = shopId,
-                status = request.Status == "success" ? "SUCCESS" : "FAILED",
-                transactionId = request.TransactionId,
-                amount = request.Amount
-            });
         }
+        private Guid ExtractShopIdFromOrderCodeEnhanced(string orderCode, string? content)
+        {
+            try
+            {
+                _logger.LogInformation("🔍 Extracting ShopId from OrderCode: {OrderCode}, Content: {Content}", orderCode, content);
 
+                // Primary extraction from orderCode
+                if (orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
+                {
+                    var shopIdString = orderCode.Substring(8);
+                    var shopId = ParseGuidFromString(shopIdString);
+                    if (shopId != Guid.Empty)
+                    {
+                        _logger.LogInformation("✅ Extracted ShopId from DEPOSIT_ prefix: {ShopId}", shopId);
+                        return shopId;
+                    }
+                }
+
+                // Fallback: Extract from orderCode directly if it's a GUID
+                if (orderCode.Length == 32 || orderCode.Length == 36)
+                {
+                    var shopId = ParseGuidFromString(orderCode);
+                    if (shopId != Guid.Empty)
+                    {
+                        _logger.LogInformation("✅ Extracted ShopId from direct GUID: {ShopId}", shopId);
+                        return shopId;
+                    }
+                }
+
+                // ✅ NEW: Fallback extraction from content
+                if (!string.IsNullOrEmpty(content))
+                {
+                    var guidPattern = @"[0-9a-fA-F]{32}";
+                    var matches = Regex.Matches(content, guidPattern, RegexOptions.IgnoreCase);
+
+                    foreach (Match match in matches)
+                    {
+                        var shopId = ParseGuidFromString(match.Value);
+                        if (shopId != Guid.Empty)
+                        {
+                            _logger.LogInformation("✅ Extracted ShopId from content pattern: {ShopId}", shopId);
+                            return shopId;
+                        }
+                    }
+                }
+
+                _logger.LogWarning("❌ Could not extract valid ShopId from any source");
+                return Guid.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error extracting ShopId from: {OrderCode}", orderCode);
+                return Guid.Empty;
+            }
+        }
         /// <summary>
         /// Processes withdrawal callbacks
         /// </summary>

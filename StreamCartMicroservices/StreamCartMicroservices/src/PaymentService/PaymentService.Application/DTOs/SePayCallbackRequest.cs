@@ -87,14 +87,17 @@ namespace PaymentService.Application.DTOs
                 return null;
             var patterns = new[]
             {
-                @"WITHDRAW_CONFIRM_[0-9a-fA-F]{32}",          
-                @"ORDERS_[0-9a-fA-F,]{32,}",                 
-                @"DEPOSIT_[0-9a-fA-F]{32}",                   
+                @"WITHDRAW_CONFIRM_[0-9a-fA-F]{32}",           
+                @"ORDERS_[0-9a-fA-F,]{32,}",                  
+                @"DEPOSIT[0-9a-fA-F]{32}",                    
+                @"WITHDRAW[0-9a-fA-F]{32}",                   
+                @"ORDER[0-9a-fA-F]{32}",                     
+                @"DEPOSIT_[0-9a-fA-F]{32}",                  
                 @"WITHDRAW_[0-9a-fA-F]{32}",                  
                 @"ORDER_[0-9a-fA-F]{32}",                     
-                @"ORDER[0-9a-fA-F]{32}",                      
                 
-                @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",        
+                @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", // GUID with hyphens
+                @"[0-9a-fA-F]{32}"
             };
 
             foreach (var pattern in patterns)
@@ -103,15 +106,41 @@ namespace PaymentService.Application.DTOs
                 if (match.Success)
                 {
                     var result = match.Value;
-                    if (result.StartsWith("ORDERS_", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return CleanOrdersPattern(result);
-                    }
+
+                    result = NormalizeOrderCode(result);
 
                     return result;
                 }
             }
             return ExtractFallbackGuid();
+        }
+        private string NormalizeOrderCode(string orderCode)
+        {
+            if (string.IsNullOrEmpty(orderCode))
+                return orderCode;
+
+            // Thêm underscore nếu thiếu
+            if (orderCode.StartsWith("DEPOSIT", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
+            {
+                return "DEPOSIT_" + orderCode.Substring(7);
+            }
+
+            if (orderCode.StartsWith("WITHDRAW", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("WITHDRAW_", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("WITHDRAW_CONFIRM_", StringComparison.OrdinalIgnoreCase))
+            {
+                return "WITHDRAW_" + orderCode.Substring(8);
+            }
+
+            if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("ORDER_", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("ORDERS_", StringComparison.OrdinalIgnoreCase))
+            {
+                return "ORDER_" + orderCode.Substring(5);
+            }
+
+            return orderCode;
         }
         private string CleanOrdersPattern(string ordersMatch)
         {
