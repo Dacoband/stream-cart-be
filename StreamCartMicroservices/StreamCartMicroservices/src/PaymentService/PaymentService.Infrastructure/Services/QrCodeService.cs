@@ -208,5 +208,87 @@ namespace PaymentService.Infrastructure.Services
             byte[] signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(content));
             return Task.FromResult(Convert.ToHexString(signatureBytes));
         }
+        public async Task<string> GenerateDepositQrCodeAsync(Guid shopId, decimal amount, Guid userId, PaymentMethod paymentMethod)
+        {
+            try
+            {
+                if (paymentMethod != PaymentMethod.BankTransfer)
+                {
+                    _logger.LogWarning("QR code can only be generated for bank transfers");
+                    return string.Empty;
+                }
+
+                string description = $"DEPOSIT_{shopId:N}";
+
+                int amountInt = (int)amount;
+
+                string template = "compact";
+                string download = "true";
+
+                string qrUrl = $"https://qr.sepay.vn/img?acc={_bankAccount}&bank={_bankName}" +
+                               $"&amount={amountInt}&des={description}&template={template}&download={download}";
+
+                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string contentToSign = $"{shopId}|{amount}|{userId}|{timestamp}";
+                string signature = await GenerateSignatureAsync(contentToSign);
+
+                string metadata = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{contentToSign}|{signature}"));
+
+                string qrCodeInfo = $"{qrUrl}|{metadata}";
+
+                _logger.LogInformation("Generated SePay deposit QR code for shop {ShopId}, amount {Amount}", shopId, amount);
+                return qrCodeInfo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating SePay deposit QR code for shop {ShopId}", shopId);
+                throw;
+            }
+        }
+        public async Task<string> GenerateWithdrawalQrCodeAsync(Guid walletTransactionId, decimal amount, Guid userId, PaymentMethod paymentMethod, string? bankAccount, string? bankNumber)
+        {
+            try
+            {
+                if (paymentMethod != PaymentMethod.BankTransfer)
+                {
+                    _logger.LogWarning("QR code can only be generated for bank transfers");
+                    return string.Empty;
+                }
+
+                // Format mô tả cho withdrawal - sử dụng WITHDRAW_ prefix để phân biệt
+                string description = $"WITHDRAW_{walletTransactionId:N}";
+
+                // Làm tròn số tiền
+                int amountInt = (int)amount;
+
+                // Tham số QR code - sử dụng thông tin ngân hàng đích thay vì ngân hàng nhận
+                string template = "compact";
+                string download = "true";
+
+                // Tạo URL QR code từ SePay cho withdrawal (chuyển tiền đi)
+                string qrUrl = $"https://qr.sepay.vn/img?acc={bankNumber}&bank={bankAccount}" +
+                               $"&amount={amountInt}&des={description}&template={template}&download={download}";
+
+                // Tạo signature để xác thực khi callback
+                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string contentToSign = $"{walletTransactionId}|{amount}|{userId}|{timestamp}";
+                string signature = await GenerateSignatureAsync(contentToSign);
+
+                // Lưu thông tin bổ sung vào metadata (để xác thực khi callback)
+                string metadata = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{contentToSign}|{signature}"));
+
+                // Lưu URL QR code và metadata
+                string qrCodeInfo = $"{qrUrl}|{metadata}";
+
+                _logger.LogInformation("Generated SePay withdrawal QR code for wallet transaction {TransactionId}, amount {Amount} to {BankAccount}-{BankNumber}",
+                    walletTransactionId, amount, bankAccount, bankNumber);
+                return qrCodeInfo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating SePay withdrawal QR code for wallet transaction {TransactionId}", walletTransactionId);
+                throw;
+            }
+        }
     }
 }

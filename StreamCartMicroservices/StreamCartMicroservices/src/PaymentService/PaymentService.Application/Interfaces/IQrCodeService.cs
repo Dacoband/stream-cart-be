@@ -36,5 +36,9 @@ namespace PaymentService.Application.Interfaces
         /// <param name="qrCode">Mã QR code cần xác thực</param>
         /// <returns>true nếu hợp lệ, false nếu không hợp lệ</returns>
         Task<bool> ValidateQrCodeAsync(string qrCode);
+        Task<string> GenerateDepositQrCodeAsync(Guid shopId, decimal amount, Guid userId, PaymentMethod paymentMethod);
+        Task<string> GenerateWithdrawalQrCodeAsync(Guid walletTransactionId, decimal amount, Guid userId, PaymentMethod paymentMethod, string? bankAccount, string? bankNumber);
+
+
     }
 }
