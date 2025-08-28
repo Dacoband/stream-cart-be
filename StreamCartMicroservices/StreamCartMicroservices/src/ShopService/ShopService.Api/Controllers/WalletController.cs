@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Shared.Common.Services.User;
 using ShopService.Application.DTOs.Wallet;
 using ShopService.Application.Interfaces;
 using System;
@@ -16,15 +17,16 @@ namespace ShopService.Api.Controllers
     {
         private readonly IWalletService _walletService;
         private readonly ILogger<WalletController> _logger;
-
-        public WalletController(IWalletService walletService, ILogger<WalletController> logger)
+        private readonly ICurrentUserService _currentUserService;
+        public WalletController(IWalletService walletService, ILogger<WalletController> logger, ICurrentUserService currentUserService)
         {
             _walletService = walletService;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         [HttpGet("{id}")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<WalletDTO>> GetWallet(Guid id)
@@ -37,7 +39,7 @@ namespace ShopService.Api.Controllers
         }
 
         [HttpGet("shop/{shopId}")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<WalletDTO>> GetWalletByShopId(Guid shopId)
@@ -57,7 +59,7 @@ namespace ShopService.Api.Controllers
         {
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
                 string shopId = User.FindFirst("ShopId")?.Value;
 
                 var wallet = await _walletService.CreateWalletAsync(createWalletDTO, userId,shopId);
@@ -71,7 +73,7 @@ namespace ShopService.Api.Controllers
         }
 
         [HttpPut("shop/{shopId}/banking-info")]
-        [Authorize]
+       // [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<WalletDTO>> UpdateShopWalletBankingInfo(Guid shopId, [FromBody] UpdateWalletDTO updateWalletDTO)
@@ -97,7 +99,7 @@ namespace ShopService.Api.Controllers
         }
 
         [HttpPost("shop-payment")]
-        [Authorize(Roles = "System")]
+        //[Authorize(Roles = "System")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ProcessShopPayment([FromBody] ShopPaymentDTO paymentRequest)

@@ -101,7 +101,7 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<UpdateCategoryCommand, ApiResponse<Category>>, UpdateCategoryHandler>();
             services.AddScoped<IRequestHandler<DeleteCategoryCommand, ApiResponse<bool>>, DeleteCategoryHandler>();
             services.AddScoped<IFlashSaleService, FlashSaleService>();
-            services.AddScoped<IRequestHandler<CreateFlashSaleCommand, ApiResponse<List<DetailFlashSaleDTO>>>, CreateFlashSaleHandle>();
+            //services.AddScoped<IRequestHandler<CreateFlashSaleCommand, ApiResponse<List<DetailFlashSaleDTO>>>, CreateFlashSaleHandle>();
             services.AddScoped<IRequestHandler<UpdateFlashSaleCommand, ApiResponse<DetailFlashSaleDTO>>, UpdateFlashSaleHandler>();
             services.AddScoped<IRequestHandler<GetAllFlashSaleQuery, ApiResponse<List<DetailFlashSaleDTO>>>, GetAllFlashSaleHandler>();
             services.AddScoped<IRequestHandler<GetDetailFlashSaleQuery, ApiResponse<DetailFlashSaleDTO>>, GetDetailFlashSaleHandler>();

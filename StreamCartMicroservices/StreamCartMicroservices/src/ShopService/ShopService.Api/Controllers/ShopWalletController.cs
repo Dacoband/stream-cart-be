@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using ShopService.Application.Commands;
 using ShopService.Application.Commands.WalletTransaction;
 using ShopService.Application.DTOs.Membership;
@@ -18,12 +19,14 @@ namespace ShopService.Api.Controllers
     public class ShopWalletController : Controller
     {
         private readonly IMediator _mediator;
-        public ShopWalletController(IMediator mediator)
+        private readonly ICurrentUserService _currentUserService;
+        public ShopWalletController(IMediator mediator, ICurrentUserService currentUserService)
         {
             _mediator = mediator;
+            _currentUserService = currentUserService;
         }
         [HttpPost]
-        [Authorize(Roles = "OperationManager,Seller")]
+        //[Authorize(Roles = "OperationManager,Seller")]
         [ProducesResponseType(typeof(ApiResponse<WalletTransaction>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateWalletTransaction([FromBody] CreateWalletTransactionDTO request)
@@ -33,7 +36,7 @@ namespace ShopService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
                 string? shopId = User.FindFirst("ShopId")?.Value;
                 CreateWalletTraansactionCommand command = new CreateWalletTraansactionCommand()
                 {
@@ -56,7 +59,7 @@ namespace ShopService.Api.Controllers
             }
         }
         [HttpPatch("{id}")]
-        [Authorize(Roles = "OperationManager,Seller")]
+       // [Authorize(Roles = "OperationManager,Seller")]
         [ProducesResponseType(typeof(ApiResponse<WalletTransaction>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateWalletTransaction([FromForm] WalletTransactionStatus status, [FromRoute] string id)
@@ -66,7 +69,7 @@ namespace ShopService.Api.Controllers
 
             try
             {
-                string userId = User.FindFirst("id")?.Value;
+                string userId = _currentUserService.GetUserId().ToString();
                 string? shopId = User.FindFirst("ShopId")?.Value;
 
                 var command = new UpdateWalletTransactionCommand()
@@ -90,7 +93,7 @@ namespace ShopService.Api.Controllers
             }
         }
         [HttpGet]
-        [Authorize(Roles = "OperationManager,Seller")]
+        //[Authorize(Roles = "OperationManager,Seller")]
         [ProducesResponseType(typeof(ApiResponse<ListWalletransationDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> FilterWalletTransaction([FromQuery] FilterWalletTransactionDTO filter)
@@ -121,7 +124,7 @@ namespace ShopService.Api.Controllers
             }
         }
         [HttpGet("{id}")]
-        [Authorize(Roles = "OperationManager,Seller")]
+       // [Authorize(Roles = "OperationManager,Seller")]
         [ProducesResponseType(typeof(ApiResponse<WalletTransaction>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetWalletTransactionById([FromRoute] string id)

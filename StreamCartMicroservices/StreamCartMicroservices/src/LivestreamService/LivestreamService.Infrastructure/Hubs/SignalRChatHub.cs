@@ -27,7 +27,7 @@ namespace LivestreamService.Infrastructure.Hubs
 
         private static readonly ConcurrentDictionary<string, (Guid livestreamId, Guid userId, string role, DateTime startTime)> _activeViewers = new();
         private readonly IAccountServiceClient _accountServiceClient;
-        private readonly IMediator _mediator; // ✅ ADD: For handling commands
+        private readonly IMediator _mediator; 
         private readonly ILivestreamProductRepository _livestreamProductRepository;
 
 
@@ -64,7 +64,6 @@ namespace LivestreamService.Infrastructure.Hubs
 
                 var userRole = await GetUserRoleAsync(userGuid);
                 var startTime = DateTime.UtcNow;
-                // ✅ FIX: Store the connection mapping WITH role information
                 _activeViewers[Context.ConnectionId] = (livestreamGuid, userGuid, userRole,startTime);
                 await CreateStreamViewRecordAsync(livestreamGuid, userGuid);
 
@@ -75,10 +74,8 @@ namespace LivestreamService.Infrastructure.Hubs
                 // Add to the livestream group for targeted updates
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"livestream_viewers_{livestreamId}");
 
-                // ✅ Update max customer viewer count
                 await UpdateMaxCustomerViewerCount(livestreamGuid);
 
-                // Broadcast updated viewer stats
 
                 await BroadcastViewerStats(livestreamGuid);
                 await Clients.Caller.SendAsync("ViewingStarted", new
@@ -1835,8 +1832,10 @@ namespace LivestreamService.Infrastructure.Hubs
                 }
 
                 // 4) Upsert cart item
+                string cartItemId = string.Empty; 
                 var existingItem = await cartItemRepository.FindByCartAndProductAsync(
                     cart.Id, livestreamProductGuid, livestreamProduct.VariantId);
+                cartItemId = existingItem?.Id.ToString() ?? string.Empty;
 
                 if (existingItem != null)
                 {
@@ -1849,6 +1848,7 @@ namespace LivestreamService.Infrastructure.Hubs
 
                     existingItem.UpdateQuantity(newQuantity, userId);
                     await cartItemRepository.ReplaceAsync(existingItem.Id.ToString(), existingItem);
+                    cartItemId = existingItem.Id.ToString();
                 }
                 else
                 {
@@ -1879,6 +1879,7 @@ namespace LivestreamService.Infrastructure.Hubs
                     try
                     {
                         await cartItemRepository.InsertAsync(newItem);
+                        cartItemId = newItem.Id.ToString();
                     }
                     catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
                     {
@@ -1898,6 +1899,7 @@ namespace LivestreamService.Infrastructure.Hubs
                     Action = "ITEM_ADDED",
                     LivestreamId = livestreamId,
                     Cart = updatedCart,
+                    CartItemId = cartItemId,
                     ProductName = productName,
                     Quantity = quantity,
                     Timestamp = DateTime.UtcNow,
@@ -2156,7 +2158,7 @@ namespace LivestreamService.Infrastructure.Hubs
             var sp = Context.GetHttpContext()?.RequestServices;
             var cartRepository = sp?.GetRequiredService<ILivestreamCartRepository>();
             var cartItemRepository = sp?.GetRequiredService<ILivestreamCartItemRepository>();
-            var productServiceClient = sp?.GetService<IProductServiceClient>(); // ✅ for variant enrichment
+            var productServiceClient = sp?.GetService<IProductServiceClient>(); 
 
             object BuildEmpty()
             {
@@ -2183,10 +2185,8 @@ namespace LivestreamService.Infrastructure.Hubs
 
             try
             {
-                // Active cart
                 var cart = await cartRepository.GetByLivestreamAndViewerAsync(livestreamId, viewerId);
 
-                // Fallback any cart
                 if (cart == null)
                 {
                     var anyCart = await cartRepository.FindOneAsync(c =>
@@ -2252,7 +2252,7 @@ namespace LivestreamService.Infrastructure.Hubs
                         LivestreamProductId = item.LivestreamProductId,
                         ProductId = item.ProductId,
                         VariantId = item.VariantId,
-                        VariantName = variantName,               // ✅ NEW
+                        VariantName = variantName,              
                         ProductName = item.ProductName,
                         ShopId = item.ShopId,
                         ShopName = item.ShopName,

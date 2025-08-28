@@ -37,6 +37,9 @@ namespace ProductService.Domain.Entities
 
         [Column("EndTime")]
         public DateTime EndTime { get; set; }
+        [Column("Slot")]
+        [Range(1, 8, ErrorMessage = "Slot phải từ 1 đến 8")]
+        public int Slot { get; set; }
         public bool NotificationSent { get; set; } = false;
 
         // Navigation properties

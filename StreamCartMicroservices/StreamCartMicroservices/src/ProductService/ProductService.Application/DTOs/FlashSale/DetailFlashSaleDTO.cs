@@ -17,6 +17,9 @@ namespace ProductService.Application.DTOs.FlashSale
         public bool IsActive { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
-
+        public int Slot { get; set; }
+        public string? ProductName { get; set; }
+        public string? ProductImageUrl { get; set; }
+        public string? VariantName { get; set; }
     }
 }

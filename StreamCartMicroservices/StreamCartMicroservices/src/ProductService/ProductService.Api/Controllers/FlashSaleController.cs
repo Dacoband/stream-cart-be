@@ -5,6 +5,7 @@ using ProductService.Application.Commands.CategoryCommands;
 using ProductService.Application.Commands.FlashSaleCommands;
 using ProductService.Application.DTOs.Category;
 using ProductService.Application.DTOs.FlashSale;
+using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.FlashSaleQueries;
 using ProductService.Domain.Entities;
 using Shared.Common.Models;
@@ -19,50 +20,144 @@ namespace ProductService.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ICurrentUserService _currentUserService;
-        public FlashSaleController(IMediator mediator,ICurrentUserService currentUserService)
+        private readonly IFlashSaleService _flashSaleService; 
+        public FlashSaleController(IMediator mediator,ICurrentUserService currentUserService, IFlashSaleService flashSaleService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
+            _flashSaleService = flashSaleService;
         }
         [HttpPost]
         [Authorize(Roles = "Seller")]
-        [ProducesResponseType(typeof(ApiResponse<List<FlashSale>>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateFlashSale([FromBody] CreateFlashSaleDTO request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhận vào không hợp lệ"));
-
             try
             {
-                string? userId = _currentUserService.GetUserId().ToString();
-                string shopId = User.FindFirst("ShopId")?.Value;
-                var command = new CreateFlashSaleCommand()
-                {
-                    UserId = userId ,
-                    ShopId = shopId,
-                    ProductId = request.ProductId,
-                    VariantId = request.VariantId,
-                    QuantityAvailable = request.QuantityAvailable,
-                    FLashSalePrice = request.FLashSalePrice,
-                    StartTime = request.StartTime,
-                    EndTime = request.EndTime,
-                };
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
 
-                var createdFlashSale = await _mediator.Send(command);
-                if (createdFlashSale.Success == false)
-                {
-                    return BadRequest(createdFlashSale);
-                }
-                return Created(request.ProductId.ToString(), createdFlashSale);
+                string userId = _currentUserService.GetUserId().ToString();
+                string shopId = _currentUserService.GetShopId().ToString();
+
+                if (string.IsNullOrEmpty(shopId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
+
+                var result = await _flashSaleService.CreateFlashSale(request, userId, shopId);
+
+                if (result.Success)
+                    return CreatedAtAction(nameof(GetFlashSaleById), new { id = result.Data.FirstOrDefault()?.Id }, result);
+                else
+                    return BadRequest(result);
             }
             catch (Exception ex)
             {
-
-                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tạo FlashSale"));
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tạo FlashSale: {ex.Message}"));
             }
+        }
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetFlashSaleById(string id)
+        {
+            try
+            {
+                var result = await _flashSaleService.GetFlashSaleById(id);
 
+                if (result.Success)
+                    return Ok(result);
+                else
+                    return NotFound(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy FlashSale: {ex.Message}"));
+            }
+        }
+        [HttpGet("shop")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 200)]
+        public async Task<IActionResult> GetFlashSalesByShopAndDate(
+            [FromQuery] DateTime? date = null,
+            [FromQuery] int? slot = null)
+        {
+            try
+            {
+                string shopId = _currentUserService.GetShopId().ToString();
+                if (string.IsNullOrEmpty(shopId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
 
+                var result = await _flashSaleService.GetFlashSalesByShopAndDateAsync(shopId, date, slot);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy FlashSale: {ex.Message}"));
+            }
+        }
+        [HttpPut("{id}/products")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> UpdateFlashSaleProducts(
+            string id,
+            [FromBody] UpdateFlashSaleProductsDTO request)
+        {
+            try
+            {
+                string userId = _currentUserService.GetUserId().ToString();
+                string shopId = _currentUserService.GetShopId().ToString();
+
+                if (string.IsNullOrEmpty(shopId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
+
+                var result = await _flashSaleService.UpdateFlashSaleProductsAsync(
+                    id, request.ProductIds, request.VariantIds, userId, shopId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật sản phẩm FlashSale: {ex.Message}"));
+            }
+        }
+        [HttpGet("products/available")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<List<Guid>>), 200)]
+        public async Task<IActionResult> GetProductsWithoutFlashSale(
+            [FromQuery] DateTime startTime,
+            [FromQuery] DateTime endTime)
+        {
+            try
+            {
+                string shopId = _currentUserService.GetShopId().ToString();
+                if (string.IsNullOrEmpty(shopId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
+
+                var result = await _flashSaleService.GetProductsWithoutFlashSaleAsync(shopId, startTime, endTime);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy sản phẩm khả dụng: {ex.Message}"));
+            }
+        }
+
+        [HttpGet("slots/available")]
+        [ProducesResponseType(typeof(ApiResponse<List<int>>), 200)]
+        public async Task<IActionResult> GetAvailableSlots(
+            [FromQuery] DateTime startTime,
+            [FromQuery] DateTime endTime)
+        {
+            try
+            {
+                var result = await _flashSaleService.GetAvailableSlotsAsync(startTime, endTime);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy slot khả dụng: {ex.Message}"));
+            }
         }
         [HttpGet("my-shop")]
         [Authorize(Roles = "Seller")]
@@ -72,7 +167,7 @@ namespace ProductService.Api.Controllers
         {
             try
             {
-                string shopId = User.FindFirst("ShopId")?.Value;
+                string shopId = _currentUserService.GetShopId().ToString();
                 if (string.IsNullOrEmpty(shopId))
                 {
                     return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop trong token"));
@@ -111,7 +206,7 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = _currentUserService.GetUserId().ToString();
-                string shopId = User.FindFirst("ShopId")?.Value;
+                string shopId = _currentUserService.GetShopId().ToString();
                 var command = new UpdateFlashSaleCommand()
                 {
                     UserId = userId,
@@ -172,7 +267,7 @@ namespace ProductService.Api.Controllers
             }
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("detail/{id}")]
         [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetDetailFlashSale([FromRoute] string id)
@@ -206,7 +301,7 @@ namespace ProductService.Api.Controllers
             try
             {
                 string? userId = _currentUserService.GetUserId().ToString();
-                string shopId = User.FindFirst("ShopId")?.Value;
+                string shopId = _currentUserService.GetShopId().ToString();
                 var command = new DeleteFlashSaleCommand()
                 {
                     FlashSaleId = id,

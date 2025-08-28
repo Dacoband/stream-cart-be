@@ -15,6 +15,8 @@ namespace ProductService.Application.DTOs.FlashSale
         public FlashSaleOrderBy? OrderBy { get; set; }
         public OrderDirection? OrderDirection { get; set; }
         public bool? IsActive { get; set; }
+        public int? Slot { get; set; }
+
         public int? PageIndex { get; set; }
         public int? PageSize { get; set; } = 10;
 
@@ -22,7 +24,9 @@ namespace ProductService.Application.DTOs.FlashSale
     public enum FlashSaleOrderBy
     {
         StartDate,
-        EndDate
+        EndDate,
+        CreatedAt,
+        Slot
     }
 
     public enum OrderDirection

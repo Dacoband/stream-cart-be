@@ -23,7 +23,7 @@ namespace ShopService.Application.Interfaces
             bool? isExpired = null,
             int pageNumber = 1,
             int pageSize = 10);
-        Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid shopId, decimal orderAmount);
+        Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid? shopId, decimal orderAmount);
         Task<int> GetUsageStatisticsAsync(Guid voucherId);
     }
 }

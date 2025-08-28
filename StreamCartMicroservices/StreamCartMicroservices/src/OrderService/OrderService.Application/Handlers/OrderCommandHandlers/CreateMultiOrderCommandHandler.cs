@@ -115,18 +115,30 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     }
                     // Lưu đơn hàng ban đầu
-                    await _orderRepository.InsertAsync(order);    
-                    
+                    await _orderRepository.InsertAsync(order);
+
                     if (!string.IsNullOrEmpty(shopOrder.VoucherCode))
                     {
+                        _logger.LogInformation("Applying voucher {Code} for shop {ShopId}, order amount: {Amount}đ",
+                            shopOrder.VoucherCode, shopOrder.ShopId, order.FinalAmount);
+
                         var voucherResult = await ApplyVoucherAsync(order, shopOrder.VoucherCode, accessToken, shopOrder.ShopId);
-                        if (!voucherResult.Success) return Fail(voucherResult.Message);
+                        if (!voucherResult.Success)
+                        {
+                            _logger.LogWarning("❌ Voucher application failed: {Message}", voucherResult.Message);
+                            return Fail(voucherResult.Message);
+                        }
 
-                        order = voucherResult.Data;
-                        voucherDiscount = voucherResult.Data.DiscountAmount - itemResult.Data.Sum(x => x.DiscountAmount);
+                        _logger.LogInformation("✅ Voucher applied successfully. Discount: {Discount}đ",
+                            voucherResult.Data.DiscountAmount);
+                        var itemDiscountTotal = itemResult.Data.Sum(x => x.DiscountAmount);
+                        var voucherDiscountAmount = voucherResult.Data.DiscountAmount;
+                        order.VoucherCode = voucherResult.Data.VoucherCode;
+                        order.DiscountAmount = itemDiscountTotal + voucherDiscountAmount;
+                        order.FinalAmount = voucherResult.Data.FinalAmount;
 
-                        // Cập nhật lại sau khi áp dụng voucher
-                        CalculateOrderTotals(order, commissionRate, voucherDiscount);
+                        _logger.LogInformation("📊 Order updated - Item Discount: {ItemDiscount}đ, Voucher Discount: {VoucherDiscount}đ, Final: {Final}đ",
+                            itemDiscountTotal, voucherDiscountAmount, order.FinalAmount);
                         await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
                     }
 
@@ -255,7 +267,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         {
             try
             {
-                // ✅ STEP 1: Validate voucher trước
                 _logger.LogInformation("🎫 Validating voucher {Code} for shop {ShopId}, order amount: {Amount}",
                     code, shopId, order.FinalAmount);
 
@@ -268,25 +279,19 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                 _logger.LogInformation("✅ Voucher validation passed. Discount: {Discount}đ", validation.DiscountAmount);
 
-                // ✅ STEP 2: Apply voucher với shopId
                 var applied = await _shopVoucherClientService.ApplyVoucherAsync(code, order.Id, order.FinalAmount, shopId, accessToken);
                 if (applied != null && applied.IsApplied)
                 {
-                    // ✅ FIX: Cập nhật order với thông tin voucher chính xác
-                    order.DiscountAmount += applied.DiscountAmount;
-                    order.FinalAmount = applied.FinalAmount;
-                    order.VoucherCode = applied.VoucherCode;
-
                     _logger.LogInformation("🎉 Voucher applied successfully! Code: {Code}, Discount: {Discount}đ, Final: {Final}đ",
                         applied.VoucherCode, applied.DiscountAmount, applied.FinalAmount);
+                    return new ApiResponse<Orders> { Success = true, Data = order, Message = "Voucher applied successfully" };
                 }
                 else
                 {
-                    _logger.LogWarning("❌ Voucher application failed: {Message}", applied?.Message ?? "Unknown error");
+                    _logger.LogWarning("❌ Voucher application failed: IsApplied={IsApplied}, Message={Message}",
+                        applied?.IsApplied, applied?.Message ?? "Unknown error");
                     return new ApiResponse<Orders> { Success = false, Message = applied?.Message ?? "Không thể áp dụng voucher" };
                 }
-
-                return new ApiResponse<Orders> { Success = true, Data = order };
             }
             catch (Exception ex)
             {
