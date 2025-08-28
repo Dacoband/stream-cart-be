@@ -40,6 +40,7 @@ namespace OrderService.Infrastructure.Clients
 
                 var requestBody = new
                 {
+                    Code = code,
                     OrderId = orderId,
                     OrderAmount = orderAmount,
                     ShopId = shopId
