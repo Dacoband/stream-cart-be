@@ -45,6 +45,7 @@ namespace OrderService.Infrastructure.Extensions
                 options.UseNpgsql(ds, npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
+
                 });
             });
 

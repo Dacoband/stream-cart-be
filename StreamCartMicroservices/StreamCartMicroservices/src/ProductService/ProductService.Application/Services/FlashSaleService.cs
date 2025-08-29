@@ -74,7 +74,7 @@ namespace ProductService.Application.Services
             if (!FlashSaleSlotHelper.SlotTimeRanges.ContainsKey(request.Slot))
             {
                 response.Success = false;
-                response.Message = $"Slot {request.Slot} không hợp lệ. Slot hợp lệ từ 1-7";
+                response.Message = $"Slot {request.Slot} không hợp lệ. Slot hợp lệ từ 1-8";
                 return response;
             }
 
@@ -287,7 +287,7 @@ namespace ProductService.Application.Services
                     if (!FlashSaleSlotHelper.SlotTimeRanges.ContainsKey(slot.Value))
                     {
                         response.Success = false;
-                        response.Message = $"Slot {slot.Value} không hợp lệ. Slot hợp lệ từ 1-7";
+                        response.Message = $"Slot {slot.Value} không hợp lệ. Slot hợp lệ từ 1-8";
                         return response;
                     }
 

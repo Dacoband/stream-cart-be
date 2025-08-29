@@ -752,47 +752,70 @@ namespace OrderService.Infrastructure.Services
         }
         public async Task<double> CalculateUserCompletionRate(Guid userId)
         {
-            var orders = await _orderRepository.GetByAccountIdAsync(userId);
-            int totalOrders = orders.Count();
-            int completedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Completed);
+            try
+            {
+                var orders = await _orderRepository.GetByAccountIdAsync(userId);
+                int totalOrders = orders.Count();
 
-            // Chỉ trừ những đơn bị user hủy
-            int canceledByUser = orders.Count(o =>
-                o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == userId.ToString()
-            );
+                // ✅ FIX: Sử dụng LINQ memory thay vì để Entity Framework translate sang SQL
+                var ordersList = orders.ToList(); // Đưa về memory trước
 
-            int validOrders = totalOrders - canceledByUser;
+                int completedOrders = ordersList.Count(o => o.OrderStatus == OrderStatus.Completed);
 
-            if (validOrders == 0) return 0.0;
+                // Chỉ trừ những đơn bị user hủy
+                int canceledByUser = ordersList.Count(o =>
+                    o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == userId.ToString()
+                );
 
-            return (double)completedOrders / validOrders * 100;
+                int validOrders = totalOrders - canceledByUser;
+
+                if (validOrders == 0) return 0.0;
+
+                return (double)completedOrders / validOrders * 100;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating user completion rate for user {UserId}", userId);
+                return 0.0;
+            }
         }
-
         public async Task<double> CalculateShopCompletionRate(Guid shopId)
         {
-            var orders = await _orderRepository.GetByShopIdAsync(shopId);
-            int totalOrders = orders.Count();
-            int completedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Completed);
+            try
+            {
+                var orders = await _orderRepository.GetByShopIdAsync(shopId);
+                int totalOrders = orders.Count();
 
-            // Đơn bị shop hủy
-            int canceledByShop = orders.Count(o =>
-                o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == shopId.ToString()
-            );
+                // ✅ FIX: Sử dụng LINQ memory thay vì để Entity Framework translate sang SQL
+                var ordersList = orders.ToList(); // Đưa về memory trước
 
-            // Đơn do hệ thống hủy (null hoặc không rõ ai hủy)
-            int canceledBySystem = orders.Count(o =>
-                o.OrderStatus == OrderStatus.Cancelled && string.IsNullOrEmpty(o.LastModifiedBy)
-            );
+                int completedOrders = ordersList.Count(o => o.OrderStatus == OrderStatus.Completed);
 
-            // Điểm phạt = 1% cho mỗi đơn bị shop hủy
-            int penaltyPoints = 1;
+                // Đơn bị shop hủy
+                int canceledByShop = ordersList.Count(o =>
+                    o.OrderStatus == OrderStatus.Cancelled && o.LastModifiedBy == shopId.ToString()
+                );
 
-            double rawRate = totalOrders == 0 ? 0.0 : (double)completedOrders / totalOrders * 100;
-            double finalRate = Math.Max(0, rawRate - penaltyPoints);
+                // Đơn do hệ thống hủy (null hoặc không rõ ai hủy)
+                int canceledBySystem = ordersList.Count(o =>
+                    o.OrderStatus == OrderStatus.Cancelled && string.IsNullOrEmpty(o.LastModifiedBy)
+                );
 
-            return finalRate;
+                // Điểm phạt = 1% cho mỗi đơn bị shop hủy
+                int penaltyPoints = 1;
+
+                double rawRate = totalOrders == 0 ? 0.0 : (double)completedOrders / totalOrders * 100;
+                double finalRate = Math.Max(0, rawRate - penaltyPoints);
+
+                return finalRate;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating shop completion rate for shop {ShopId}", shopId);
+                return 0.0;
+            }
         }
-    private void SchedulePendingThenProcessingThenShippedDeadlines(Guid orderId)
+        private void SchedulePendingThenProcessingThenShippedDeadlines(Guid orderId)
         {
             _ = Task.Run(async () =>
             {

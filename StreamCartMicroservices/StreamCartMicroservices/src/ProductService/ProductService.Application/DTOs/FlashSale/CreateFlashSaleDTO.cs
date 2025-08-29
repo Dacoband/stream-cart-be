@@ -8,7 +8,7 @@ namespace ProductService.Application.DTOs.FlashSale
     {
         public List<CreateFlashSaleProductDTO> Products { get; set; } = new();
 
-        [Range(1, 7, ErrorMessage = "Slot phải từ 1 đến 7")]
+        [Range(1, 8, ErrorMessage = "Slot phải từ 1 đến 8")]
         public int Slot { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm áp dụng FlashSale phải lớn hơn 0")]
