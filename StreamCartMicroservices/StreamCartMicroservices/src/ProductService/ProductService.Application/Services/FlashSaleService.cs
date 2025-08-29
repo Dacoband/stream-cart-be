@@ -214,8 +214,8 @@ namespace ProductService.Application.Services
                     FlashSalePrice = flashSalePrice,
                     QuantityAvailable = finalQuantityAvailable,
                     QuantitySold = 0,
-                    StartTime = startTime,
-                    EndTime = endTime,
+                    StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc), 
+                    EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),     
                     Slot = slot
                 };
                 flashSale.SetCreator(userId);
@@ -258,7 +258,7 @@ namespace ProductService.Application.Services
             }
         }
 
-        public async Task<ApiResponse<List<ProductWithoutFlashSaleDTO>>> GetProductsWithoutFlashSaleAsync(string shopId, DateTime date)
+        public async Task<ApiResponse<List<ProductWithoutFlashSaleDTO>>> GetProductsWithoutFlashSaleAsync(string shopId, DateTime date, int? slot = null)
         {
             var response = new ApiResponse<List<ProductWithoutFlashSaleDTO>>
             {
@@ -275,18 +275,35 @@ namespace ProductService.Application.Services
                     return response;
                 }
 
-                // ✅ FIX: Sử dụng startTime và endTime thay vì chỉ date
-                var startOfDay = date.Date;
-                var endOfDay = date.Date.AddDays(1).AddTicks(-1);
-                var productIdsWithoutFlashSale = await _flashSaleRepository.GetProductsWithoutFlashSaleAsync(shopGuid, startOfDay, endOfDay);
+                DateTime startTime, endTime;
+
+                if (slot.HasValue)
+                {
+                    // ✅ NẾU CÓ SLOT: Lấy thời gian cụ thể của slot đó
+                    if (!FlashSaleSlotHelper.SlotTimeRanges.ContainsKey(slot.Value))
+                    {
+                        response.Success = false;
+                        response.Message = $"Slot {slot.Value} không hợp lệ. Slot hợp lệ từ 1-7";
+                        return response;
+                    }
+
+                    var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot.Value, date.Date);
+                    startTime = slotTime.Start;
+                    endTime = slotTime.End;
+                }
+                else
+                {
+                    startTime = date.Date;
+                    endTime = date.Date.AddDays(1).AddTicks(-1);
+                }
+
+                var productIdsWithoutFlashSale = await _flashSaleRepository.GetProductsWithoutFlashSaleAsync(shopGuid, startTime, endTime);
                 var products = new List<ProductWithoutFlashSaleDTO>();
 
                 foreach (var productId in productIdsWithoutFlashSale)
                 {
                     var product = await _productRepository.GetByIdAsync(productId.ToString());
                     if (product == null) continue;
-
-                    // Get product image
                     string? productImageUrl = null;
                     try
                     {
@@ -294,8 +311,6 @@ namespace ProductService.Application.Services
                         productImageUrl = primaryImage?.ImageUrl;
                     }
                     catch (Exception) { }
-
-                    // Get variants
                     var variants = new List<ProductVariantWithoutFlashSaleDTO>();
                     try
                     {
@@ -329,6 +344,17 @@ namespace ProductService.Application.Services
                 }
 
                 response.Data = products;
+
+                if (slot.HasValue)
+                {
+                    var slotTimeRange = FlashSaleSlotHelper.SlotTimeRanges[slot.Value];
+                    response.Message = $"Lấy danh sách sản phẩm không có FlashSale thành công cho ngày {date:dd/MM/yyyy} slot {slot.Value} ({slotTimeRange.Start:hh\\:mm}-{slotTimeRange.End:hh\\:mm})";
+                }
+                else
+                {
+                    response.Message = $"Lấy danh sách sản phẩm không có FlashSale thành công cho ngày {date:dd/MM/yyyy} (tất cả slot)";
+                }
+
                 return response;
             }
             catch (Exception ex)
