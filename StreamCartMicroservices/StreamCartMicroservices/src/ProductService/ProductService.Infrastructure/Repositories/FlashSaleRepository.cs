@@ -67,6 +67,7 @@ namespace ProductService.Infrastructure.Repositories
         {
             var dayStart = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
             var dayEnd = DateTime.SpecifyKind(date.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            var now = DateTime.UtcNow;
 
             var occupiedSlots = await _dbSet
                 .Where(fs => !fs.IsDeleted &&
@@ -76,8 +77,28 @@ namespace ProductService.Infrastructure.Repositories
                 .Distinct()
                 .ToListAsync();
 
-            return FlashSaleSlotHelper.GetAvailableSlotsForDate(date, occupiedSlots);
+            var slotsToExclude = new List<int>(occupiedSlots);
+
+            if (date.Date == DateTime.UtcNow.Date)
+            {
+                // Convert UTC hiện tại sang SE Asia timezone để so sánh với slots
+                var seAsiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var localNow = TimeZoneInfo.ConvertTimeFromUtc(now, seAsiaTimeZone);
+                var currentTimeOfDay = localNow.TimeOfDay;
+
+                var expiredSlots = FlashSaleSlotHelper.SlotTimeRanges
+                    .Where(slot => slot.Value.End <= currentTimeOfDay)
+                    .Select(slot => slot.Key)
+                    .ToList();
+
+                // Thêm expired slots vào danh sách loại bỏ
+                slotsToExclude.AddRange(expiredSlots);
+                slotsToExclude = slotsToExclude.Distinct().ToList();
+            }
+
+            return FlashSaleSlotHelper.GetAvailableSlotsForDate(date, slotsToExclude);
         }
+
         public async Task<List<Guid>> GetProductsWithoutFlashSaleAsync(Guid shopId, DateTime startTime, DateTime endTime)
         {
             var utcStartTime = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);

@@ -29,8 +29,8 @@ namespace OrderService.Infrastructure.Extensions
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
             // Mapping enum PostgreSQL
-            NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
-            NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
 
             // Cấu hình DataSource
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
@@ -38,8 +38,6 @@ namespace OrderService.Infrastructure.Extensions
             dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
             var dataSource = dataSourceBuilder.Build();
             services.AddSingleton(dataSource);
-
-            // Cấu hình DbContext
             // Cấu hình DbContext
             services.AddDbContext<OrderContext>((serviceProvider, options) =>
             {
@@ -47,14 +45,7 @@ namespace OrderService.Infrastructure.Extensions
                 options.UseNpgsql(ds, npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
-
-                    var nameTranslator = new NpgsqlNullNameTranslator();
-                    npgsqlOptions.MapEnum<OrderStatus>("order_status", nameTranslator: nameTranslator);
-                    npgsqlOptions.MapEnum<PaymentStatus>("payment_status", nameTranslator: nameTranslator);
                 });
-
-                // Dòng này có thể không cần thiết nữa nếu đã map hết ở trên
-                // NpgsqlConnection.GlobalTypeMapper.EnableUnmappedTypes(); 
             });
 
             // Đăng ký Repository & Services
