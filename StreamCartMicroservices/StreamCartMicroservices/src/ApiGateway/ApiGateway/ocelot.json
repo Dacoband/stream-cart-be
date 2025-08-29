@@ -887,6 +887,19 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
       "SwaggerKey": "notification"
     },
+    {
+      "DownstreamPathTemplate": "/hubs/notification/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notification-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/hubs/notification/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
+      "AllowWebSockets": true
+    },
     //{
     //  "DownstreamPathTemplate": "/api/payments/generate-qr-code",
     //  "DownstreamScheme": "http",

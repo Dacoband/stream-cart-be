@@ -155,9 +155,7 @@ namespace ProductService.Application.Services
                         }
                     }
 
-                    // 👇 Reset trạng thái đã gửi thông báo nếu cần chạy lại lần sau
-                    fs.NotificationSent = false;
-                    await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
+                   
                 }
             }
 
