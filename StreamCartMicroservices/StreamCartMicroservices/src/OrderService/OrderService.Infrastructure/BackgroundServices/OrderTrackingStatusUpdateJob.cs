@@ -2,6 +2,7 @@
 using OrderService.Application.Interfaces;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Domain.Enums;
+using OrderService.Infrastructure.Extensions;
 using Quartz;
 using System;
 using System.Collections.Generic;
@@ -124,10 +125,9 @@ namespace OrderService.Infrastructure.BackgroundServices
 
             order.UpdateStatus(newOrderStatus, "system-delivery-tracking");
 
-            // Set actual delivery date if delivered
             if (newOrderStatus == OrderStatus.Delivered)
             {
-                order.SetActualDeliveryDate(latestLog.UpdatedDate, "system-delivery-tracking");
+                order.SetActualDeliveryDate(latestLog.UpdatedDate.ToUtcSafe(), "system-delivery-tracking");
             }
 
             await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
