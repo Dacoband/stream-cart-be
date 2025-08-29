@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProductService.Application.Helpers;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Data;
 using ProductService.Infrastructure.Interfaces;
@@ -34,12 +35,21 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<List<FlashSale>> GetByTimeAndProduct(DateTime startTime, DateTime endTime, Guid productId, Guid? variantId)
         {
-           var flashSlae= await _dbSet.Where(x => x.StartTime >= startTime && x.EndTime <= endTime && x.ProductId == productId && x.IsDeleted == false).ToListAsync();
-            if (variantId.HasValue) {
-            
-            flashSlae = flashSlae.Where(x=> x.VariantId == variantId).ToList();
+            var flashSales = await _dbSet
+                .Where(x => x.StartTime < endTime && x.EndTime > startTime &&
+                           x.ProductId == productId && x.IsDeleted == false)
+                .ToListAsync();
+
+            if (variantId.HasValue)
+            {
+                flashSales = flashSales.Where(x => x.VariantId == variantId).ToList();
             }
-            return flashSlae;
+            else
+            {
+                flashSales = flashSales.Where(x => !x.VariantId.HasValue).ToList();
+            }
+
+            return flashSales;
         }
         public async Task<List<FlashSale>> GetByShopIdAsync(Guid shopId)
         {
@@ -53,19 +63,19 @@ namespace ProductService.Infrastructure.Repositories
                 .OrderByDescending(fs => fs.CreatedAt)
                 .ToList());
         }
-        public async Task<List<int>> GetAvailableSlotsAsync(DateTime startTime, DateTime endTime)
+        public async Task<List<int>> GetAvailableSlotsAsync(DateTime date)
         {
+            var dayStart = date.Date;
+            var dayEnd = date.Date.AddDays(1).AddTicks(-1);
+
             var occupiedSlots = await _dbSet
                 .Where(fs => !fs.IsDeleted &&
-                           ((fs.StartTime <= startTime && fs.EndTime >= startTime) ||
-                            (fs.StartTime <= endTime && fs.EndTime >= endTime) ||
-                            (fs.StartTime >= startTime && fs.EndTime <= endTime)))
+                           fs.StartTime >= dayStart &&
+                           fs.StartTime <= dayEnd)
                 .Select(fs => fs.Slot)
                 .Distinct()
                 .ToListAsync();
-
-            var allSlots = Enumerable.Range(1, 8).ToList();
-            return allSlots.Except(occupiedSlots).ToList();
+            return FlashSaleSlotHelper.GetAvailableSlotsForDate(date, occupiedSlots);
         }
         public async Task<List<Guid>> GetProductsWithoutFlashSaleAsync(Guid shopId, DateTime startTime, DateTime endTime)
         {

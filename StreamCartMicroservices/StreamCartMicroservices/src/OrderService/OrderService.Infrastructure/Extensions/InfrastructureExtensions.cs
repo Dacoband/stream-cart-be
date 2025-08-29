@@ -127,9 +127,20 @@ namespace OrderService.Infrastructure.Extensions
                 if (!string.IsNullOrEmpty(baseUrl))
                     client.BaseAddress = new Uri(baseUrl);
             });
-
+            services.AddHttpClient<IDeliveryApiClient, DeliveryApiClient>();
             services.AddQuartz(q =>
             {
+                q.UseMicrosoftDependencyInjectionJobFactory();
+
+                // Order tracking status update job - runs every 10 minutes
+                var trackingJobKey = new JobKey("OrderTrackingStatusUpdateJob");
+                q.AddJob<OrderTrackingStatusUpdateJob>(opts => opts.WithIdentity(trackingJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(trackingJobKey)
+                    .WithIdentity("OrderTrackingStatusUpdateTrigger")
+                    .WithCronSchedule("0 */2 * * * ?")
+                    .WithDescription("Update order status based on delivery tracking"));
+
                 var cancelDraftingKey = new JobKey("cancel-drafting-orders-job");
                 q.AddJob<CancelDraftingOrdersJob>(opts => opts.WithIdentity(cancelDraftingKey));
                 q.AddTrigger(opts => opts
@@ -158,9 +169,7 @@ namespace OrderService.Infrastructure.Extensions
                     .WithIdentity("auto-complete-delivered-orders-trigger")
                     .WithCronSchedule("0 30 0 * * ?"));
             });
-
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
             // Nếu có service chạy nền theo interval ngoài Quartz
             services.AddHostedService<OrderCompletionService>();
             services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>();

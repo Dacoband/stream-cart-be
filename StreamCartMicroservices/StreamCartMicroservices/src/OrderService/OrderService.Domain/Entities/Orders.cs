@@ -122,7 +122,11 @@ namespace OrderService.Domain.Entities
             OrderStatus = newStatus;
             SetModifier(modifiedBy);
         }
-
+        public void SetActualDeliveryDate(DateTime deliveryDate, string modifiedBy)
+        {
+            ActualDeliveryDate = deliveryDate;
+            SetModifier(modifiedBy);
+        }
 
         /// <summary>
         /// Auto-cancels an unconfirmed order due to shop timeout
