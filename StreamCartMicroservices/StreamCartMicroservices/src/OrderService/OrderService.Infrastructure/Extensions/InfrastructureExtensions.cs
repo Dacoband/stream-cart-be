@@ -40,17 +40,21 @@ namespace OrderService.Infrastructure.Extensions
             services.AddSingleton(dataSource);
 
             // Cấu hình DbContext
+            // Cấu hình DbContext
             services.AddDbContext<OrderContext>((serviceProvider, options) =>
             {
                 var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
                 options.UseNpgsql(ds, npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
-                    npgsqlOptions.MapEnum<OrderStatus>("order_status");
-                    npgsqlOptions.MapEnum<PaymentStatus>("payment_status");
+
+                    var nameTranslator = new NpgsqlNullNameTranslator();
+                    npgsqlOptions.MapEnum<OrderStatus>("order_status", nameTranslator: nameTranslator);
+                    npgsqlOptions.MapEnum<PaymentStatus>("payment_status", nameTranslator: nameTranslator);
                 });
 
-                NpgsqlConnection.GlobalTypeMapper.EnableUnmappedTypes();
+                // Dòng này có thể không cần thiết nữa nếu đã map hết ở trên
+                // NpgsqlConnection.GlobalTypeMapper.EnableUnmappedTypes(); 
             });
 
             // Đăng ký Repository & Services
@@ -128,6 +132,7 @@ namespace OrderService.Infrastructure.Extensions
                     client.BaseAddress = new Uri(baseUrl);
             });
             services.AddHttpClient<IDeliveryApiClient, DeliveryApiClient>();
+
             services.AddQuartz(q =>
             {
                 q.UseMicrosoftDependencyInjectionJobFactory();
