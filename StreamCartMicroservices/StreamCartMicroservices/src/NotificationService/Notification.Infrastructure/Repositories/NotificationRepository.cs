@@ -24,6 +24,18 @@ namespace Notification.Infrastrcture.Repositories
             await _collection.InsertOneAsync(notification);
         }
 
+        public async Task<bool> CreateNotification(Notifications notification)
+        {
+            try
+            {
+                await _collection.InsertOneAsync(notification);
+                return true;
+            }
+            catch (Exception ex) { 
+                return false;
+            }
+        }
+
         public IQueryable<Notifications> GetByUserIdAsync(string userId)
         {
             return  _collection.AsQueryable().Where(x=> x.RecipientUserID == userId);

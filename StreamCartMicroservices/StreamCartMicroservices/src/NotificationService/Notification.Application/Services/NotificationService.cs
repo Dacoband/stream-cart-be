@@ -18,6 +18,32 @@ namespace Notification.Application.Services
         {
             _notificationRepository = notificationRepository;
         }
+
+        public async Task<ApiResponse<Notifications>> CreateNotification(CreateNotificationDTO notification)
+        {
+            Notifications request = new Notifications();
+            request.RecipientUserID = notification.RecipientUserID;
+            request.OrderCode = notification.OrderCode;
+            request.ProductId = notification.ProductId;
+            request.VariantId = notification.VariantId;
+            request.LivestreamId = notification.LivestreamId;
+            request.Type = "System";
+            request.Message = notification.Message;
+            request.IsRead = false;
+
+            request.SetCreator("system");
+            try
+            {
+                await _notificationRepository.CreateAsync(request);
+                return new ApiResponse<Notifications> { Success = true, Message = "Tạo mới thông báo thành công", Data = request };
+
+            }
+            catch (Exception ex) { 
+            return new ApiResponse<Notifications> { Success = false, Message = ex.Message };
+            
+            }
+        }
+
         public async Task<ApiResponse<ListNotificationDTO>> GetMyNotification(FilterNotificationDTO filter, string userId)
         {
             
