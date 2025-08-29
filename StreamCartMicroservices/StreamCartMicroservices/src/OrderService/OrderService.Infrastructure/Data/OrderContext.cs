@@ -67,6 +67,7 @@ namespace OrderService.Infrastructure.Data
 
                 entity.Property(e => e.OrderStatus)
                .HasColumnName("order_status")
+               .HasColumnType("order_status")
                .IsRequired();
 
 
@@ -95,8 +96,9 @@ namespace OrderService.Infrastructure.Data
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(e => e.PaymentStatus)
-                    .HasColumnName("payment_status");
-
+                    .HasColumnName("payment_status")
+                    .HasColumnType("payment_status")
+                    .IsRequired();
                 entity.Property(e => e.PaymentMethod)
                    .HasColumnName("payment_method")
                    .HasMaxLength(50);

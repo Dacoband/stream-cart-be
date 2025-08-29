@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrderService.Infrastructure.Data;
@@ -11,9 +12,11 @@ using OrderService.Infrastructure.Data;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderContext))]
-    partial class OrderContextModelSnapshot : ModelSnapshot
+    [Migration("20250829202247_FixEnumModelSnapshot")]
+    partial class FixEnumModelSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -228,7 +231,7 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnName("order_date");
 
                     b.Property<int>("OrderStatus")
-                        .HasColumnType("order_status")
+                        .HasColumnType("integer")
                         .HasColumnName("order_status");
 
                     b.Property<string>("PaymentMethod")
@@ -238,7 +241,7 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnName("payment_method");
 
                     b.Property<int>("PaymentStatus")
-                        .HasColumnType("payment_status")
+                        .HasColumnType("integer")
                         .HasColumnName("payment_status");
 
                     b.Property<decimal>("ShippingFee")
