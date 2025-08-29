@@ -8,13 +8,13 @@ namespace ProductService.Application.Helpers
     {
         public static readonly Dictionary<int, (TimeSpan Start, TimeSpan End)> SlotTimeRanges = new()
         {
-            { 1, (new TimeSpan(0, 0, 0), new TimeSpan(2, 0, 0)) },    
-            { 2, (new TimeSpan(2, 0, 0), new TimeSpan(6, 0, 0)) },    
-            { 3, (new TimeSpan(6, 0, 0), new TimeSpan(9, 0, 0)) },    
-            { 4, (new TimeSpan(9, 0, 0), new TimeSpan(17, 0, 0)) },   
+            { 1, (new TimeSpan(0, 0, 0), new TimeSpan(2, 0, 0)) },
+            { 2, (new TimeSpan(2, 0, 0), new TimeSpan(6, 0, 0)) },
+            { 3, (new TimeSpan(6, 0, 0), new TimeSpan(9, 0, 0)) },
+            { 4, (new TimeSpan(9, 0, 0), new TimeSpan(17, 0, 0)) },
             { 5, (new TimeSpan(17, 0, 0), new TimeSpan(19, 0, 0)) },
-            { 6, (new TimeSpan(19, 0, 0), new TimeSpan(21, 0, 0)) },  
-            { 7, (new TimeSpan(21, 0, 0), new TimeSpan(23, 59, 59)) } 
+            { 6, (new TimeSpan(19, 0, 0), new TimeSpan(21, 0, 0)) },
+            { 7, (new TimeSpan(21, 0, 0), new TimeSpan(23, 59, 59)) }
         };
 
         public static (DateTime Start, DateTime End) GetSlotTimeForDate(int slot, DateTime date)
@@ -23,10 +23,13 @@ namespace ProductService.Application.Helpers
                 throw new ArgumentException($"Invalid slot number: {slot}");
 
             var timeRange = SlotTimeRanges[slot];
-            var startDateTime = date.Date.Add(timeRange.Start);
-            var endDateTime = date.Date.Add(timeRange.End);
+            var seAsiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var startLocal = date.Date.Add(timeRange.Start);
+            var endLocal = date.Date.Add(timeRange.End);
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, seAsiaTimeZone);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, seAsiaTimeZone);
 
-            return (startDateTime, endDateTime);
+            return (startUtc, endUtc);
         }
 
         public static List<int> GetAvailableSlotsForDate(DateTime date, List<int> occupiedSlots)
@@ -37,7 +40,12 @@ namespace ProductService.Application.Helpers
 
         public static int? GetCurrentSlotForTime(DateTime dateTime)
         {
-            var timeOfDay = dateTime.TimeOfDay;
+            var seAsiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var localTime = dateTime.Kind == DateTimeKind.Utc
+                ? TimeZoneInfo.ConvertTimeFromUtc(dateTime, seAsiaTimeZone)
+                : dateTime;
+
+            var timeOfDay = localTime.TimeOfDay;
 
             foreach (var slot in SlotTimeRanges)
             {
@@ -45,7 +53,7 @@ namespace ProductService.Application.Helpers
                     return slot.Key;
             }
 
-            return null; // Không trong slot nào
+            return null; 
         }
 
         public static bool IsSlotValidForDate(int slot, DateTime date)

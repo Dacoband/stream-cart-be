@@ -131,7 +131,9 @@ namespace ProductService.Api.Controllers
         [HttpGet("products/available")]
         [Authorize(Roles = "Seller")]
         [ProducesResponseType(typeof(ApiResponse<List<ProductWithoutFlashSaleDTO>>), 200)]
-        public async Task<IActionResult> GetProductsWithoutFlashSale([FromQuery] DateTime date)
+        public async Task<IActionResult> GetProductsWithoutFlashSale(
+    [FromQuery] DateTime date,
+    [FromQuery] int? slot = null)  
         {
             try
             {
@@ -139,7 +141,7 @@ namespace ProductService.Api.Controllers
                 if (string.IsNullOrEmpty(shopId))
                     return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
 
-                var result = await _flashSaleService.GetProductsWithoutFlashSaleAsync(shopId, date);
+                var result = await _flashSaleService.GetProductsWithoutFlashSaleAsync(shopId, date, slot);
                 return Ok(result);
             }
             catch (Exception ex)
