@@ -13,5 +13,6 @@ namespace Notification.Infrastrcture.Interface
         public IQueryable<Notifications> GetByUserIdAsync(string userId);
         public Task CreateAsync(Notifications notification);
         public Task MarkAsReadAsync(Guid id);
+        public Task<bool> CreateNotification(Notifications notification);
     }
 }

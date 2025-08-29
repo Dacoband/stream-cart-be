@@ -398,12 +398,15 @@ namespace DeliveryService.Application.Services
         public async Task<ApiResponse<OrderLogResponse>> GetDeliveryStatus(string deliveryId)
         {
             var client = _httpClientFactory.CreateClient();
-            var requestPayload = new { order_code = deliveryId };
 
             var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/v2/shipping-order/detail");
             request.Headers.Add("Token", _ghnSettings.Token);
             request.Headers.Add("ShopId", _ghnSettings.ShopId);
-            request.Content = new StringContent(JsonSerializer.Serialize(requestPayload), Encoding.UTF8, "application/json");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new { order_code = deliveryId }),
+                Encoding.UTF8,
+                "application/json"
+            );
 
             var response = await client.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
@@ -419,16 +422,88 @@ namespace DeliveryService.Application.Services
 
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
-            var data = root.GetProperty("data");
 
-            var logs = data.GetProperty("log")
-                .EnumerateArray()
-                .Select(log => new OrderLogItem
+            // Một số API GHN trả "code": 200/400... trong body
+            if (root.TryGetProperty("code", out var codeEl) && codeEl.ValueKind == JsonValueKind.Number && codeEl.GetInt32() != 200)
+            {
+                var msg = root.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown GHN error";
+                return new ApiResponse<OrderLogResponse> { Success = false, Message = $"GHN API Error: {msg}" };
+            }
+
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind == JsonValueKind.Null)
+            {
+                return new ApiResponse<OrderLogResponse> { Success = false, Message = "GHN trả về rỗng hoặc không có 'data'." };
+            }
+
+            var logs = new List<OrderLogItem>();
+
+            // Helper parse thời gian linh hoạt
+            static DateTime? ParseDate(JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.String)
                 {
-                    Status = log.GetProperty("status").GetString(),
-                    UpdatedDate = log.GetProperty("updated_date").GetDateTime()
-                })
-                .ToList();
+                    var s = el.GetString();
+                    if (DateTime.TryParse(s, out var dt)) return dt;
+                    if (long.TryParse(s, out var unix)) return DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime;
+                }
+                else if (el.ValueKind == JsonValueKind.Number && el.TryGetInt64(out var unixNum))
+                {
+                    return DateTimeOffset.FromUnixTimeSeconds(unixNum).UtcDateTime;
+                }
+                return null;
+            }
+
+            // 1) Ưu tiên mảng log nếu tồn tại (với các tên hay gặp)
+            JsonElement logArray;
+            if ((data.TryGetProperty("log", out logArray) ||
+                 data.TryGetProperty("logs", out logArray) ||
+                 data.TryGetProperty("status_history", out logArray)) &&
+                logArray.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var log in logArray.EnumerateArray())
+                {
+                    string status = null;
+                    DateTime? updated = null;
+
+                    if (log.TryGetProperty("status", out var s)) status = s.GetString();
+
+                    if (log.TryGetProperty("updated_date", out var ud)) updated = ParseDate(ud);
+                    else if (log.TryGetProperty("time", out var t)) updated = ParseDate(t);
+                    else if (log.TryGetProperty("created_at", out var ca)) updated = ParseDate(ca);
+
+                    logs.Add(new OrderLogItem
+                    {
+                        Status = status ?? "(unknown)",
+                        UpdatedDate = (DateTime)updated
+                    });
+                }
+            }
+            else
+            {
+                // 2) Fallback: chỉ có trạng thái hiện tại
+                if (data.TryGetProperty("status", out var statusEl))
+                {
+                    DateTime? updated = null;
+                    if (data.TryGetProperty("updated_date", out var ud)) updated = ParseDate(ud);
+                    else if (data.TryGetProperty("modified_date", out var md)) updated = ParseDate(md);
+
+                    logs.Add(new OrderLogItem
+                    {
+                        Status = statusEl.GetString(),
+                        UpdatedDate = (DateTime)updated
+                    });
+                }
+                else
+                {
+                    // 3) Không có gì để map → trả debug hỗ trợ
+                    var availableKeys = string.Join(", ", data.EnumerateObject().Select(p => p.Name));
+                    return new ApiResponse<OrderLogResponse>
+                    {
+                        Success = false,
+                        Message = $"Không tìm thấy lịch sử/trạng thái trong 'data'. Các key có sẵn: {availableKeys}"
+                    };
+                }
+            }
 
             return new ApiResponse<OrderLogResponse>
             {
