@@ -43,7 +43,11 @@ namespace ProductService.Application.Services
 
             try
             {
-                var availableSlots = await _flashSaleRepository.GetAvailableSlotsAsync(date.Date);
+                var utcDate = date.Kind == DateTimeKind.Utc
+                    ? date.Date
+                    : DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+
+                var availableSlots = await _flashSaleRepository.GetAvailableSlotsAsync(utcDate);
                 response.Data = availableSlots;
                 return response;
             }
