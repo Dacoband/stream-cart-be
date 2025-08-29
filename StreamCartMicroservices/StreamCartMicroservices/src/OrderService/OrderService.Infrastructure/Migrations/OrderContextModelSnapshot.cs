@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using OrderService.Domain.Enums;
 using OrderService.Infrastructure.Data;
 
 #nullable disable
@@ -228,8 +227,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date");
 
-                    b.Property<OrderStatus>("OrderStatus")
-                        .HasColumnType("order_status")
+                    b.Property<int>("OrderStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("order_status");
 
                     b.Property<string>("PaymentMethod")
@@ -238,8 +237,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("payment_method");
 
-                    b.Property<PaymentStatus>("PaymentStatus")
-                        .HasColumnType("payment_status")
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("payment_status");
 
                     b.Property<decimal>("ShippingFee")
@@ -416,7 +415,7 @@ namespace OrderService.Infrastructure.Migrations
 
                     b.HasIndex("Rating");
 
-                    b.ToTable("Reviews");
+                    b.ToTable("Reviews", (string)null);
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>

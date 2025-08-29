@@ -41,12 +41,9 @@ namespace OrderService.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            modelBuilder.HasPostgresEnum<OrderStatus>();
+            modelBuilder.HasPostgresEnum<PaymentStatus>();
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-            modelBuilder.HasPostgresEnum<OrderStatus>(); 
-
-
-
 
             // Configure Orders entity for PostgreSQL
             modelBuilder.Entity<Orders>(entity =>
@@ -342,8 +339,8 @@ namespace OrderService.Infrastructure.Data
                 entity.HasIndex(e => e.CreatedAt);
                 entity.HasIndex(e => e.Rating);
             });
-            modelBuilder
-                .HasPostgresEnum<PaymentStatus>();
+            //modelBuilder
+                //.HasPostgresEnum<PaymentStatus>();
         }
         private static class EnumConverters
         {

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using OrderService.Domain.Enums;
 using OrderService.Infrastructure.Data;
 
 #nullable disable
@@ -13,8 +12,8 @@ using OrderService.Infrastructure.Data;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderContext))]
-    [Migration("20250821194230_Addstring3")]
-    partial class Addstring3
+    [Migration("20250829193311_Addstring5")]
+    partial class Addstring5
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,7 +23,7 @@ namespace OrderService.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "order_status", new[] { "cancelled", "completed", "delivered", "on_delivere", "packed", "pending", "processing", "refunded", "returning", "shipped", "waiting" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "order_status", new[] { "waiting", "pending", "processing", "shipped", "delivered", "cancelled", "packed", "on_delivere", "returning", "refunded", "completed" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "payment_status", new[] { "pending", "paid", "failed", "refunded", "partially_refunded" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
@@ -231,10 +230,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date");
 
-                    b.Property<string>("OrderStatus")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
+                    b.Property<int>("OrderStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("order_status");
 
                     b.Property<string>("PaymentMethod")
@@ -243,8 +240,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("payment_method");
 
-                    b.Property<PaymentStatus>("PaymentStatus")
-                        .HasColumnType("payment_status")
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("payment_status");
 
                     b.Property<decimal>("ShippingFee")
