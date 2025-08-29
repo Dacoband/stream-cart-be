@@ -1,6 +1,7 @@
 ﻿using MassTransit.Transports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
@@ -347,6 +348,26 @@ namespace OrderService.Infrastructure.Repositories
         public Task<Orders?> GetOrderDetailById(Guid id)
         {
             return _orderContext.Orders.Include(x => x.Items).Where(x=> x.Id == id).FirstOrDefaultAsync();
+        }
+        // Thay thế method GetOrdersWithTrackingCodeAsync() hiện tại bằng:
+
+        public async Task<IEnumerable<Orders>> GetOrdersWithTrackingCodeAsync()
+        {
+            try
+            {
+                return await _orderContext.Orders
+                    .Where(o => !string.IsNullOrEmpty(o.TrackingCode) &&
+                               !o.IsDeleted &&
+                               (o.OrderStatus == OrderStatus.Processing ||
+                                o.OrderStatus == OrderStatus.Shipped ||
+                                o.OrderStatus == OrderStatus.OnDelivere))
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting orders with tracking codes");
+                throw;
+            }
         }
     }
 }
