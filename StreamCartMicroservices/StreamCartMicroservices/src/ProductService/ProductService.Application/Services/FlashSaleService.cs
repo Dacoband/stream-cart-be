@@ -1177,15 +1177,19 @@ namespace ProductService.Application.Services
 
                 // Nhóm theo ngày và slot
                 var groupedByDateAndSlot = activeFlashSales
-                    .GroupBy(f => new { Date = f.StartTime.Date, Slot = f.Slot })
-                    .ToList();
+            .GroupBy(f => new {
+                Date = DateTime.SpecifyKind(f.StartTime, DateTimeKind.Utc).Date,
+                Slot = f.Slot
+            })
+            .ToList();
                 foreach (var group in groupedByDateAndSlot.OrderBy(g => g.Key.Date).ThenBy(g => g.Key.Slot))
                 {
                     var date = group.Key.Date;
                     var slot = group.Key.Slot;
                     var flashSalesInSlot = group.ToList();
 
-                    var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot, date);
+                    var utcDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                    var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot, utcDate);
 
                     var slotInfo = new FlashSaleSlotSimpleDTO
                     {
