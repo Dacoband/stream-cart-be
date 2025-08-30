@@ -26,6 +26,8 @@ namespace PaymentService.Application.Interfaces
         /// Cập nhật trạng thái wallet transaction
         /// </summary>
         Task<bool> UpdateWalletTransactionStatusAsync(Guid transactionId, int status, string? paymentTransactionId = null, string? modifiedBy = null);
+        Task<bool> UpdateWalletBalanceAsync(Guid shopId, decimal amount, string modifiedBy = "System");
+
     }
 }
 

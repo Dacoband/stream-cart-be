@@ -202,7 +202,31 @@ namespace ShopService.Application.Services
                 throw;
             }
         }
+        public async Task<bool> AddFundsAsync(Guid walletId, decimal amount, string modifiedBy)
+        {
+            try
+            {
+                var wallet = await _walletRepository.GetByIdAsync(walletId.ToString());
+                if (wallet == null)
+                {
+                    _logger.LogWarning("Không tìm thấy ví {WalletId} để thêm tiền", walletId);
+                    return false;
+                }
 
+                wallet.Balance += amount;
+                wallet.UpdatedAt = DateTime.UtcNow;
+                wallet.SetModifier(modifiedBy);
+                await _walletRepository.ReplaceAsync(walletId.ToString(), wallet);
+
+                _logger.LogInformation("Đã cập nhật balance cho ví {WalletId}, số tiền thêm: {Amount}", walletId, amount);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi thêm tiền vào ví {WalletId}", walletId);
+                return false;
+            }
+        }
         private static WalletDTO MapToDto(Wallet wallet)
         {
             return new WalletDTO
