@@ -38,17 +38,27 @@ namespace ProductService.Application.Services
             var response = new ApiResponse<List<int>>
             {
                 Success = true,
-                Message = "Lấy danh sách slot khả dụng thành công"
+                Message = "Lấy danh sách slot khả dụng thành công",
+                Data = new List<int>()
             };
 
             try
             {
-                var utcDate = date.Kind == DateTimeKind.Utc
-                    ? date.Date
-                    : DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+                // Lấy timezone VN
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+                // Chuẩn hóa date về 00:00 theo timezone VN
+                var localDate = date.Kind == DateTimeKind.Utc
+                    ? TimeZoneInfo.ConvertTimeFromUtc(date, tz).Date
+                    : date.Date;
+
+                // Convert localDate về UTC để query DB
+                var utcDate = TimeZoneInfo.ConvertTimeToUtc(localDate, tz);
 
                 var availableSlots = await _flashSaleRepository.GetAvailableSlotsAsync(utcDate);
                 response.Data = availableSlots;
+
+                response.Message = $"Lấy danh sách slot khả dụng thành công cho ngày {localDate:yyyy-MM-dd} (UTC: {utcDate:yyyy-MM-dd})";
                 return response;
             }
             catch (Exception ex)
@@ -58,6 +68,7 @@ namespace ProductService.Application.Services
                 return response;
             }
         }
+
 
         public async Task<ApiResponse<List<DetailFlashSaleDTO>>> CreateFlashSale(CreateFlashSaleDTO request, string userId, string shopId)
         {
@@ -218,8 +229,8 @@ namespace ProductService.Application.Services
                     FlashSalePrice = flashSalePrice,
                     QuantityAvailable = finalQuantityAvailable,
                     QuantitySold = 0,
-                    StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc), 
-                    EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),     
+                    StartTime = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
+                    EndTime = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc),
                     Slot = slot
                 };
                 flashSale.SetCreator(userId);
@@ -1176,19 +1187,21 @@ namespace ProductService.Application.Services
                 var activeFlashSales = allFlashSales.Where(f => !f.IsDeleted).ToList();
 
                 // Nhóm theo ngày và slot
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
                 var groupedByDateAndSlot = activeFlashSales
-            .GroupBy(f => new {
-                Date = DateTime.SpecifyKind(f.StartTime, DateTimeKind.Utc).Date,
-                Slot = f.Slot
-            })
-            .ToList();
+                    .GroupBy(f => new {
+                        Date = TimeZoneInfo.ConvertTimeFromUtc(f.StartTime, tz).Date,
+                        Slot = f.Slot
+                    })
+                    .ToList();
                 foreach (var group in groupedByDateAndSlot.OrderBy(g => g.Key.Date).ThenBy(g => g.Key.Slot))
                 {
                     var date = group.Key.Date;
                     var slot = group.Key.Slot;
                     var flashSalesInSlot = group.ToList();
 
-                    var utcDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                    var utcDate = TimeZoneInfo.ConvertTimeToUtc(date, tz);
                     var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot, utcDate);
 
                     var slotInfo = new FlashSaleSlotSimpleDTO

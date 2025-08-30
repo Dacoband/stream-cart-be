@@ -86,13 +86,14 @@ namespace ProductService.Infrastructure.Repositories
                 var localNow = TimeZoneInfo.ConvertTimeFromUtc(now, seAsiaTimeZone);
                 var currentTimeOfDay = localNow.TimeOfDay;
 
-                var expiredSlots = FlashSaleSlotHelper.SlotTimeRanges
-                    .Where(slot => slot.Value.End <= currentTimeOfDay)
+                // ✅ FIX: Loại bỏ cả slot đã kết thúc VÀ slot đang diễn ra
+                var unavailableSlots = FlashSaleSlotHelper.SlotTimeRanges
+                    .Where(slot => slot.Value.Start <= currentTimeOfDay) // ✅ LOẠI BỎ CÁC SLOT ĐÃ BẮT ĐẦU (bao gồm đang diễn ra)
                     .Select(slot => slot.Key)
                     .ToList();
 
-                // Thêm expired slots vào danh sách loại bỏ
-                slotsToExclude.AddRange(expiredSlots);
+                // Thêm unavailable slots vào danh sách loại bỏ
+                slotsToExclude.AddRange(unavailableSlots);
                 slotsToExclude = slotsToExclude.Distinct().ToList();
             }
 
