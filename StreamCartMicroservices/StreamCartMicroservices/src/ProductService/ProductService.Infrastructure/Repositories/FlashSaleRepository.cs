@@ -141,5 +141,24 @@ namespace ProductService.Infrastructure.Repositories
 
             return !await query.AnyAsync();
         }
+        public async Task<List<FlashSale>> GetFlashSalesBySlotAndDateAsync(Guid shopId, DateTime date, int slot)
+        {
+            var dayStart = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            var dayEnd = DateTime.SpecifyKind(date.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+
+            var shopProductIds = await _dbContext.Products
+                .Where(p => p.ShopId == shopId && !p.IsDeleted)
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            return await _dbSet
+                .Where(fs => !fs.IsDeleted &&
+                           fs.Slot == slot &&
+                           fs.StartTime >= dayStart &&
+                           fs.StartTime <= dayEnd &&
+                           shopProductIds.Contains(fs.ProductId))
+                .OrderByDescending(fs => fs.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

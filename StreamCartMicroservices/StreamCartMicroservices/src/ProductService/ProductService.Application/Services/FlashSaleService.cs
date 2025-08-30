@@ -461,21 +461,21 @@ namespace ProductService.Application.Services
                         break;
                 }
 
-                // Fix pagination issue - đây là điểm quan trọng
-                var pageIndex = filter.PageIndex ?? 0;
-                var pageSize = filter.PageSize ?? 10;
-
-                // Đảm bảo pageIndex không âm và pageSize hợp lệ
-                if (pageIndex < 0) pageIndex = 0;
-                if (pageSize <= 0) pageSize = 10;
-                if (pageSize > 100) pageSize = 100; // Giới hạn tối đa
-
+                var pageIndex = Math.Max(0, (filter.PageIndex ?? 1) - 1); 
+                var pageSize = Math.Max(1, Math.Min(100, filter.PageSize ?? 10)); 
                 var totalCount = query.Count();
-                query = query.Skip(pageIndex * pageSize).Take(pageSize);
+                var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+                if (pageIndex >= totalPages && totalCount > 0)
+                {
+                    pageIndex = Math.Max(0, totalPages - 1);
+                }
+
+                var flashSaleList = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
 
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-                var flashSaleList = query.ToList();
                 var detailFlashSales = new List<DetailFlashSaleDTO>();
+
 
                 foreach (var f in flashSaleList)
                 {
@@ -1041,6 +1041,385 @@ namespace ProductService.Application.Services
                 response.Message = "Lỗi khi cập nhật sản phẩm FlashSale: " + ex.Message;
                 return response;
             }
+        }
+        public async Task<ApiResponse<ShopFlashSaleOverviewDTO>> GetShopFlashSaleOverviewAsync(string shopId, DateTime date)
+        {
+            var response = new ApiResponse<ShopFlashSaleOverviewDTO>
+            {
+                Success = true,
+                Message = "Lấy thông tin tổng quan FlashSale thành công"
+            };
+
+            try
+            {
+                if (!Guid.TryParse(shopId, out Guid shopGuid))
+                {
+                    response.Success = false;
+                    response.Message = "Shop ID không hợp lệ";
+                    return response;
+                }
+
+                var overview = new ShopFlashSaleOverviewDTO
+                {
+                    Date = date.Date,
+                    ShopId = shopGuid,
+                    ShopName = "Shop",
+                    Slots = new List<FlashSaleSlotInfoDTO>()
+                };
+
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+                // Lặp qua tất cả 8 slots
+                for (int slot = 1; slot <= 8; slot++)
+                {
+                    var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot, date.Date);
+                    var timeRange = FlashSaleSlotHelper.SlotTimeRanges[slot];
+
+                    // Lấy FlashSales trong slot này
+                    var slotFlashSales = await _flashSaleRepository.GetFlashSalesBySlotAndDateAsync(shopGuid, date.Date, slot);
+
+                    var slotInfo = new FlashSaleSlotInfoDTO
+                    {
+                        Date = date.Date,
+                        Slot = slot,
+                        SlotTimeRange = $"{timeRange.Start:hh\\:mm} - {timeRange.End:hh\\:mm}",
+                        SlotStatus = GetSlotStatus(slotTime.Start, slotTime.End, slotFlashSales.Any()),
+                        TotalProducts = slotFlashSales.Count,
+                        TotalQuantityAvailable = slotFlashSales.Sum(f => f.QuantityAvailable),
+                        TotalQuantitySold = slotFlashSales.Sum(f => f.QuantitySold),
+                        TotalRevenue = slotFlashSales.Sum(f => f.FlashSalePrice * f.QuantitySold),
+                        Products = new List<DetailFlashSaleDTO>()
+                    };
+
+                    // Tạo DetailFlashSaleDTO cho từng sản phẩm
+                    foreach (var flashSale in slotFlashSales)
+                    {
+                        string? productImageUrl = null;
+                        string productName = "Unknown Product";
+                        string variantName = "";
+
+                        try
+                        {
+                            var product = await _productRepository.GetByIdAsync(flashSale.ProductId.ToString());
+                            productName = product?.ProductName ?? productName;
+
+                            var primaryImage = await _productImageRepository.GetPrimaryImageAsync(flashSale.ProductId, flashSale.VariantId);
+                            productImageUrl = primaryImage?.ImageUrl;
+
+                            if (flashSale.VariantId.HasValue)
+                            {
+                                variantName = await GetVariantNameAsync(flashSale.VariantId.Value) ?? "";
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // Silent fail
+                        }
+
+                        slotInfo.Products.Add(new DetailFlashSaleDTO
+                        {
+                            Id = flashSale.Id,
+                            ProductId = flashSale.ProductId,
+                            VariantId = flashSale.VariantId,
+                            FlashSalePrice = flashSale.FlashSalePrice,
+                            QuantityAvailable = flashSale.QuantityAvailable,
+                            QuantitySold = flashSale.QuantitySold,
+                            Slot = flashSale.Slot,
+                            IsActive = !flashSale.IsDeleted && flashSale.StartTime <= DateTime.UtcNow && flashSale.EndTime >= DateTime.UtcNow,
+                            StartTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.StartTime, tz),
+                            EndTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.EndTime, tz),
+                            ProductName = productName,
+                            VariantName = variantName,
+                            ProductImageUrl = productImageUrl
+                        });
+                    }
+
+                    overview.Slots.Add(slotInfo);
+                }
+
+                // Tính tổng cho overview
+                overview.TotalActiveSlots = overview.Slots.Count(s => s.TotalProducts > 0);
+                overview.TotalProducts = overview.Slots.Sum(s => s.TotalProducts);
+                overview.TotalQuantityAvailable = overview.Slots.Sum(s => s.TotalQuantityAvailable);
+                overview.TotalQuantitySold = overview.Slots.Sum(s => s.TotalQuantitySold);
+                overview.TotalRevenue = overview.Slots.Sum(s => s.TotalRevenue);
+
+                response.Data = overview;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi lấy thông tin tổng quan FlashSale: " + ex.Message;
+                return response;
+            }
+        }
+        public async Task<ApiResponse<List<FlashSaleSlotSimpleDTO>>> GetShopFlashSaleSimpleAsync(string shopId)
+        {
+            var response = new ApiResponse<List<FlashSaleSlotSimpleDTO>>
+            {
+                Success = true,
+                Message = "Lấy thông tin tổng quan FlashSale thành công",
+                Data = new List<FlashSaleSlotSimpleDTO>()
+            };
+
+            try
+            {
+                if (!Guid.TryParse(shopId, out Guid shopGuid))
+                {
+                    response.Success = false;
+                    response.Message = "Shop ID không hợp lệ";
+                    return response;
+                }
+
+                var allFlashSales = await _flashSaleRepository.GetByShopIdAsync(shopGuid);
+                var activeFlashSales = allFlashSales.Where(f => !f.IsDeleted).ToList();
+
+                // Nhóm theo ngày và slot
+                var groupedByDateAndSlot = activeFlashSales
+                    .GroupBy(f => new { Date = f.StartTime.Date, Slot = f.Slot })
+                    .ToList();
+                foreach (var group in groupedByDateAndSlot.OrderBy(g => g.Key.Date).ThenBy(g => g.Key.Slot))
+                {
+                    var date = group.Key.Date;
+                    var slot = group.Key.Slot;
+                    var flashSalesInSlot = group.ToList();
+
+                    var slotTime = FlashSaleSlotHelper.GetSlotTimeForDate(slot, date);
+
+                    var slotInfo = new FlashSaleSlotSimpleDTO
+                    {
+                        Date = date,
+                        Slot = slot,
+                        Status = GetSlotStatus(slotTime.Start, slotTime.End, flashSalesInSlot.Any()),
+                        TotalProduct = flashSalesInSlot.Count
+                    };
+
+                    response.Data.Add(slotInfo);
+                }
+
+                response.Message = $"Lấy thông tin tổng quan FlashSale thành công. " +
+                    $"Tổng: {response.Data.Count} slot, " +
+                    $"từ {activeFlashSales.Count} FlashSale";
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi lấy thông tin tổng quan FlashSale: " + ex.Message;
+                return response;
+            }
+        }
+        public async Task<ApiResponse<bool>> DeleteFlashSaleSlotAsync(DeleteFlashSaleSlotDTO request, string userId, string shopId)
+        {
+            var response = new ApiResponse<bool>()
+            {
+                Success = true,
+                Message = "Xóa FlashSale slot thành công",
+                Data = true
+            };
+
+            try
+            {
+                if (!Guid.TryParse(shopId, out Guid shopGuid))
+                {
+                    response.Success = false;
+                    response.Message = "Shop ID không hợp lệ";
+                    return response;
+                }
+
+                // Validate slot
+                if (!FlashSaleSlotHelper.SlotTimeRanges.ContainsKey(request.Slot))
+                {
+                    response.Success = false;
+                    response.Message = $"Slot {request.Slot} không hợp lệ. Slot hợp lệ từ 1-8";
+                    return response;
+                }
+
+                // Lấy tất cả FlashSale trong slot và ngày của shop
+                var slotFlashSales = await _flashSaleRepository.GetFlashSalesBySlotAndDateAsync(shopGuid, request.Date.Date, request.Slot);
+
+                if (!slotFlashSales.Any())
+                {
+                    response.Success = false;
+                    response.Message = $"Không tìm thấy FlashSale nào trong slot {request.Slot} ngày {request.Date:dd/MM/yyyy}";
+                    return response;
+                }
+
+                // Kiểm tra xem có FlashSale nào đang diễn ra không
+                var now = DateTime.UtcNow;
+                var activeFlashSales = slotFlashSales.Where(f => f.StartTime <= now && f.EndTime >= now && !f.IsDeleted).ToList();
+
+                if (activeFlashSales.Any())
+                {
+                    response.Success = false;
+                    response.Message = $"Không thể xóa slot vì có {activeFlashSales.Count} FlashSale đang diễn ra";
+                    return response;
+                }
+
+                // Xóa tất cả FlashSale trong slot
+                int deletedCount = 0;
+                foreach (var flashSale in slotFlashSales)
+                {
+                    if (!flashSale.IsDeleted)
+                    {
+                        flashSale.Delete(userId);
+                        await _flashSaleRepository.ReplaceAsync(flashSale.Id.ToString(), flashSale);
+                        deletedCount++;
+                    }
+                }
+
+                response.Message = $"Đã xóa {deletedCount} FlashSale trong slot {request.Slot} ngày {request.Date:dd/MM/yyyy}";
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi xóa FlashSale slot: " + ex.Message;
+                return response;
+            }
+        }
+        /// <summary>
+        /// ✅ NEW: Cập nhật đơn giản chỉ giá và số lượng FlashSale
+        /// </summary>
+        public async Task<ApiResponse<DetailFlashSaleDTO>> UpdateFlashSalePriceQuantityAsync(UpdateFlashSalePriceQuantityDTO request, string flashSaleId, string userId, string shopId)
+        {
+            var response = new ApiResponse<DetailFlashSaleDTO>()
+            {
+                Success = true,
+                Message = "Cập nhật FlashSale thành công",
+            };
+
+            try
+            {
+                var existingFlashSale = await _flashSaleRepository.GetByIdAsync(flashSaleId);
+                if (existingFlashSale == null || existingFlashSale.IsDeleted == true)
+                {
+                    response.Success = false;
+                    response.Message = "Không tìm thấy FlashSale";
+                    return response;
+                }
+
+                var existingProduct = await _productRepository.GetByIdAsync(existingFlashSale.ProductId.ToString());
+                if (existingProduct == null || existingProduct.ShopId.ToString() != shopId)
+                {
+                    response.Success = false;
+                    response.Message = "Bạn không có quyền cập nhật FlashSale cho sản phẩm này";
+                    return response;
+                }
+
+                // Không cho phép cập nhật nếu đang diễn ra
+                var now = DateTime.UtcNow;
+                if (existingFlashSale.StartTime <= now && existingFlashSale.EndTime >= now)
+                {
+                    response.Success = false;
+                    response.Message = "Không thể cập nhật FlashSale đang diễn ra";
+                    return response;
+                }
+
+                // Validate giá và số lượng
+                if (request.QuantityAvailable.HasValue)
+                {
+                    var maxStock = existingFlashSale.VariantId.HasValue && existingFlashSale.VariantId != Guid.Empty
+                        ? (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.Stock ?? 0
+                        : existingProduct.StockQuantity;
+
+                    if (request.QuantityAvailable.Value > maxStock)
+                    {
+                        response.Success = false;
+                        response.Message = "Không đủ số lượng sản phẩm tồn kho để áp dụng FlashSale";
+                        return response;
+                    }
+                }
+
+                if (request.FLashSalePrice.HasValue)
+                {
+                    var maxPrice = existingFlashSale.VariantId.HasValue && existingFlashSale.VariantId != Guid.Empty
+                        ? (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.Price ?? 0
+                        : existingProduct.BasePrice;
+
+                    if (request.FLashSalePrice.Value >= maxPrice)
+                    {
+                        response.Success = false;
+                        response.Message = "Giá FlashSale phải thấp hơn giá sản phẩm";
+                        return response;
+                    }
+                }
+
+                // Cập nhật các field được yêu cầu
+                if (request.FLashSalePrice.HasValue)
+                    existingFlashSale.FlashSalePrice = request.FLashSalePrice.Value;
+
+                if (request.QuantityAvailable.HasValue)
+                    existingFlashSale.QuantityAvailable = request.QuantityAvailable.Value;
+
+                existingFlashSale.SetModifier(userId);
+
+                await _flashSaleRepository.ReplaceAsync(existingFlashSale.Id.ToString(), existingFlashSale);
+
+                // Trả về kết quả với thông tin đầy đủ
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                string? productImageUrl = null;
+                string productName = existingProduct.ProductName;
+                string variantName = "";
+
+                try
+                {
+                    var primaryImage = await _productImageRepository.GetPrimaryImageAsync(existingFlashSale.ProductId, existingFlashSale.VariantId);
+                    productImageUrl = primaryImage?.ImageUrl;
+
+                    if (existingFlashSale.VariantId.HasValue)
+                    {
+                        variantName = await GetVariantNameAsync(existingFlashSale.VariantId.Value) ?? "";
+                    }
+                }
+                catch (Exception)
+                {
+                    // Silent fail
+                }
+
+                var result = new DetailFlashSaleDTO()
+                {
+                    Id = existingFlashSale.Id,
+                    ProductId = existingFlashSale.ProductId,
+                    VariantId = existingFlashSale.VariantId,
+                    FlashSalePrice = existingFlashSale.FlashSalePrice,
+                    QuantityAvailable = existingFlashSale.QuantityAvailable,
+                    QuantitySold = existingFlashSale.QuantitySold,
+                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(existingFlashSale.StartTime, tz),
+                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(existingFlashSale.EndTime, tz),
+                    Slot = existingFlashSale.Slot,
+                    IsActive = existingFlashSale.IsValid(),
+                    ProductName = productName,
+                    VariantName = variantName,
+                    ProductImageUrl = productImageUrl
+                };
+
+                response.Data = result;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi cập nhật FlashSale: " + ex.Message;
+                return response;
+            }
+        }
+        /// <summary>
+        /// Helper method để xác định trạng thái slot
+        /// </summary>
+        private string GetSlotStatus(DateTime startTime, DateTime endTime, bool hasProducts)
+        {
+            if (!hasProducts) return "Empty";
+
+            var now = DateTime.UtcNow;
+            if (now < startTime) return "Upcoming";
+            if (now >= startTime && now <= endTime) return "Active";
+            if (now > endTime) return "Expired";
+
+            return "Unknown";
         }
     }
 }

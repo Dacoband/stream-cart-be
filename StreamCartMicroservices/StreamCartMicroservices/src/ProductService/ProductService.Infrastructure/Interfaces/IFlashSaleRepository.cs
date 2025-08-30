@@ -18,5 +18,6 @@ namespace ProductService.Infrastructure.Interfaces
         Task<List<int>> GetAvailableSlotsAsync(DateTime date);
         Task<bool> IsSlotAvailableAsync(int slot, DateTime startTime, DateTime endTime, Guid? excludeFlashSaleId = null);
         Task<List<Guid>> GetProductsWithoutFlashSaleAsync(Guid shopId, DateTime startTime, DateTime endTime);
+        Task<List<FlashSale>> GetFlashSalesBySlotAndDateAsync(Guid shopId, DateTime date, int slot);
     }
 }

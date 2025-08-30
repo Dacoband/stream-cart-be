@@ -403,5 +403,83 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy thông tin slots: {ex.Message}"));
             }
         }
+        [HttpGet("shop/overview-simple")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<List<FlashSaleSlotSimpleDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetShopFlashSaleSimple()
+        {
+            try
+            {
+                string shopId = _currentUserService.GetShopId().ToString();
+                if (string.IsNullOrEmpty(shopId))
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin shop"));
+
+                var result = await _flashSaleService.GetShopFlashSaleSimpleAsync(shopId);
+
+                if (result.Success)
+                    return Ok(result);
+                else
+                    return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy thông tin tổng quan FlashSale: {ex.Message}"));
+            }
+        }
+        [HttpDelete("slot")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> DeleteFlashSaleSlot([FromBody] DeleteFlashSaleSlotDTO request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhận vào không hợp lệ"));
+
+            try
+            {
+                string? userId = _currentUserService.GetUserId().ToString();
+                string shopId = _currentUserService.GetShopId().ToString();
+
+                var result = await _flashSaleService.DeleteFlashSaleSlotAsync(request, userId, shopId);
+
+                if (result.Success == false)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi xóa FlashSale slot: {ex.Message}"));
+            }
+        }
+        [HttpPatch("{id}/price-quantity")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> UpdateFlashSalePriceQuantity([FromBody] UpdateFlashSalePriceQuantityDTO request, [FromRoute] string id)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhận vào không hợp lệ"));
+
+            try
+            {
+                string? userId = _currentUserService.GetUserId().ToString();
+                string shopId = _currentUserService.GetShopId().ToString();
+
+                var result = await _flashSaleService.UpdateFlashSalePriceQuantityAsync(request, id, userId, shopId);
+
+                if (result.Success == false)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật FlashSale: {ex.Message}"));
+            }
+        }
     }
 }
