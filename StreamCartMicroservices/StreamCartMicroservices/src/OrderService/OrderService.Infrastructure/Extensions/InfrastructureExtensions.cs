@@ -34,7 +34,7 @@ namespace OrderService.Infrastructure.Extensions
 
             // Cấu hình DataSource
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
-            dataSourceBuilder.EnableUnmappedTypes();
+            //dataSourceBuilder.EnableUnmappedTypes();
             dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
             dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
             var dataSource = dataSourceBuilder.Build();
