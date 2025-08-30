@@ -9,5 +9,7 @@ namespace LivestreamService.Application.DTOs
     public class UpdateStockDTO
     {
         public int Stock { get; set; }
+        public decimal? Price { get; set; }
+
     }
 }

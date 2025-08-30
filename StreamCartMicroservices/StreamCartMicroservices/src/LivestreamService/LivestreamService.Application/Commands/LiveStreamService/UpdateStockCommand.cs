@@ -14,6 +14,7 @@ namespace LivestreamService.Application.Commands.LiveStreamService
         public string ProductId { get; set; } = string.Empty;
         public string VariantId { get; set; } = string.Empty;
         public int Stock { get; set; }
+        public decimal? Price { get; set; }
         public Guid SellerId { get; set; }
     }
 }

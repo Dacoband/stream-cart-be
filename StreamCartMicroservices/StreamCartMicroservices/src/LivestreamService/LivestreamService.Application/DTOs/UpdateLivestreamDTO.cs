@@ -13,5 +13,7 @@ namespace Livestreamservice.Application.DTOs
         public DateTime ScheduledStartTime { get; set; }
         public string? ThumbnailUrl { get; set; }
         public string? Tags { get; set; }
+        public Guid? LivestreamHostId { get; set; }
+
     }
 }

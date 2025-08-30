@@ -300,6 +300,7 @@ namespace LivestreamService.Api.Controllers
                     ProductId = productId,
                     VariantId = variantId ?? string.Empty,
                     Stock = request.Stock,
+                    Price = request.Price,
                     SellerId = userId
                 };
 

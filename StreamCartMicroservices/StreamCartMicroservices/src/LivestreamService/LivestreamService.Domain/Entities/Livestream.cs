@@ -112,16 +112,8 @@ namespace LivestreamService.Domain.Entities
         //}
         public void UpdateLivestreamHost(Guid newLivestreamHostId, string modifiedBy, Guid requestingUserId)
         {
-            if (requestingUserId != SellerId)
-            {
-                throw new UnauthorizedAccessException("Only the shop owner can change the livestream host");
-            }
-
-            if (Status)
-            {
-                throw new InvalidOperationException("Cannot change host while livestream is active");
-            }
-
+            if (SellerId != requestingUserId)
+                throw new UnauthorizedAccessException("Only the seller can update livestream host");
             LivestreamHostId = newLivestreamHostId;
             SetModifier(modifiedBy);
         }

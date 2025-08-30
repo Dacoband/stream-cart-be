@@ -35,10 +35,11 @@ namespace LivestreamService.Application.Handlers
             {
                 throw new KeyNotFoundException($"Livestream with ID {request.Id} not found");
             }
-
-            // ✅ FIX: Get requestingUserId from current user service
             var requestingUserId = _currentUserService.GetUserId();
-
+            if (request.LivestreamHostId.HasValue)
+            {
+                livestream.UpdateLivestreamHost(request.LivestreamHostId.Value, request.UpdatedBy ?? "system", requestingUserId);
+            }
             // Update the livestream properties with requestingUserId
             livestream.UpdateDetails(
                 request.Title,

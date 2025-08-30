@@ -330,6 +330,7 @@ namespace LivestreamService.Api.Controllers
                     ScheduledStartTime = request.ScheduledStartTime,
                     ThumbnailUrl = request.ThumbnailUrl,
                     Tags = request.Tags,
+                    LivestreamHostId = request.LivestreamHostId, 
                     UpdatedBy = userId.ToString()
                 };
 

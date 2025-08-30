@@ -50,6 +50,17 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
 
                 // Update stock
                 livestreamProduct.UpdateStock(request.Stock, request.SellerId.ToString());
+                if (request.Price.HasValue && request.Price.Value > 0)
+                {
+                    livestreamProduct.UpdatePrice(request.Price.Value, request.SellerId.ToString());
+                }
+                else
+                {
+                    _logger.LogInformation("Chỉ cập nhật stock cho livestream product {ProductId}: Stock={Stock}",
+                        livestreamProduct.Id, request.Stock);
+                }
+
+                livestreamProduct.SetModifier(request.SellerId.ToString());
 
                 // Save changes
                 await _livestreamProductRepository.ReplaceAsync(livestreamProduct.Id.ToString(), livestreamProduct);
