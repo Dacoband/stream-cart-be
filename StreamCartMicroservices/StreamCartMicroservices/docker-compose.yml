@@ -239,13 +239,13 @@ services:
       #Delivery Service
       - API_TOKEN_GHN=&{API_TOKEN_GHN}
       - GHN_SHOPID=${GHN_SHOPID}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      product-service:
-        condition: service_started
-      shop-service:
-        condition: service_started
+    # depends_on:
+      # rabbitmq:
+      #   condition: service_healthy
+      # product-service:
+      #   condition: service_started
+      # shop-service:
+      #   condition: service_started
     restart: unless-stopped
     networks:
     - app-network

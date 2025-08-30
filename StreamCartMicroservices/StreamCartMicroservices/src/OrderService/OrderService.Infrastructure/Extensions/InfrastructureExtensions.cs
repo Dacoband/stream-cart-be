@@ -33,23 +33,30 @@ namespace OrderService.Infrastructure.Extensions
             //NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
 
             // Cấu hình DataSource
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
-            //dataSourceBuilder.EnableUnmappedTypes();
-            dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
-            dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
-            var dataSource = dataSourceBuilder.Build();
-            services.AddSingleton(dataSource);
-            // Cấu hình DbContext
-            services.AddDbContext<OrderContext>((serviceProvider, options) =>
+            //var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
+            ////dataSourceBuilder.EnableUnmappedTypes();
+            //dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //var dataSource = dataSourceBuilder.Build();
+            //services.AddSingleton(dataSource);
+            //// Cấu hình DbContext
+            //services.AddDbContext<OrderContext>((serviceProvider, options) =>
+            //{
+            //    var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
+            //    options.UseNpgsql(ds, npgsqlOptions =>
+            //    {
+            //        npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
+
+            //    });
+            //});
+            services.AddDbContext<OrderContext>(options =>
             {
-                var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
-                options.UseNpgsql(ds, npgsqlOptions =>
-                {
-                    npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
-
-                });
+                options.UseNpgsql(
+                    configuration.GetConnectionString("PostgreSQL"),
+                    npgsqlOptions => {
+                        npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
+                    });
             });
-
             // Đăng ký Repository & Services
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();

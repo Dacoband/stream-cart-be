@@ -41,8 +41,8 @@ namespace OrderService.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.HasPostgresEnum<OrderStatus>();
-            modelBuilder.HasPostgresEnum<PaymentStatus>();
+            //modelBuilder.HasPostgresEnum<OrderStatus>();
+            //modelBuilder.HasPostgresEnum<PaymentStatus>();
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
             // Configure Orders entity for PostgreSQL
@@ -66,9 +66,10 @@ namespace OrderService.Infrastructure.Data
                     .IsRequired();
 
                 entity.Property(e => e.OrderStatus)
-               .HasColumnName("order_status")
-               .HasColumnType("order_status")
-               .IsRequired();
+                    .HasColumnName("order_status")
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .IsRequired();
 
 
                 entity.Property(e => e.TotalPrice)
@@ -97,7 +98,8 @@ namespace OrderService.Infrastructure.Data
 
                 entity.Property(e => e.PaymentStatus)
                     .HasColumnName("payment_status")
-                    .HasColumnType("payment_status")
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
                     .IsRequired();
                 entity.Property(e => e.PaymentMethod)
                    .HasColumnName("payment_method")
