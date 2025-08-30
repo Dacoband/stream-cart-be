@@ -25,8 +25,13 @@ namespace ProductService.Application.Helpers
 
             var timeRange = SlotTimeRanges[slot];
             var seAsiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            var startLocal = date.Date.Add(timeRange.Start);
-            var endLocal = date.Date.Add(timeRange.End);
+            var localDate = date.Kind == DateTimeKind.Utc
+        ? TimeZoneInfo.ConvertTimeFromUtc(date, seAsiaTimeZone).Date
+        : DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified);
+
+            var startLocal = DateTime.SpecifyKind(localDate.Add(timeRange.Start), DateTimeKind.Unspecified);
+            var endLocal = DateTime.SpecifyKind(localDate.Add(timeRange.End), DateTimeKind.Unspecified);
+
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, seAsiaTimeZone);
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, seAsiaTimeZone);
 
