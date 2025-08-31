@@ -20,7 +20,7 @@ namespace OrderService.Infrastructure.BackgroundServices
         // Mapping delivery status to order status
         private readonly Dictionary<string, OrderStatus> _statusMapping = new()
         {
-            { "ready_to_pick", OrderStatus.Delivered },    // 4
+            { "delivered", OrderStatus.Delivered },    // 4
             { "picked", OrderStatus.Shipped },             // 3  
             { "delivering", OrderStatus.OnDelivere }       // 7
         };
