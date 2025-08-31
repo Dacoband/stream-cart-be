@@ -17,5 +17,7 @@ namespace Livestreamservice.Application.Commands
         public  string? ThumbnailUrl { get; set; }
         public string? Tags { get; set; }
         public string? UpdatedBy { get; set; }
+        public Guid? LivestreamHostId { get; set; }
+
     }
 }

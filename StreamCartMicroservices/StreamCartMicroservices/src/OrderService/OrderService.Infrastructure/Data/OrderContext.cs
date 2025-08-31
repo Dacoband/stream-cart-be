@@ -41,12 +41,9 @@ namespace OrderService.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            //modelBuilder.HasPostgresEnum<OrderStatus>();
+            //modelBuilder.HasPostgresEnum<PaymentStatus>();
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-            modelBuilder.HasPostgresEnum<OrderStatus>(); 
-
-
-
 
             // Configure Orders entity for PostgreSQL
             modelBuilder.Entity<Orders>(entity =>
@@ -69,8 +66,10 @@ namespace OrderService.Infrastructure.Data
                     .IsRequired();
 
                 entity.Property(e => e.OrderStatus)
-               .HasColumnName("order_status")
-               .IsRequired();
+                    .HasColumnName("order_status")
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .IsRequired();
 
 
                 entity.Property(e => e.TotalPrice)
@@ -98,8 +97,10 @@ namespace OrderService.Infrastructure.Data
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(e => e.PaymentStatus)
-                    .HasColumnName("payment_status");
-
+                    .HasColumnName("payment_status")
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .IsRequired();
                 entity.Property(e => e.PaymentMethod)
                    .HasColumnName("payment_method")
                    .HasMaxLength(50);
@@ -342,8 +343,8 @@ namespace OrderService.Infrastructure.Data
                 entity.HasIndex(e => e.CreatedAt);
                 entity.HasIndex(e => e.Rating);
             });
-            modelBuilder
-                .HasPostgresEnum<PaymentStatus>();
+            //modelBuilder
+                //.HasPostgresEnum<PaymentStatus>();
         }
         private static class EnumConverters
         {

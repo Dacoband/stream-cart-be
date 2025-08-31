@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using OrderService.Domain.Enums;
 using OrderService.Infrastructure.Data;
 
 #nullable disable
@@ -21,8 +20,6 @@ namespace OrderService.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "order_status", new[] { "waiting", "pending", "processing", "shipped", "delivered", "cancelled", "packed", "on_delivere", "returning", "refunded", "completed" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "payment_status", new[] { "pending", "paid", "failed", "refunded", "partially_refunded" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("OrderService.Domain.Entities.OrderItem", b =>
@@ -228,8 +225,10 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date");
 
-                    b.Property<OrderStatus>("OrderStatus")
-                        .HasColumnType("order_status")
+                    b.Property<string>("OrderStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("order_status");
 
                     b.Property<string>("PaymentMethod")
@@ -238,8 +237,10 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("payment_method");
 
-                    b.Property<PaymentStatus>("PaymentStatus")
-                        .HasColumnType("payment_status")
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("payment_status");
 
                     b.Property<decimal>("ShippingFee")

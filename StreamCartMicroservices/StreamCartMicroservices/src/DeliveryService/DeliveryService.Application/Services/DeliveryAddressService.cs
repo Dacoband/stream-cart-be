@@ -254,10 +254,10 @@ namespace DeliveryService.Application.Services
                 throw new Exception($"GHN trả về lỗi khi tính thời gian giao hàng: {result?.Message ?? "Không rõ lỗi"}");
 
             if (result.Data.TryGetProperty("leadtime", out var leadTimeProp) &&
-                leadTimeProp.ValueKind == JsonValueKind.Number)
+         leadTimeProp.ValueKind == JsonValueKind.Number)
             {
                 var leadTimeUnix = leadTimeProp.GetInt64();
-                return DateTimeOffset.FromUnixTimeSeconds(leadTimeUnix).ToLocalTime().DateTime;
+                return DateTimeOffset.FromUnixTimeSeconds(leadTimeUnix).UtcDateTime;
             }
             else
             {

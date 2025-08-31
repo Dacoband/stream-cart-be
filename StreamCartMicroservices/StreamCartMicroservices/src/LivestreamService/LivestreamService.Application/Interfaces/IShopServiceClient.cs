@@ -44,5 +44,9 @@ namespace LivestreamService.Application.Interfaces
         /// <param name="shopId">Shop ID</param>
         /// <returns>True if the shop exists, otherwise false</returns>
         Task<bool> DoesShopExistAsync(Guid shopId);
+        Task<ShopMembershipDto?> GetActiveShopMembershipAsync(Guid shopId);
+        Task<bool> UpdateShopMembershipRemainingLivestreamAsync(Guid shopId, int remainingMinutes);
+
+
     }
 }

@@ -1611,6 +1611,15 @@ namespace PaymentService.Api.Controllers
                 };
 
                 var result = await _walletServiceClient.CreateWalletTransactionAsync(walletTransactionRequest);
+                var balanceUpdateResult = await _walletServiceClient.UpdateWalletBalanceAsync(shopId, amount, "System");
+                if (!balanceUpdateResult)
+                {
+                    _logger.LogWarning("Cập nhật balance wallet thất bại cho deposit shopId: {ShopId}", shopId);
+                }
+                else
+                {
+                    _logger.LogInformation("Cập nhật balance wallet thành công cho deposit shopId: {ShopId}, amount: {Amount}", shopId, amount);
+                }
                 _logger.LogInformation("Wallet transaction created: {Result} for shop {ShopId}", result, shopId);
             }
             catch (Exception ex)

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using OrderService.Domain.Enums;
 using OrderService.Infrastructure.Data;
 
 #nullable disable
@@ -13,8 +12,8 @@ using OrderService.Infrastructure.Data;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderContext))]
-    [Migration("20250821194714_Addstring4")]
-    partial class Addstring4
+    [Migration("20250829193311_Addstring5")]
+    partial class Addstring5
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -231,8 +230,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date");
 
-                    b.Property<OrderStatus>("OrderStatus")
-                        .HasColumnType("order_status")
+                    b.Property<int>("OrderStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("order_status");
 
                     b.Property<string>("PaymentMethod")
@@ -241,8 +240,8 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("payment_method");
 
-                    b.Property<PaymentStatus>("PaymentStatus")
-                        .HasColumnType("payment_status")
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer")
                         .HasColumnName("payment_status");
 
                     b.Property<decimal>("ShippingFee")

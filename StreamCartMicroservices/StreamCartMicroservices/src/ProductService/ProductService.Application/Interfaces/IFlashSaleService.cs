@@ -17,10 +17,13 @@ namespace ProductService.Application.Interfaces
         public Task<ApiResponse<DetailFlashSaleDTO>> GetFlashSaleById(string id);
         public Task<ApiResponse<bool>> DeleteFlashsale(string id, string userId, string shopId);
         Task<ApiResponse<List<DetailFlashSaleDTO>>> GetFlashSalesByShopIdAsync(string shopId, FilterFlashSaleDTO filter);
-
-        Task<ApiResponse<List<int>>> GetAvailableSlotsAsync(DateTime startTime, DateTime endTime);
+        Task<ApiResponse<List<int>>> GetAvailableSlotsAsync(DateTime date);
         Task<ApiResponse<List<DetailFlashSaleDTO>>> GetFlashSalesByShopAndDateAsync(string shopId, DateTime? date, int? slot);
         Task<ApiResponse<bool>> UpdateFlashSaleProductsAsync(string flashSaleId, List<Guid> productIds, List<Guid>? variantIds, string userId, string shopId);
-        Task<ApiResponse<List<Guid>>> GetProductsWithoutFlashSaleAsync(string shopId, DateTime startTime, DateTime endTime);
+        Task<ApiResponse<List<ProductWithoutFlashSaleDTO>>> GetProductsWithoutFlashSaleAsync(string shopId, DateTime date, int? slot = null);
+        Task<ApiResponse<ShopFlashSaleOverviewDTO>> GetShopFlashSaleOverviewAsync(string shopId, DateTime date);
+        Task<ApiResponse<List<FlashSaleSlotSimpleDTO>>> GetShopFlashSaleSimpleAsync(string shopId);
+        Task<ApiResponse<bool>> DeleteFlashSaleSlotAsync(DeleteFlashSaleSlotDTO request, string userId, string shopId);
+        Task<ApiResponse<DetailFlashSaleDTO>> UpdateFlashSalePriceQuantityAsync(UpdateFlashSalePriceQuantityDTO request, string flashSaleId, string userId, string shopId);
     }
 }

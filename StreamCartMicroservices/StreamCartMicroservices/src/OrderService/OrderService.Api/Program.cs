@@ -79,7 +79,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status");
 
 var app = builder.Build();
 

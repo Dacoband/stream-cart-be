@@ -6,7 +6,9 @@ using Shared.Common.Services.User;
 using ShopService.Application.Commands;
 using ShopService.Application.Commands.WalletTransaction;
 using ShopService.Application.DTOs.Membership;
+using ShopService.Application.DTOs.Wallet;
 using ShopService.Application.DTOs.WalletTransaction;
+using ShopService.Application.Interfaces;
 using ShopService.Application.Queries;
 using ShopService.Application.Queries.WalletTransaction;
 using ShopService.Domain.Entities;
@@ -20,10 +22,14 @@ namespace ShopService.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ICurrentUserService _currentUserService;
-        public ShopWalletController(IMediator mediator, ICurrentUserService currentUserService)
+        private readonly ILogger<ShopWalletController> _logger;
+        private readonly IWalletService _walletService;
+        public ShopWalletController(IMediator mediator, ICurrentUserService currentUserService, ILogger<ShopWalletController> logger, IWalletService walletService)
         {
             _mediator = mediator;
             _currentUserService = currentUserService;
+            _logger = logger;
+            _walletService = walletService;
         }
         [HttpPost]
         //[Authorize(Roles = "OperationManager,Seller")]
@@ -37,7 +43,20 @@ namespace ShopService.Api.Controllers
             try
             {
                 string userId = _currentUserService.GetUserId().ToString();
-                string? shopId = User.FindFirst("ShopId")?.Value;
+                string? shopId = Request.Headers["X-Shop-Id"].FirstOrDefault()
+                                ?? User.FindFirst("ShopId")?.Value
+                                ?? _currentUserService.GetShopId();
+
+                if (string.IsNullOrEmpty(shopId))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin Shop ID"));
+                }
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    // ✅ Get from header if current user service fails
+                    userId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "system";
+                }
                 CreateWalletTraansactionCommand command = new CreateWalletTraansactionCommand()
                 {
                     CreateWalletTransactionDTO = request,
@@ -150,6 +169,64 @@ namespace ShopService.Api.Controllers
 
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi tìm giao dịch ví: {ex.Message}"));
             }
+        }
+        /// <summary>
+        /// Cập nhật balance của wallet
+        /// </summary>
+        [HttpPatch("shop/{shopId}/balance")]
+        [Authorize]
+        public async Task<IActionResult> UpdateWalletBalance(Guid shopId, [FromBody] UpdateWalletBalanceRequest request)
+        {
+            try
+            {
+                var wallet = await _walletService.GetWalletByShopIdAsync(shopId);
+                if (wallet == null)
+                {
+                    return NotFound(new { error = "Không tìm thấy ví của shop" });
+                }
+
+                var result = await UpdateWalletBalanceDirectly(wallet.Id, request.Amount, request.ModifiedBy ?? "System");
+
+                if (result)
+                {
+                    return Ok(new { success = true, message = "Cập nhật balance thành công" });
+                }
+
+                return BadRequest(new { error = "Cập nhật balance thất bại" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật balance cho shop {ShopId}", shopId);
+                return StatusCode(500, new { error = "Lỗi hệ thống" });
+            }
+        }
+        private async Task<bool> UpdateWalletBalanceDirectly(Guid walletId, decimal amount, string modifiedBy)
+        {
+            try
+            {
+                var result = await _walletService.AddFundsAsync(walletId, amount, modifiedBy);
+
+                if (result)
+                {
+                    _logger.LogInformation("✅ Cập nhật balance thành công cho wallet {WalletId}, amount: {Amount}", walletId, amount);
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Cập nhật balance thất bại cho wallet {WalletId}", walletId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật balance cho wallet {WalletId}", walletId);
+                return false;
+            }
+        }
+        public class UpdateWalletBalanceRequest
+        {
+            public decimal Amount { get; set; }
+            public string? ModifiedBy { get; set; }
         }
     }
 }

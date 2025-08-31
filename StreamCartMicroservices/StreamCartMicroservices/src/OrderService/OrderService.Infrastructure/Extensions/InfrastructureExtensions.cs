@@ -29,30 +29,34 @@ namespace OrderService.Infrastructure.Extensions
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
             // Mapping enum PostgreSQL
-            NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
-            NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //NpgsqlConnection.GlobalTypeMapper.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //NpgsqlConnection.GlobalTypeMapper.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
 
             // Cấu hình DataSource
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
-            dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
-            dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
-            var dataSource = dataSourceBuilder.Build();
-            services.AddSingleton(dataSource);
+            //var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.GetConnectionString("PostgreSQL"));
+            ////dataSourceBuilder.EnableUnmappedTypes();
+            //dataSourceBuilder.MapEnum<OrderStatus>("order_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //dataSourceBuilder.MapEnum<PaymentStatus>("payment_status", nameTranslator: new NpgsqlNullNameTranslator());
+            //var dataSource = dataSourceBuilder.Build();
+            //services.AddSingleton(dataSource);
+            //// Cấu hình DbContext
+            //services.AddDbContext<OrderContext>((serviceProvider, options) =>
+            //{
+            //    var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
+            //    options.UseNpgsql(ds, npgsqlOptions =>
+            //    {
+            //        npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
 
-            // Cấu hình DbContext
-            services.AddDbContext<OrderContext>((serviceProvider, options) =>
+            //    });
+            //});
+            services.AddDbContext<OrderContext>(options =>
             {
-                var ds = serviceProvider.GetRequiredService<NpgsqlDataSource>();
-                options.UseNpgsql(ds, npgsqlOptions =>
-                {
-                    npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
-                    npgsqlOptions.MapEnum<OrderStatus>("order_status");
-                    npgsqlOptions.MapEnum<PaymentStatus>("payment_status");
-                });
-
-                NpgsqlConnection.GlobalTypeMapper.EnableUnmappedTypes();
+                options.UseNpgsql(
+                    configuration.GetConnectionString("PostgreSQL"),
+                    npgsqlOptions => {
+                        npgsqlOptions.MigrationsAssembly(typeof(OrderContext).Assembly.FullName);
+                    });
             });
-
             // Đăng ký Repository & Services
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IOrderItemRepository, OrderItemRepository>();
@@ -127,9 +131,21 @@ namespace OrderService.Infrastructure.Extensions
                 if (!string.IsNullOrEmpty(baseUrl))
                     client.BaseAddress = new Uri(baseUrl);
             });
+            services.AddHttpClient<IDeliveryApiClient, DeliveryApiClient>();
 
             services.AddQuartz(q =>
             {
+                q.UseMicrosoftDependencyInjectionJobFactory();
+
+                // Order tracking status update job - runs every 10 minutes
+                var trackingJobKey = new JobKey("OrderTrackingStatusUpdateJob");
+                q.AddJob<OrderTrackingStatusUpdateJob>(opts => opts.WithIdentity(trackingJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(trackingJobKey)
+                    .WithIdentity("OrderTrackingStatusUpdateTrigger")
+                    .WithCronSchedule("0 */2 * * * ?")
+                    .WithDescription("Update order status based on delivery tracking"));
+
                 var cancelDraftingKey = new JobKey("cancel-drafting-orders-job");
                 q.AddJob<CancelDraftingOrdersJob>(opts => opts.WithIdentity(cancelDraftingKey));
                 q.AddTrigger(opts => opts
@@ -158,9 +174,7 @@ namespace OrderService.Infrastructure.Extensions
                     .WithIdentity("auto-complete-delivered-orders-trigger")
                     .WithCronSchedule("0 30 0 * * ?"));
             });
-
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
             // Nếu có service chạy nền theo interval ngoài Quartz
             services.AddHostedService<OrderCompletionService>();
             services.AddHttpClient<ILivestreamServiceClient, LivestreamServiceClient>();

@@ -105,6 +105,7 @@ namespace OrderService.Application.Interfaces.IRepositories
         Task<List<Orders>> GetOrdersByStatusAndCreatedBeforeAsync(OrderStatus status, DateTime cutoff);
         Task<List<Orders>> GetOrdersByStatusAndModifiedBeforeAsync(OrderStatus status, DateTime cutoff);
         Task<Orders?> GetOrderDetailById(Guid id);
+        Task<IEnumerable<Orders>> GetOrdersWithTrackingCodeAsync();
     }
 
     /// <summary>

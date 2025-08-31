@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PaymentService.Application.Interfaces;
@@ -51,7 +52,12 @@ namespace PaymentService.Infrastructure.Extensions
             services.AddScoped<IPaymentService, PaymentService.Infrastructure.Services.PaymentService>();
             services.AddScoped<IPaymentRepository, PaymentService.Infrastructure.Repositories.PaymentRepository>();
             services.AddScoped<IQrCodeService, QrCodeService>();
-            services.AddScoped<IWalletServiceClient, WalletServiceClient>();
+            services.AddHttpClient<IWalletServiceClient, WalletServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://brightpa.me/");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 
             return services;
