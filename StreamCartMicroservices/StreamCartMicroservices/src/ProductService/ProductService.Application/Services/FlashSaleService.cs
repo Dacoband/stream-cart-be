@@ -499,7 +499,22 @@ namespace ProductService.Application.Services
                         var product = await _productRepository.GetByIdAsync(f.ProductId.ToString());
                         productName = product?.ProductName ?? productName;
 
-                        var primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, f.VariantId);
+                        ProductImage? primaryImage = null;
+
+                        if (f.VariantId.HasValue)
+                        {
+                            primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, f.VariantId);
+
+                            if (primaryImage == null)
+                            {
+                                primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, null);
+                            }
+                        }
+                        else
+                        {
+                            primaryImage = await _productImageRepository.GetPrimaryImageAsync(f.ProductId, null);
+                        }
+
                         productImageUrl = primaryImage?.ImageUrl;
 
                         if (f.VariantId.HasValue)
@@ -509,8 +524,8 @@ namespace ProductService.Application.Services
                     }
                     catch (Exception)
                     {
-                        // Silent fail
                     }
+                    var (price, stock) = await GetPriceAndStockAsync(f.ProductId, f.VariantId);
 
                     detailFlashSales.Add(new DetailFlashSaleDTO
                     {
@@ -526,7 +541,10 @@ namespace ProductService.Application.Services
                         EndTime = TimeZoneInfo.ConvertTimeFromUtc(f.EndTime, tz),
                         ProductName = productName,
                         VariantName = variantName,
-                        ProductImageUrl = productImageUrl
+                        ProductImageUrl = productImageUrl,
+                        Price = price,
+                        Stock = stock
+
                     });
                 }
 
@@ -542,7 +560,6 @@ namespace ProductService.Application.Services
             }
         }
 
-        // Giữ nguyên các method khác...
         private async Task<string?> GetVariantNameAsync(Guid variantId)
         {
             try
@@ -575,6 +592,31 @@ namespace ProductService.Application.Services
             {
                 return null;
             }
+        }
+        private async Task<(decimal Price, int Stock)> GetPriceAndStockAsync(Guid productId, Guid? variantId)
+        {
+            try
+            {
+                if (variantId.HasValue && variantId.Value != Guid.Empty)
+                {
+                    var variant = await _productVariantRepository.GetByIdAsync(variantId.Value.ToString());
+                    if (variant != null)
+                    {
+                        return (variant.Price, variant.Stock);
+                    }
+                }
+
+                var product = await _productRepository.GetByIdAsync(productId.ToString());
+                if (product != null)
+                {
+                    return (product.BasePrice, product.StockQuantity);
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return (0m, 0);
         }
 
         public async Task<ApiResponse<bool>> DeleteFlashsale(string id, string userId, string shopId)

@@ -21,5 +21,7 @@ namespace ProductService.Application.DTOs.FlashSale
         public string? ProductName { get; set; }
         public string? ProductImageUrl { get; set; }
         public string? VariantName { get; set; }
+        public decimal Price { get; set; }
+        public int Stock { get; set; }
     }
 }
