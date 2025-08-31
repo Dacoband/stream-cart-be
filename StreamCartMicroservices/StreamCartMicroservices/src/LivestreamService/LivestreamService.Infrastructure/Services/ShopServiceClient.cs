@@ -163,7 +163,7 @@ namespace LivestreamService.Infrastructure.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"/api/shop-membership/shop/{shopId}/active");
+                var response = await _httpClient.GetAsync($"/api/shopmembership/shop/{shopId}/active");
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("No active membership found for shop {ShopId}: {StatusCode}", shopId, response.StatusCode);
@@ -192,7 +192,7 @@ namespace LivestreamService.Infrastructure.Services
                 var jsonContent = JsonSerializer.Serialize(updateRequest);
                 var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PutAsync($"/api/shop-membership/shop/{shopId}/remaining-livestream", content);
+                var response = await _httpClient.PutAsync($"/api/shopmembership/shop/{shopId}/remaining-livestream", content);
 
                 if (!response.IsSuccessStatusCode)
                 {
