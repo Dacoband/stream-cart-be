@@ -169,6 +169,19 @@ namespace ProductService.Application.Handlers.DetailHandlers
                         attributeValueDict[pair.AttributeName] = pair.ValueName;
                     }
                 }
+                 finalPrice = (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0m)
+    ? variant.FlashSalePrice.Value
+    : variant.Price;
+
+                decimal discountPercent = 0m;
+                if (variant.Price > 0m && variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0m)
+                {
+                    var salePrice = variant.FlashSalePrice.Value;
+                    if (salePrice < variant.Price)
+                    {
+                        discountPercent = Math.Round(((variant.Price - salePrice) / variant.Price) * 100m, 2);
+                    }
+                }
 
                 variantDtos.Add(new ProductDetailVariantDto
                 {
@@ -176,13 +189,15 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     AttributeValues = attributeValueDict,
                     Stock = variant.Stock,
                     Price = variant.Price,
-                    FlashSalePrice = variant.FlashSalePrice,
+                    FinalPrice = finalPrice,
+                    FlashSalePrice = discountPercent,   // % giảm giá
                     VariantImage = variantImageDto,
                     Length = variant.Length,
                     Weight = variant.Weight,
                     Width = variant.Width,
                     Height = variant.Height,
                 });
+
             }
 
             // Get shop info (placeholder - in production you'd call a shop service)
@@ -205,6 +220,15 @@ namespace ProductService.Application.Handlers.DetailHandlers
             {
                 modifideName = await _accountCLientService.GetAccountById(product.LastModifiedBy);
             }
+            if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+            {
+                finalPrice = product.DiscountPrice.Value;
+
+            }
+            else
+            {
+                finalPrice = product.BasePrice;
+            }
             // Build final response
             return new ProductDetailDto
             {
@@ -214,7 +238,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 CategoryId = product.CategoryId,
                 CategoryName = GetCategoryNamePlaceholder(product.CategoryId),
                 BasePrice = product.BasePrice,
-                DiscountPrice = product.DiscountPrice,
+                DiscountPrice = (product.BasePrice - finalPrice) / 100,
                 FinalPrice = finalPrice,
                 StockQuantity = product.StockQuantity,
                 QuantitySold = product.QuantitySold,

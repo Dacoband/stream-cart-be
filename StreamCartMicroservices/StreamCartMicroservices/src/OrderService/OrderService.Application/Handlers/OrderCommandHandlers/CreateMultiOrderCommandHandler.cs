@@ -134,7 +134,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         var itemDiscountTotal = itemResult.Data.Sum(x => x.DiscountAmount);
                         var voucherDiscountAmount = voucherResult.Data.DiscountAmount;
                         order.VoucherCode = voucherResult.Data.VoucherCode;
-                        order.DiscountAmount = itemDiscountTotal + voucherDiscountAmount;
+                        order.DiscountAmount =  voucherDiscountAmount;
                         order.FinalAmount = voucherResult.Data.FinalAmount;
 
                         _logger.LogInformation("📊 Order updated - Item Discount: {ItemDiscount}đ, Voucher Discount: {VoucherDiscount}đ, Final: {Final}đ",
@@ -225,23 +225,23 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     if (variant == null)
                         return Fail($"Không tìm thấy phiên bản sản phẩm có mã: {item.VariantId}");
 
-                    unitPrice = variant.Price;
+                    unitPrice = (decimal)variant.FinalPrice;
 
                     // Kiểm tra null và tránh chia cho 0
                     if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
                     {
                         unitPrice = variant.FlashSalePrice.Value;
-                        discount = variant.Price - variant.FlashSalePrice.Value;
+                        discount = (decimal)(variant.Price - variant.FinalPrice);
                     }
                 }
                 else
                 {
-                    unitPrice = product.BasePrice;
+                    unitPrice = product.FinalPrice;
 
                     if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
                     {
                         unitPrice = product.FinalPrice;
-                        discount = (decimal)(product.BasePrice - product.DiscountPrice);
+                        discount = (decimal)(product.BasePrice - product.FinalPrice);
                     }
                 }
 
@@ -411,7 +411,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             decimal commissionFee = totalPrice * commissionRate / 100;
 
             order.TotalPrice = totalPrice;
-            order.DiscountAmount = itemDiscount + voucherDiscount;
+            order.DiscountAmount = voucherDiscount;
             order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
             order.CommissionFee = order.TotalPrice * (commissionFee/100);
             order.NetAmount = totalPrice - commissionFee;
