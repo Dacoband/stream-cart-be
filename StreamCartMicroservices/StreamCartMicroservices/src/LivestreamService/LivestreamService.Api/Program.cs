@@ -26,12 +26,10 @@ using System.Text.RegularExpressions;
 var builder = WebApplication.CreateBuilder(args);
 
 DotEnv.Load();
-// Load environment variables
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-// Process configuration to replace ${ENV_VAR} placeholders
 ReplaceConfigurationPlaceholders(builder.Configuration);
 
 builder.Services.AddApplicationServices(builder.Configuration);
@@ -44,7 +42,6 @@ builder.Services.AddScoped<ILivekitService, LivekitService>();
 
 builder.Services.AddAppSettings(builder.Configuration);
 
-// ✅ FIX: CORS configuration để support credentials
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
@@ -56,16 +53,13 @@ builder.Services.AddCors(options =>
               .AllowCredentials(); 
     });
 
-    // ✅ Additional policy cho testing từ file://
     options.AddPolicy("FileTestingPolicy", policy =>
     {
         policy.AllowAnyOrigin() // ✅ For file:// testing only
               .AllowAnyMethod()
               .AllowAnyHeader();
-        // ✅ Note: Cannot use AllowCredentials with AllowAnyOrigin
     });
 
-    // ✅ Development policy
     options.AddPolicy("DevCorsPolicy", policy =>
     {
         policy.WithOrigins("http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000")
@@ -74,14 +68,12 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
-// ✅ Add WebSocket services
 builder.Services.AddWebSockets(options =>
 {
     options.KeepAliveInterval = TimeSpan.FromMinutes(2);
     options.ReceiveBufferSize = 4 * 1024;
 });
 
-// ✅ Configure forwarded headers for reverse proxy/load balancer
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
@@ -133,18 +125,16 @@ builder.Services.AddSwaggerGen(c =>
 // Register SignalR chat service
 builder.Services.AddScoped<ISignalRChatService, SignalRChatService>();
 
-// ✅ Enhanced SignalR configuration for HTTPS/Production with detailed logging
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
-    options.MaximumReceiveMessageSize = 102400; // 100KB
-    options.HandshakeTimeout = TimeSpan.FromSeconds(90); // ✅ Increase handshake timeout
+    options.MaximumReceiveMessageSize = 102400;
+    options.HandshakeTimeout = TimeSpan.FromSeconds(90); 
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(90); // ✅ Increase client timeout
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(90); 
     options.StreamBufferCapacity = 10;
 });
 
-// ✅ Enhanced JWT configuration for Docker
 builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.Events = new JwtBearerEvents
@@ -157,7 +147,6 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
             Console.WriteLine($"[SignalR JWT] Path: {path}");
             Console.WriteLine($"[SignalR JWT] Token present: {!string.IsNullOrEmpty(accessToken)}");
 
-            // ✅ FIXED: Check for SignalR paths and set token
             if (!string.IsNullOrEmpty(accessToken) &&
                 (path.StartsWithSegments("/signalrchat") ||
                  path.StartsWithSegments("/notificationHub") ||
@@ -173,7 +162,6 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
         {
             var path = context.Request.Path;
 
-            // Nếu là SignalR → bỏ qua trả 401, để handshake qua
             if (path.StartsWithSegments("/signalrchat") ||
                 path.StartsWithSegments("/notificationHub") ||
                 path.StartsWithSegments("/testhub"))
@@ -183,7 +171,6 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
                 return;
             }
 
-            // Các API thường → giữ behavior cũ
             context.HandleResponse();
             context.Response.ContentType = "application/json";
 
@@ -215,10 +202,8 @@ builder.Logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Trace);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Http.Connections", LogLevel.Trace);
 var app = builder.Build();
 
-// ✅ Add debug middleware first
 app.UseMiddleware<SignalRDebugMiddleware>();
 
-// ✅ CRITICAL: Use forwarded headers for proxy/load balancer
 app.UseForwardedHeaders();
 app.UseRouting();
 app.UseWebSockets(new WebSocketOptions
@@ -226,7 +211,6 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromMinutes(2)
 });
 
-// Configure the HTTP request pipeline
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -234,10 +218,6 @@ app.UseSwaggerUI(c =>
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     c.DefaultModelsExpandDepth(0);
 });
-
-
-
-// ✅ CRITICAL: CORS must come before authentication for SignalR to work
 app.UseCors("DefaultCorsPolicy");
 if (app.Environment.IsProduction())
 {
@@ -246,7 +226,6 @@ if (app.Environment.IsProduction())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ✅ Map TestHub for debugging (NO AUTHORIZATION)
 app.MapHub<TestHub>("/testhub", options =>
 {
     options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |
@@ -258,8 +237,6 @@ app.MapHub<TestHub>("/testhub", options =>
     options.LongPolling.PollTimeout = TimeSpan.FromSeconds(90);
     options.AllowStatefulReconnects = false;
 });
-
-// ✅ Map other hubs
 app.MapHub<SignalRChatHub>("/signalrchat", options =>
 {
     options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets |

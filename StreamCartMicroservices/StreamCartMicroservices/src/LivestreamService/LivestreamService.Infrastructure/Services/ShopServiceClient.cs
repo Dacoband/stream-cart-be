@@ -159,7 +159,55 @@ namespace LivestreamService.Infrastructure.Services
                 throw;
             }
         }
+        public async Task<ShopMembershipDto?> GetActiveShopMembershipAsync(Guid shopId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/shop-membership/shop/{shopId}/active");
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("No active membership found for shop {ShopId}: {StatusCode}", shopId, response.StatusCode);
+                    return null;
+                }
 
+                var content = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<ShopMembershipDto>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return apiResponse?.Data;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active membership for shop {ShopId}", shopId);
+                return null;
+            }
+        }
+        public async Task<bool> UpdateShopMembershipRemainingLivestreamAsync(Guid shopId, int remainingMinutes)
+        {
+            try
+            {
+                var updateRequest = new { RemainingLivestream = remainingMinutes };
+                var jsonContent = JsonSerializer.Serialize(updateRequest);
+                var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PutAsync($"/api/shop-membership/shop/{shopId}/remaining-livestream", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to update remaining livestream for shop {ShopId}: {StatusCode}", shopId, response.StatusCode);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating remaining livestream for shop {ShopId}", shopId);
+                return false;
+            }
+        }
         private class ApiResponse<T>
         {
             public bool Success { get; set; }

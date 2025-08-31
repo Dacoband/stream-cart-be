@@ -14,13 +14,20 @@ namespace LivestreamService.Application.Handlers
     {
         private readonly ILivestreamRepository _livestreamRepository;
         private readonly ILogger<EndLivestreamCommandHandler> _logger;
+        private readonly ILivestreamMembershipService _membershipService;
+        private readonly IShopServiceClient _shopServiceClient;
+
 
         public EndLivestreamCommandHandler(
             ILivestreamRepository livestreamRepository,
-            ILogger<EndLivestreamCommandHandler> logger)
+            ILogger<EndLivestreamCommandHandler> logger,
+            ILivestreamMembershipService membershipService,
+            IShopServiceClient shopServiceClient)
         {
             _livestreamRepository = livestreamRepository;
             _logger = logger;
+            _membershipService = membershipService;
+            _shopServiceClient = shopServiceClient;
         }
 
         public async Task<LivestreamDTO> Handle(EndLivestreamCommand request, CancellationToken cancellationToken)
@@ -36,11 +43,32 @@ namespace LivestreamService.Application.Handlers
             {
                 throw new UnauthorizedAccessException("Only the livestream creator can end it");
             }
-
+            // Calculate used minutes
+            int usedMinutes = 0;
+            if (livestream.ActualStartTime.HasValue)
+            {
+                var livestreamDuration = DateTime.UtcNow - livestream.ActualStartTime.Value;
+                usedMinutes = Math.Max(0, (int)livestreamDuration.TotalMinutes);
+            }
             // End the livestream
             livestream.End(request.SellerId.ToString());
             await _livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
 
+            if (usedMinutes > 0)
+            {
+                var deductionSuccess = await _membershipService.DeductLivestreamTimeAsync(livestream.ShopId, usedMinutes);
+
+                if (deductionSuccess)
+                {
+                    _logger.LogInformation("Ended livestream {LivestreamId} and deducted {UsedMinutes} minutes from shop {ShopId}",
+                        livestream.Id, usedMinutes, livestream.ShopId);
+                }
+                else
+                {
+                    _logger.LogWarning("Ended livestream {LivestreamId} but failed to deduct {UsedMinutes} minutes from shop {ShopId}",
+                        livestream.Id, usedMinutes, livestream.ShopId);
+                }
+            }
             _logger.LogInformation("Livestream {LivestreamId} ended by seller {SellerId}", livestream.Id, request.SellerId);
 
             return new LivestreamDTO

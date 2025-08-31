@@ -1,8 +1,10 @@
 ﻿using LivestreamService.Application.Interfaces;
+using LivestreamService.Application.Services;
 using LivestreamService.Infrastructure.BackgroundServices;
 using LivestreamService.Infrastructure.Consumers;
 using LivestreamService.Infrastructure.Data;
 using LivestreamService.Infrastructure.Hubs;
+using LivestreamService.Infrastructure.Interfaces;
 using LivestreamService.Infrastructure.Repositories;
 using LivestreamService.Infrastructure.Services;
 using LivestreamService.Infrastructure.Settings;
@@ -50,6 +52,9 @@ namespace LivestreamService.Infrastructure.Extensions
             services.AddScoped<IAccountServiceClient, AccountServiceClient>();
             services.AddScoped<ILivekitService, LivekitService>();
 
+
+            services.AddScoped<ILivestreamMembershipService, LivestreamMembershipService>();
+            services.AddScoped<ILivestreamNotificationService, LivestreamNotificationService>();
             // Add HttpClient for service communication
             services.AddHttpClient<IShopServiceClient, ShopServiceClient>(client =>
             {
@@ -94,7 +99,6 @@ namespace LivestreamService.Infrastructure.Extensions
             services.AddScoped<ILivestreamCartRepository, LivestreamCartRepository>();
             services.AddScoped<ILivestreamCartItemRepository, LivestreamCartItemRepository>();
 
-            // ✅ Background Services
             services.AddHostedService<LivestreamCartCleanupService>();
             services.AddQuartz(q =>
             {
@@ -104,8 +108,16 @@ namespace LivestreamService.Infrastructure.Extensions
                 q.AddTrigger(opts => opts
                     .ForJob(cartCleanupJobKey)
                     .WithIdentity("LivestreamCartCleanupTrigger")
-                    .WithCronSchedule("0 0 * * * ?") // Every hour at minute 0
+                    .WithCronSchedule("0 0 * * * ?") 
                     .WithDescription("Cleanup expired livestream carts"));
+
+                var monitoringJobKey = new JobKey("LivestreamTimeMonitoringJob");
+                q.AddJob<LivestreamTimeMonitoringJob>(opts => opts.WithIdentity(monitoringJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(monitoringJobKey)
+                    .WithIdentity("LivestreamTimeMonitoringTrigger")
+                    .WithCronSchedule("0 */5 * * * ?") 
+                    .WithDescription("Monitor active livestream time"));
             });
 
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);

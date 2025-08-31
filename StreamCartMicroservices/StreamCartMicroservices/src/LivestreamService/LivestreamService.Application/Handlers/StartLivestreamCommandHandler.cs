@@ -17,16 +17,18 @@ namespace LivestreamService.Application.Handlers
         private readonly ILivekitService _livekitService;
         private readonly ILogger<StartLivestreamCommandHandler> _logger;
         private readonly ICurrentUserService _currentUserService;
+        private readonly ILivestreamMembershipService _membershipService;
         public StartLivestreamCommandHandler(
             ILivestreamRepository livestreamRepository,
             ILivekitService livekitService,
             ILogger<StartLivestreamCommandHandler> logger,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,ILivestreamMembershipService livestreamMembershipService)
         {
             _livestreamRepository = livestreamRepository;
             _livekitService = livekitService;
             _logger = logger;
             _currentUserService = currentUserService;
+            _membershipService = livestreamMembershipService;
         }
 
         public async Task<LivestreamDTO> Handle(StartLivestreamCommand request, CancellationToken cancellationToken)
@@ -42,7 +44,17 @@ namespace LivestreamService.Application.Handlers
             {
                 throw new UnauthorizedAccessException("Only the livestream creator can start it");
             }
-             var requestingUserId = _currentUserService.GetUserId();
+            var requestingUserId = _currentUserService.GetUserId();
+            //Valiedate livestream nha 
+            var membershipValidation = await _membershipService.ValidateRemainingLivestreamTimeAsync(livestream.ShopId);
+            if (!membershipValidation.IsValid)
+            {
+                throw new InvalidOperationException($"Không thể bắt đầu livestream: {membershipValidation.ErrorMessage}");
+            }
+            if (membershipValidation.RemainingMinutes <= 0)
+            {
+                throw new InvalidOperationException("Shop đã hết thời gian livestream trong gói thành viên. Vui lòng gia hạn gói thành viên để tiếp tục livestream.");
+            }
             // Start the livestream
             livestream.Start(request.SellerId.ToString(),requestingUserId);
             await _livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
