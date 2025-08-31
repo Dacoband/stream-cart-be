@@ -24,14 +24,21 @@ namespace ProductService.Application.Handlers.VariantHandlers
             {
                 throw new InvalidOperationException($"Product variant with ID {request.Id} not found.");
             }
+            var finalPrice = variant.Price;
+            if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
+            {
+                finalPrice = variant.FlashSalePrice.Value;
 
+            }
+          
             return new ProductVariantDto1
             {
                 Id = variant.Id,
                 ProductId = variant.ProductId,
                 SKU = variant.SKU,
                 Price = variant.Price,
-                FlashSalePrice = variant.FlashSalePrice,
+                FlashSalePrice = variant.FlashSalePrice.HasValue ? ((variant.Price - variant.FlashSalePrice.Value) / variant.Price) * 100 : 0,
+                FinalPrice = finalPrice,
                 Stock = variant.Stock,
                 CreatedAt = variant.CreatedAt,
                 CreatedBy = variant.CreatedBy,

@@ -13,8 +13,6 @@ namespace ProductService.Application.DTOs.Products
         public decimal BasePrice { get; set; }
         public decimal? DiscountPrice { get; set; }
         public decimal FinalPrice { get; set; }
-        public decimal? DiscountPercent { get; set; } = 0;
-
         public int StockQuantity { get; set; }
         public int QuantitySold { get; set; }
         public decimal? Weight { get; set; }
@@ -71,6 +69,7 @@ namespace ProductService.Application.DTOs.Products
         public int Stock { get; set; }
         public decimal Price { get; set; }
         public decimal? FlashSalePrice { get; set; }
+        public decimal? FinalPrice { get; set; } = 0;
         public decimal? Weight { get; set; }
         //public string? Dimensions { get; set; }
         public decimal? Length { get; set; }

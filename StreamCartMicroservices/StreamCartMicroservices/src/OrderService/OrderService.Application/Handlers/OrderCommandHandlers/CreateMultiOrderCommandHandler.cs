@@ -225,13 +225,13 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     if (variant == null)
                         return Fail($"Không tìm thấy phiên bản sản phẩm có mã: {item.VariantId}");
 
-                    unitPrice = variant.Price;
+                    unitPrice = (decimal)variant.FinalPrice;
 
                     // Kiểm tra null và tránh chia cho 0
                     if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
                     {
                         unitPrice = variant.FlashSalePrice.Value;
-                        discount = variant.Price - variant.FlashSalePrice.Value;
+                        discount = (decimal)(variant.Price - variant.FinalPrice);
                     }
                 }
                 else
@@ -241,7 +241,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
                     {
                         unitPrice = product.FinalPrice;
-                        discount = (decimal)(product.BasePrice - product.DiscountPrice);
+                        discount = (decimal)(product.BasePrice - product.FinalPrice);
                     }
                 }
 
