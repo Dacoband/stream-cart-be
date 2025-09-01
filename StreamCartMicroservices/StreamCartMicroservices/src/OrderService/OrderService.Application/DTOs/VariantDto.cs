@@ -13,6 +13,7 @@ namespace OrderService.Application.DTOs
         public decimal Price { get; set; }
         public int Stock { get; set; }
         public decimal? FlashSalePrice { get; set; }
+        public decimal? FinalPrice { get; set; }
         public decimal? Length { get; set; }
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }    

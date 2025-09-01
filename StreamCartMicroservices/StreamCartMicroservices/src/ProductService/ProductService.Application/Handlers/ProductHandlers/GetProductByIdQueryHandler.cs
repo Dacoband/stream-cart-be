@@ -39,6 +39,16 @@ namespace ProductService.Application.Handlers.ProductHandlers
             // Get primary image if exists
             var primaryImage = await _productImageRepository.GetPrimaryImageAsync(product.Id);
             string? primaryImageUrl = primaryImage?.ImageUrl;
+             finalPrice = (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0m)
+      ? product.DiscountPrice.Value   // giá sau giảm (sale price)
+      : product.BasePrice;
+
+            decimal discountPercent = 0m;
+            if (product.BasePrice > 0m && finalPrice < product.BasePrice)
+            {
+                discountPercent = ((product.BasePrice - finalPrice) / product.BasePrice) * 100m;
+                discountPercent = Math.Round(discountPercent, 2);
+            }
 
             return new ProductDto
             {
@@ -48,7 +58,11 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 SKU = product.SKU,
                 CategoryId = product.CategoryId,
                 BasePrice = product.BasePrice,
-                DiscountPrice = product.DiscountPrice,
+
+                // Nếu DTO field này thật sự là % giảm, gán discountPercent
+                // Nên đổi tên thành DiscountPercent cho dễ hiểu
+                DiscountPrice = discountPercent,
+
                 FinalPrice = finalPrice,
                 StockQuantity = product.StockQuantity,
                 IsActive = product.IsActive,
@@ -67,6 +81,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 LastModifiedAt = product.LastModifiedAt,
                 LastModifiedBy = product.LastModifiedBy
             };
+
         }
     }
 }

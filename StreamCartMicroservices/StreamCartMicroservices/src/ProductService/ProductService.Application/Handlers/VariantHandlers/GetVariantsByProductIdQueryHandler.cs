@@ -23,18 +23,26 @@ namespace ProductService.Application.Handlers.VariantHandlers
         {
             var variants = await _variantRepository.GetByProductIdAsync(request.ProductId);
 
-            return variants.Select(v => new ProductVariantDto
+            return variants.Select(v =>
             {
-                Id = v.Id,
-                ProductId = v.ProductId,
-                SKU = v.SKU,
-                Price = v.Price,
-                FlashSalePrice = v.FlashSalePrice,
-                Stock = v.Stock,
-                CreatedAt = v.CreatedAt,
-                CreatedBy = v.CreatedBy,
-                LastModifiedAt = v.LastModifiedAt,
-                LastModifiedBy = v.LastModifiedBy
+                decimal finalPrice = v.FlashSalePrice.HasValue && v.FlashSalePrice.Value > 0
+                    ? v.FlashSalePrice.Value
+                    : v.Price;
+
+                return new ProductVariantDto
+                {
+                    Id = v.Id,
+                    ProductId = v.ProductId,
+                    SKU = v.SKU,
+                    Price = v.Price,
+                    FinalPrice = finalPrice,
+                    FlashSalePrice = v.FlashSalePrice.HasValue ? ((v.Price - v.FlashSalePrice.Value) / v.Price) * 100 : 0,
+                    Stock = v.Stock,
+                    CreatedAt = v.CreatedAt,
+                    CreatedBy = v.CreatedBy,
+                    LastModifiedAt = v.LastModifiedAt,
+                    LastModifiedBy = v.LastModifiedBy
+                };
             });
         }
     }

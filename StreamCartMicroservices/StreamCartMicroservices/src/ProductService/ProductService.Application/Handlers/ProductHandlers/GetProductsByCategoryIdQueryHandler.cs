@@ -41,6 +41,22 @@ namespace ProductService.Application.Handlers.ProductHandlers
                 // Get primary image if exists
                 var primaryImage = await _productImageRepository.GetPrimaryImageAsync(p.Id);
                 string? primaryImageUrl = primaryImage?.ImageUrl;
+                 finalPrice = (p.DiscountPrice.HasValue && p.DiscountPrice.Value > 0m)
+      ? p.DiscountPrice.Value   // giá sau giảm (sale price)
+      : p.BasePrice;
+
+                // Tính % giảm an toàn
+                decimal discountPercent = 0m;
+                if (p.BasePrice > 0m && finalPrice < p.BasePrice)
+                {
+                    discountPercent = ((p.BasePrice - finalPrice) / p.BasePrice) * 100m;
+                    // Làm tròn 2 chữ số thập phân (tuỳ bạn)
+                    discountPercent = Math.Round(discountPercent, 2);
+
+                    // Giới hạn [0, 100] để tránh lệch
+                    if (discountPercent < 0m) discountPercent = 0m;
+                    else if (discountPercent > 100m) discountPercent = 100m;
+                }
 
                 result.Add(new ProductDto
                 {
@@ -49,8 +65,12 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     Description = p.Description,
                     SKU = p.SKU,
                     CategoryId = p.CategoryId,
+
                     BasePrice = p.BasePrice,
-                    DiscountPrice = p.DiscountPrice,
+                    // ĐỔI: nếu DTO đang dùng tên DiscountPrice nhưng mang ý nghĩa phần trăm,
+                    // thì gán discountPercent. (Khuyến nghị đổi tên thành DiscountPercent cho rõ)
+                    DiscountPrice = discountPercent,
+
                     FinalPrice = finalPrice,
                     StockQuantity = p.StockQuantity,
                     IsActive = p.IsActive,
@@ -61,7 +81,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     HasVariant = p.HasVariant,
                     QuantitySold = p.QuantitySold,
                     ShopId = p.ShopId,
-                    //LivestreamId = p.LivestreamId,
+                    // LivestreamId = p.LivestreamId,
                     PrimaryImageUrl = primaryImageUrl,
                     HasPrimaryImage = primaryImage != null,
                     CreatedAt = p.CreatedAt,
@@ -69,6 +89,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     LastModifiedAt = p.LastModifiedAt,
                     LastModifiedBy = p.LastModifiedBy
                 });
+
             }
 
             return result;

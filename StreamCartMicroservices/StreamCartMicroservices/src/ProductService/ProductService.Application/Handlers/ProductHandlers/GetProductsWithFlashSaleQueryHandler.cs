@@ -43,7 +43,15 @@ namespace ProductService.Application.Handlers.ProductHandlers
                     // Get primary image if exists
                     var primaryImage = await _productImageRepository.GetPrimaryImageAsync(p.Id);
                     string? primaryImageUrl = primaryImage?.ImageUrl;
+                    if (p.DiscountPrice.HasValue && p.DiscountPrice.Value > 0)
+                    {
+                        finalPrice = p.DiscountPrice.Value;
 
+                    }
+                    else
+                    {
+                        finalPrice = p.BasePrice;
+                    }
                     result.Add(new ProductDto
                     {
                         Id = p.Id,
@@ -52,18 +60,18 @@ namespace ProductService.Application.Handlers.ProductHandlers
                         SKU = p.SKU,
                         CategoryId = p.CategoryId,
                         BasePrice = p.BasePrice,
-                        DiscountPrice = p.DiscountPrice,
+                        DiscountPrice = (p.BasePrice - finalPrice) / 100,
                         FinalPrice = finalPrice,
                         StockQuantity = p.StockQuantity,
                         IsActive = p.IsActive,
                         Weight = p.Weight,
-                        //Dimensions = p.Dimensions,
                         Length = p.Length,
                         Width = p.Width,
                         Height = p.Height,
                         HasVariant = p.HasVariant,
                         QuantitySold = p.QuantitySold,
                         ShopId = p.ShopId,
+                        // LivestreamId = p.LivestreamId,
                         PrimaryImageUrl = primaryImageUrl,
                         HasPrimaryImage = primaryImage != null,
                         CreatedAt = p.CreatedAt,

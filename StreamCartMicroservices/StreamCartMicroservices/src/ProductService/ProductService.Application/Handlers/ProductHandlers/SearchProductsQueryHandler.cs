@@ -144,14 +144,22 @@ namespace ProductService.Application.Handlers.ProductHandlers
                         var discountPercentage = product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0
                             ? product.DiscountPrice.Value
                             : 0;
+                        if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+                        {
+                            finalPrice = product.DiscountPrice.Value;
 
+                        }
+                        else
+                        {
+                            finalPrice = product.BasePrice;
+                        }
                         productDtos.Add(new ProductSearchItemDto
                         {
                             Id = product.Id,
                             ProductName = product.ProductName,
                             Description = product.Description,
                             BasePrice = product.BasePrice,
-                            DiscountPrice = product.DiscountPrice,
+                            DiscountPrice = (product.BasePrice - finalPrice) / 100,
                             FinalPrice = finalPrice,
                             StockQuantity = product.StockQuantity,
                             PrimaryImageUrl = primaryImage?.ImageUrl,

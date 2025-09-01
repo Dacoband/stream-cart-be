@@ -18,6 +18,7 @@ namespace ShopService.Domain.Enums
         Success,
         Failed,
         Pending,
-        Canceled
+        Canceled,
+        Retry
     }
 }

@@ -54,7 +54,6 @@ namespace OrderService.Domain.Entities
             Notes = notes ?? string.Empty;
             VariantId = variantId;
             DiscountAmount = discountAmount;
-
             CalculateTotalPrice();
         }
 
@@ -153,7 +152,7 @@ namespace OrderService.Domain.Entities
         /// </summary>
         private void CalculateTotalPrice()
         {
-            TotalPrice = (Quantity * UnitPrice) - DiscountAmount;
+            TotalPrice = (Quantity * UnitPrice) ;
         }
 
         #endregion
