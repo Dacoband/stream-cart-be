@@ -53,7 +53,6 @@ namespace LivestreamService.Infrastructure.Services
                     {
                         SenderId = senderId,
                         SenderName = senderName,
-                        SenderType = "System",
                         Message = message,
                         Timestamp = DateTime.UtcNow
                     });
@@ -262,7 +261,6 @@ namespace LivestreamService.Infrastructure.Services
                         MessageId = message.Id,
                         LivestreamId = message.LivestreamId,
                         SenderName = message.SenderName,
-                        SenderType = "System",        
                         Content = TruncateMessage(message.Message, 100),
                         Timestamp = DateTime.UtcNow
                     });
