@@ -11,6 +11,7 @@ namespace ShopService.Domain.Entities
         public string Description { get; private set; } = string.Empty;
         public string LogoURL { get; private set; } = string.Empty;
         public string CoverImageURL { get; private set; } = string.Empty;
+        public string BusinessLicenseImageURL { get; private set; } = string.Empty;
 
         public decimal RatingAverage { get; private set; }
         public int TotalReview { get; private set; }
@@ -45,7 +46,8 @@ namespace ShopService.Domain.Entities
             string shopName,
             string? description = null,
             string? logoURL = null,
-            string? coverImageURL = null) : base()
+            string? coverImageURL = null,
+            string? businessLicenseImageURL = null) : base()
         {
             if (string.IsNullOrWhiteSpace(shopName))
                 throw new ArgumentException("Tên cửa hàng không được để trống", nameof(shopName));
@@ -54,6 +56,7 @@ namespace ShopService.Domain.Entities
             Description = description ?? string.Empty;
             LogoURL = logoURL ?? string.Empty;
             CoverImageURL = coverImageURL ?? string.Empty;
+            BusinessLicenseImageURL = businessLicenseImageURL ?? string.Empty;
 
             RatingAverage = 0;
             TotalReview = 0;
@@ -71,6 +74,7 @@ namespace ShopService.Domain.Entities
             string? description = null,
             string? logoURL = null,
             string? coverImageURL = null,
+            string? businessLicenseImageURL = null,
             string? modifier = null)
         {
             if (!string.IsNullOrWhiteSpace(shopName))
@@ -79,6 +83,7 @@ namespace ShopService.Domain.Entities
             Description = description ?? Description;
             LogoURL = logoURL ?? LogoURL;
             CoverImageURL = coverImageURL ?? CoverImageURL;
+            BusinessLicenseImageURL = businessLicenseImageURL ?? BusinessLicenseImageURL;
 
             if (!string.IsNullOrWhiteSpace(modifier))
                 SetModifier(modifier);

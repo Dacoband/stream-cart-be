@@ -204,31 +204,33 @@ namespace LivestreamService.Infrastructure.BackgroundServices
         }
 
         private async Task AutoEndLivestreamAsync(
-            Livestream livestream,
-            ILivestreamMembershipService membershipService,
-            ILivestreamRepository livestreamRepository,
-            string reason)
+    Livestream livestream,
+    ILivestreamMembershipService membershipService,
+    ILivestreamRepository livestreamRepository,
+    string reason)
         {
             try
             {
                 _logger.LogInformation("🔄 Auto-ending livestream {LivestreamId} due to {Reason}", livestream.Id, reason);
 
-                // ✅ Tính tổng thời gian đã sử dụng
-                var totalUsedMinutes = livestream.ActualStartTime.HasValue
-                    ? (int)(DateTime.UtcNow - livestream.ActualStartTime.Value).TotalMinutes
-                    : 0;
-
-                // ✅ Đảm bảo ít nhất 1 phút nếu đã start
-                if (livestream.ActualStartTime.HasValue && totalUsedMinutes < 1)
+                var totalUsedMinutes = 0;
+                if (livestream.ActualStartTime.HasValue)
                 {
-                    totalUsedMinutes = 1;
+                    var duration = DateTime.UtcNow - livestream.ActualStartTime.Value;
+                    var calculatedMinutes = (int)duration.TotalMinutes;
+
+                    var membership = await membershipService.ValidateRemainingLivestreamTimeAsync(livestream.ShopId);
+                    var maxDeductableMinutes = membership?.RemainingMinutes ?? 0;
+
+                    totalUsedMinutes = Math.Min(calculatedMinutes, Math.Max(maxDeductableMinutes, 1));
+
+                    _logger.LogInformation("💡 Calculated duration: {Calculated}min, Max deductable: {Max}min, Final deduction: {Final}min",
+                        calculatedMinutes, maxDeductableMinutes, totalUsedMinutes);
                 }
 
-                // ✅ Kết thúc livestream
                 livestream.End($"system-{reason.ToLower()}");
                 await livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
 
-                // ✅ Trừ thời gian membership
                 if (totalUsedMinutes > 0)
                 {
                     var deductionSuccess = await membershipService.DeductLivestreamTimeAsync(
@@ -246,6 +248,7 @@ namespace LivestreamService.Infrastructure.BackgroundServices
                     }
                 }
 
+                // Cleanup cache...
                 var keysToRemove = _warningSentCache.Keys
                     .Where(k => k.StartsWith(livestream.Id.ToString()))
                     .ToList();
@@ -261,7 +264,7 @@ namespace LivestreamService.Infrastructure.BackgroundServices
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Error auto-ending livestream {LivestreamId}", livestream.Id);
-                throw; // Re-throw để có thể retry nếu cần
+                throw;
             }
         }
     }
