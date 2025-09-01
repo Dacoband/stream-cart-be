@@ -20,5 +20,36 @@ namespace ShopService.Infrastructure.Repositories
         {
             _context = context;
         }
+        public new async Task<Membership?> GetById(string id)
+        {
+            if (Guid.TryParse(id, out Guid guidId))
+            {
+                return await _context.Membership
+                     .IgnoreQueryFilters() 
+                    .FirstOrDefaultAsync(m => m.Id == guidId);
+            }
+            return null;
+        }
+        public async Task<Membership?> GetActiveByIdAsync(string id)
+        {
+            if (Guid.TryParse(id, out Guid guidId))
+            {
+                return await _context.Membership
+                    .FirstOrDefaultAsync(m => m.Id == guidId && !m.IsDeleted);
+            }
+            return null;
+        }
+
+        public new async Task<IEnumerable<Membership>> GetAll()
+        {
+            return await _context.Membership.IgnoreQueryFilters() 
+                .ToListAsync();
+        }
+        public async Task<IEnumerable<Membership>> GetAllActiveAsync()
+        {
+            return await _context.Membership
+                .Where(m => !m.IsDeleted)
+                .ToListAsync();
+        }
     }
 }

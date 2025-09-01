@@ -10,7 +10,8 @@ namespace ShopService.Application.DTOs
         public string Description { get; set; } = string.Empty;
         public string LogoURL { get; set; } = string.Empty;
         public string CoverImageURL { get; set; } = string.Empty;
-        
+        public string BusinessLicenseImageURL { get; set; } = string.Empty;
+
         public decimal RatingAverage { get; set; }
         public int TotalReview { get; set; }
         

@@ -14,6 +14,7 @@ namespace ShopService.Application.Commands
         public string Description { get; set; } = string.Empty;
         public string LogoURL { get; set; } = string.Empty;
         public string CoverImageURL { get; set; } = string.Empty;
+        public string BusinessLicenseImageURL { get; set; } = string.Empty;
         public Guid AccountId { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;

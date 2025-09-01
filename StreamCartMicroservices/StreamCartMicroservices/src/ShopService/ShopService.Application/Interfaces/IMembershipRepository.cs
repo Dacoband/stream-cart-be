@@ -10,5 +10,9 @@ namespace ShopService.Application.Interfaces
 {
     public interface IMembershipRepository : IGenericRepository<Membership>
     {
+        Task<Membership?> GetActiveByIdAsync(string id);
+        Task<Membership?> GetById(string id);
+        Task<IEnumerable<Membership>> GetAll();
+        Task<IEnumerable<Membership>> GetAllActiveAsync();
     }
 }

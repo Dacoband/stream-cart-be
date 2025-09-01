@@ -17,7 +17,7 @@ namespace ShopService.Application.DTOs.Membership
         public int? MaxLivestream { get; set; }
         public int? MaxCommission { get; set; }
 
-        public bool? IsDeleted { get; set; } 
+       // public bool? IsDeleted { get; set; } 
 
         public int? PageIndex { get; set; }
         public int? PageSize { get; set; }

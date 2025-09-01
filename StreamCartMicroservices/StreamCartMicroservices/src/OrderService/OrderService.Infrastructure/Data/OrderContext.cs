@@ -28,7 +28,12 @@ namespace OrderService.Infrastructure.Data
         /// </summary>
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<RefundRequest> RefundRequests { get; set; }
 
+        /// <summary>
+        /// ✅ THÊM - Refund details collection
+        /// </summary>
+        public DbSet<RefundDetail> RefundDetails { get; set; }
         /// <summary>
         /// Creates a new instance of OrderContext
         /// </summary>
@@ -343,8 +348,168 @@ namespace OrderService.Infrastructure.Data
                 entity.HasIndex(e => e.CreatedAt);
                 entity.HasIndex(e => e.Rating);
             });
-            //modelBuilder
-                //.HasPostgresEnum<PaymentStatus>();
+            modelBuilder.Entity<RefundRequest>(entity =>
+            {
+                entity.ToTable("refund_requests");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("refund_id");
+
+                entity.Property(e => e.OrderId)
+                    .HasColumnName("order_id")
+                    .IsRequired();
+
+                entity.Property(e => e.TrackingCode)
+                    .HasColumnName("tracking_code")
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.RequestedByUserId)
+                    .HasColumnName("requested_by_user_id")
+                    .IsRequired();
+
+                entity.Property(e => e.RequestedAt)
+                    .HasColumnName("requested_at")
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasColumnName("status")
+                    .HasConversion<string>()
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.ProcessedByUserId)
+                    .HasColumnName("processed_by_user_id");
+
+                entity.Property(e => e.ProcessedAt)
+                    .HasColumnName("processed_at");
+
+                entity.Property(e => e.RefundAmount)
+                    .HasColumnName("refund_amount")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.ShippingFee)
+                    .HasColumnName("shipping_fee")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.TotalAmount)
+                    .HasColumnName("total_amount")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.IsDeleted)
+                    .HasColumnName("is_deleted");
+
+                // Relationships
+                entity.HasOne<Orders>()
+                    .WithMany()
+                    .HasForeignKey(r => r.OrderId)
+                    .HasConstraintName("fk_refund_requests_orders")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.OrderId)
+                    .HasDatabaseName("ix_refund_requests_order_id");
+
+                entity.HasIndex(e => e.RequestedByUserId)
+                     .HasDatabaseName("ix_refund_requests_requested_by_user_id");
+
+                entity.HasIndex(e => e.Status)
+                    .HasDatabaseName("ix_refund_requests_status");
+
+                entity.HasIndex(e => e.RequestedAt)
+                    .HasDatabaseName("ix_refund_requests_requested_at");
+
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<RefundDetail>(entity =>
+            {
+                entity.ToTable("refund_details");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("refund_detail_id");
+
+                entity.Property(e => e.OrderItemId)
+                    .HasColumnName("order_item")
+                    .IsRequired();
+
+                entity.Property(e => e.RefundRequestId)
+                    .HasColumnName("refund_request_id")
+                    .IsRequired();
+
+                entity.Property(e => e.Reason)
+                    .HasColumnName("reason")
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.ImageUrl)
+                    .HasColumnName("image_url")
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.UnitPrice)
+                    .HasColumnName("unit_price")
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                // Base entity properties
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.CreatedBy)
+                    .HasColumnName("created_by")
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastModifiedAt)
+                    .HasColumnName("last_modified_at");
+
+                entity.Property(e => e.LastModifiedBy)
+                    .HasColumnName("last_modified_by")
+                    .HasMaxLength(50);
+                entity.Property(e => e.IsDeleted)
+                   .HasColumnName("is_deleted");
+
+                // Relationships
+                entity.HasOne<RefundRequest>()
+                    .WithMany(r => r.RefundDetails)
+                    .HasForeignKey(rd => rd.RefundRequestId)
+                    .HasConstraintName("fk_refund_details_refund_requests")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<OrderItem>()
+                    .WithMany()
+                    .HasForeignKey(rd => rd.OrderItemId)
+                    .HasConstraintName("fk_refund_details_order_items")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.RefundRequestId)
+                    .HasDatabaseName("ix_refund_details_refund_request_id");
+
+                entity.HasIndex(e => e.OrderItemId)
+                    .HasDatabaseName("ix_refund_details_order_item_id");
+
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
         }
         private static class EnumConverters
         {

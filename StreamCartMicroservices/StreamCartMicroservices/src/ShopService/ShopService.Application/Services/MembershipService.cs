@@ -128,7 +128,7 @@ namespace ShopService.Application.Services
                 Success = true,
                 Message = "Lọc gói thành viên thành công"
             };
-            var query =await _membershipRepository.GetAllAsync();
+            var query =await _membershipRepository.GetAll();
 
             // Lọc theo điều kiện
             if (!string.IsNullOrEmpty(request.Type))
@@ -166,10 +166,10 @@ namespace ShopService.Application.Services
                 query = query.Where(m => m.Commission <= request.MaxCommission.Value);
             }
 
-            if (request.IsDeleted.HasValue)
-            {
-                query = query.Where(m => m.IsDeleted == request.IsDeleted.Value);
-            }
+            //if (request.IsDeleted.HasValue)
+            //{
+            //    query = query.Where(m => m.IsDeleted == request.IsDeleted.Value);
+            //}
 
             // Sắp xếp
             query = (request.SortBy, request.SortDirection) switch
@@ -223,7 +223,7 @@ namespace ShopService.Application.Services
                 Success = true,
                 Message = "Lấy dữ liệu gói thành viên thành công"
             };
-            var existingMembership = await _membershipRepository.GetByIdAsync(id);
+            var existingMembership = await _membershipRepository.GetById(id);
             if (existingMembership == null)
             {
                 result.Success = false;
