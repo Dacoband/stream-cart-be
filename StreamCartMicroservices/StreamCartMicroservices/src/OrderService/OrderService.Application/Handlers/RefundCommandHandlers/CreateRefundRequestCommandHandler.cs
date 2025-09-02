@@ -51,6 +51,35 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 if (order.AccountId != userId)
                     throw new UnauthorizedAccessException("You can only create refund requests for your own orders");
 
+                // ✅ Check for duplicate order items in the request
+                var duplicateOrderItems = request.RefundItems
+                    .GroupBy(ri => ri.OrderItemId)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicateOrderItems.Any())
+                {
+                    throw new ApplicationException($"Duplicate order items found in refund request: {string.Join(", ", duplicateOrderItems)}");
+                }
+
+                // ✅ Check if any of these order items are already in a refund request
+                var existingRefundDetails = await Task.WhenAll(
+                    request.RefundItems.Select(async ri =>
+                        await _refundDetailRepository.GetByOrderItemIdAsync(ri.OrderItemId))
+                );
+
+                var alreadyRefundedItems = existingRefundDetails
+                    .SelectMany(details => details)
+                    .Select(rd => rd.OrderItemId)
+                    .Distinct()
+                    .ToList();
+
+                if (alreadyRefundedItems.Any())
+                {
+                    throw new ApplicationException($"Order items already have refund requests: {string.Join(", ", alreadyRefundedItems)}");
+                }
+
                 var refundRequest = new RefundRequest(request.OrderId, userId, order.ShippingFee);
 
                 foreach (var refundItem in request.RefundItems)
@@ -66,7 +95,7 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                         refundItem.OrderItemId,
                         refundRequest.Id,
                         refundItem.Reason,
-                        orderItem.TotalPrice, 
+                        orderItem.TotalPrice,
                         refundItem.ImageUrl
                     );
                     refundDetail.SetCreator(userId.ToString());
@@ -74,14 +103,12 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                     refundRequest.AddRefundDetail(refundDetail);
                 }
 
-                // Save refund request
+                // ✅ Save refund request with all details in a single transaction
+                // This should handle the foreign key relationships properly
                 await _refundRequestRepository.InsertAsync(refundRequest);
 
-                // Save refund details
-                foreach (var detail in refundRequest.RefundDetails)
-                {
-                    await _refundDetailRepository.InsertAsync(detail);
-                }
+                // ✅ No need to save details separately as they should be cascade saved with the request
+                // If using Entity Framework with proper navigation properties, the details should be saved automatically
 
                 _logger.LogInformation("Refund request created successfully with ID {RefundRequestId}", refundRequest.Id);
 

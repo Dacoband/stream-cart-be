@@ -8,6 +8,7 @@ using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
+using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -23,6 +24,7 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
         private readonly IDeliveryClient _deliveryClient;
         private readonly IProductServiceClient _productServiceClient;
         private readonly ILogger<UpdateRefundStatusCommandHandler> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
         public UpdateRefundStatusCommandHandler(
             IRefundRequestRepository refundRequestRepository,
@@ -30,7 +32,8 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
             IOrderItemRepository orderItemRepository,
             IDeliveryClient deliveryClient,
             IProductServiceClient productServiceClient,
-            ILogger<UpdateRefundStatusCommandHandler> logger)
+            ILogger<UpdateRefundStatusCommandHandler> logger,
+            ICurrentUserService currentUserService)
         {
             _refundRequestRepository = refundRequestRepository;
             _orderRepository = orderRepository;
@@ -38,12 +41,14 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
             _deliveryClient = deliveryClient;
             _productServiceClient = productServiceClient;
             _logger = logger;
+            _currentUserService = currentUserService;
         }
 
         public async Task<RefundRequestDto> Handle(UpdateRefundStatusCommand request, CancellationToken cancellationToken)
         {
             try
             {
+                var userId = _currentUserService.GetUserId();
                 _logger.LogInformation("Updating refund status for refund {RefundRequestId} to {NewStatus}",
                     request.RefundRequestId, request.NewStatus);
 
@@ -68,15 +73,11 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                     case RefundStatus.Delivered:
                     case RefundStatus.Completed:
                     case RefundStatus.Refunded:
-                        if (!string.IsNullOrEmpty(request.TrackingCode))
-                        {
-                            refundRequest.SetTrackingCode(request.TrackingCode, request.ModifiedBy);
-                        }
                         break;
                 }
 
                 // Update status
-                refundRequest.UpdateStatus(request.NewStatus, request.ModifiedBy);
+                refundRequest.UpdateStatus(request.NewStatus, userId.ToString());
 
                 // Save changes
                 await _refundRequestRepository.ReplaceAsync(refundRequest.Id.ToString(), refundRequest);
@@ -195,8 +196,6 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 // Don't throw exception here, just log the error
             }
         }
-
-        // ✅ Manual conversion method without AutoMapper
         private static RefundRequestDto ConvertToRefundRequestDto(RefundRequest refundRequest)
         {
             return new RefundRequestDto

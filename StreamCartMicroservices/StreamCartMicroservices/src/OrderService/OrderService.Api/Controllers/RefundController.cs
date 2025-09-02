@@ -8,6 +8,7 @@ using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
+using ShopService.Domain.Entities;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
@@ -141,11 +142,10 @@ namespace OrderService.Api.Controllers
             }
         }
 
-        [HttpGet("shop/{shopId}")]
+        [HttpGet("shop")]
         [Authorize(Roles = "Seller,OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<RefundRequestDto>>), 200)]
         public async Task<IActionResult> GetShopRefunds(
-            Guid shopId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] RefundStatus? status = null,
@@ -154,15 +154,17 @@ namespace OrderService.Api.Controllers
         {
             try
             {
+                string shopId = _currentUserService.GetShopId();
+                Guid.TryParse(shopId, out Guid shopGuid);
                 var result = await _refundService.GetRefundRequestsByShopIdAsync(
-                    shopId, pageNumber, pageSize, status, fromDate, toDate);
+                    shopGuid, pageNumber, pageSize, status, fromDate, toDate);
 
                 return Ok(ApiResponse<PagedResult<RefundRequestDto>>.SuccessResult(
                     result, "Lấy danh sách hoàn tiền thành công"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting shop refunds for shop {ShopId}", shopId);
+                _logger.LogError(ex, "Error getting shop refunds for shop {ShopId}", "");
                 return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
             }
         }
