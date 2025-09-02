@@ -4,8 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.DTOs.RefundDTOs;
 using OrderService.Application.Interfaces.IServices;
+using OrderService.Domain.Enums;
+using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
+using Shared.Common.Services.User;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace OrderService.Api.Controllers
@@ -17,11 +21,13 @@ namespace OrderService.Api.Controllers
     {
         private readonly IRefundService _refundService;
         private readonly ILogger<RefundController> _logger;
+        private readonly ICurrentUserService _currentUserService;
 
-        public RefundController(IRefundService refundService, ILogger<RefundController> logger)
+        public RefundController(IRefundService refundService, ILogger<RefundController> logger, ICurrentUserService currentUserService)
         {
             _refundService = refundService ?? throw new ArgumentNullException(nameof(refundService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
         }
 
         /// <summary>
@@ -134,5 +140,62 @@ namespace OrderService.Api.Controllers
                     ApiResponse<object>.ErrorResult("An error occurred while retrieving the refund request"));
             }
         }
+
+        [HttpGet("shop/{shopId}")]
+        [Authorize(Roles = "Seller,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<RefundRequestDto>>), 200)]
+        public async Task<IActionResult> GetShopRefunds(
+            Guid shopId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] RefundStatus? status = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var result = await _refundService.GetRefundRequestsByShopIdAsync(
+                    shopId, pageNumber, pageSize, status, fromDate, toDate);
+
+                return Ok(ApiResponse<PagedResult<RefundRequestDto>>.SuccessResult(
+                    result, "Lấy danh sách hoàn tiền thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting shop refunds for shop {ShopId}", shopId);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+        [HttpPut("{id}/confirm")]
+        [Authorize(Roles = "Seller,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<RefundRequestDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ConfirmRefund(
+            Guid id,
+            [FromBody] ConfirmRefundDto request)
+        {
+            try
+            {
+                var modifiedBy = _currentUserService.GetUserId().ToString();
+
+                var result = await _refundService.ConfirmRefundRequestAsync(
+                    id, request.IsApproved, request.Reason, modifiedBy);
+
+                var message = request.IsApproved ? "Xác nhận hoàn tiền thành công" : "Từ chối hoàn tiền thành công";
+                return Ok(ApiResponse<RefundRequestDto>.SuccessResult(result, message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming refund {RefundId}", id);
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+    }
+    public class ConfirmRefundDto
+    {
+        [Required]
+        public bool IsApproved { get; set; }
+
+        public string? Reason { get; set; }
     }
 }
