@@ -68,8 +68,8 @@ namespace OrderService.Infrastructure.Services
                 {
                     RefundRequestId = updateStatusDto.RefundRequestId,
                     NewStatus = updateStatusDto.NewStatus,
-                    ModifiedBy = updateStatusDto.ModifiedBy,
-                    TrackingCode = updateStatusDto.TrackingCode
+                   // ModifiedBy = updateStatusDto.ModifiedBy,
+                    //TrackingCode = updateStatusDto.TrackingCode
                 };
 
                 return await _mediator.Send(command);

@@ -9,7 +9,7 @@ namespace OrderService.Application.Commands.RefundCommands
     {
         public Guid RefundRequestId { get; set; }
         public RefundStatus NewStatus { get; set; }
-        public string ModifiedBy { get; set; } = string.Empty;
-        public string? TrackingCode { get; set; }
+        //public string ModifiedBy { get; set; } = string.Empty;
+        //public string? TrackingCode { get; set; }
     }
 }

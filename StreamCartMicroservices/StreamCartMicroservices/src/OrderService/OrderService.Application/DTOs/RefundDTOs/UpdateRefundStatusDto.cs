@@ -21,12 +21,12 @@ namespace OrderService.Application.DTOs.RefundDTOs
         /// <summary>
         /// User who is updating the status
         /// </summary>
-        [Required]
-        public string ModifiedBy { get; set; } = string.Empty;
+        //[Required]
+        //public string ModifiedBy { get; set; } = string.Empty;
 
         /// <summary>
         /// Optional tracking code when status is Packed or OnDelivery
         /// </summary>
-        public string? TrackingCode { get; set; }
+       //public string? TrackingCode { get; set; }
     }
 }
