@@ -4,6 +4,8 @@ using OrderService.Application.Commands.RefundCommands;
 using OrderService.Application.DTOs.RefundDTOs;
 using OrderService.Application.Interfaces.IRepositories;
 using OrderService.Application.Interfaces.IServices;
+using OrderService.Domain.Enums;
+using Shared.Common.Domain.Bases;
 using Shared.Common.Services.User;
 using System;
 using System.Linq;
@@ -124,6 +126,90 @@ namespace OrderService.Infrastructure.Services
                 _logger.LogError(ex, "Error getting refund request {RefundRequestId}", refundRequestId);
                 throw;
             }
+        }
+        public async Task<PagedResult<RefundRequestDto>> GetRefundRequestsByShopIdAsync(
+             Guid shopId, int pageNumber = 1, int pageSize = 10,
+             RefundStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            try
+            {
+                _logger.LogInformation("Getting refund requests for shop {ShopId}", shopId);
+
+                var refunds = await _refundRequestRepository.GetPagedRefundRequestsAsync(
+                    pageNumber, pageSize, status, null, null, fromDate, toDate);
+
+                var refundDtos = refunds.Items.Select(ConvertToDto).ToList();
+
+                return new PagedResult<RefundRequestDto>(
+                    refundDtos,
+                    refunds.TotalCount,
+                    refunds.CurrentPage,
+                    refunds.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting refund requests for shop {ShopId}", shopId);
+                throw;
+            }
+        }
+
+        public async Task<RefundRequestDto> ConfirmRefundRequestAsync(
+            Guid refundRequestId, bool isApproved, string? reason, string modifiedBy)
+        {
+            try
+            {
+                _logger.LogInformation("Confirming refund request {RefundRequestId}, approved: {IsApproved}",
+                    refundRequestId, isApproved);
+
+                var refund = await _refundRequestRepository.GetByIdAsync(refundRequestId.ToString());
+                if (refund == null)
+                    throw new InvalidOperationException("Refund request not found");
+
+                // ✅ Sử dụng enum values có sẵn
+                var newStatus = isApproved ? RefundStatus.Confirmed : RefundStatus.Rejected;
+                refund.UpdateStatus(newStatus, modifiedBy);
+
+                await _refundRequestRepository.ReplaceAsync(refund.Id.ToString(), refund);
+
+                return ConvertToDto(refund);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming refund request {RefundRequestId}", refundRequestId);
+                throw;
+            }
+        }
+        private static RefundRequestDto ConvertToDto(Domain.Entities.RefundRequest refundRequest)
+        {
+            return new RefundRequestDto
+            {
+                Id = refundRequest.Id,
+                OrderId = refundRequest.OrderId,
+                TrackingCode = refundRequest.TrackingCode,
+                RequestedByUserId = refundRequest.RequestedByUserId,
+                RequestedAt = refundRequest.RequestedAt,
+                Status = refundRequest.Status,
+                ProcessedByUserId = refundRequest.ProcessedByUserId,
+                ProcessedAt = refundRequest.ProcessedAt,
+                RefundAmount = refundRequest.RefundAmount,
+                ShippingFee = refundRequest.ShippingFee,
+                TotalAmount = refundRequest.TotalAmount,
+                CreatedAt = refundRequest.CreatedAt,
+                CreatedBy = refundRequest.CreatedBy,
+                LastModifiedAt = refundRequest.LastModifiedAt,
+                LastModifiedBy = refundRequest.LastModifiedBy,
+                RefundDetails = refundRequest.RefundDetails.Select(rd => new RefundDetailDto
+                {
+                    Id = rd.Id,
+                    OrderItemId = rd.OrderItemId,
+                    RefundRequestId = rd.RefundRequestId,
+                    Reason = rd.Reason,
+                    ImageUrl = rd.ImageUrl,
+                    UnitPrice = rd.UnitPrice,
+                    CreatedAt = rd.CreatedAt,
+                    CreatedBy = rd.CreatedBy
+                }).ToList()
+            };
         }
     }
 }
