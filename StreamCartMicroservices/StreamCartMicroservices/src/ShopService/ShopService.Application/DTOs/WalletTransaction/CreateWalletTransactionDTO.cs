@@ -15,7 +15,7 @@ namespace ShopService.Application.DTOs.WalletTransaction
         public WalletTransactionStatus? Status { get; set; } = WalletTransactionStatus.Pending;
         public string? TransactionId { get; set; }
         public Guid? ShopMembershipId { get; set; }
-        public Guid? OrderId { get; set; }
+        public string? OrderId { get; set; }
         public Guid? RefundId { get; set; }
     }
 }

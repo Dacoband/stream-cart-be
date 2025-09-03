@@ -10,7 +10,7 @@ namespace OrderService.Application.DTOs.WalletDTOs
         /// <summary>
         /// ID đơn hàng
         /// </summary>
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
 
         /// <summary>
         /// ID của shop

@@ -49,7 +49,20 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", cors =>
+        cors.WithOrigins(
+                "http://localhost:3000", 
+                "https://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://stream-cart.dacoban.studio"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+    );
+});
 // App services
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);

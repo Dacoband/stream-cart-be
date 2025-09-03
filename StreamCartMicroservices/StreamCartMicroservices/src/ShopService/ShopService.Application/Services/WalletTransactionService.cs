@@ -26,83 +26,93 @@ namespace ShopService.Application.Services
             _walletRepository = walletRepository;
             _shopRepository = shopRepository;
         }
-        public async Task<ApiResponse<WalletTransaction>> CreateWalletTransaction(CreateWalletTransactionDTO request, string? shopId, string userId)
+        public async Task<ApiResponse<WalletTransaction>> CreateWalletTransaction(
+    CreateWalletTransactionDTO request,
+    string? shopId,
+    string userId)
         {
-            var response = new ApiResponse<WalletTransaction>()
+            var response = new ApiResponse<WalletTransaction>
             {
                 Success = true,
                 Message = "Tạo giao dịch ví thành công"
             };
-            var walletTransaction = new WalletTransaction();
 
-            if (request.Amount < 0)
+            // ===== 1) Validate input =====
+            if (!Guid.TryParse(shopId, out var shopGuid))
+            {
+                response.Success = false;
+                response.Message = "shopId không hợp lệ";
+                return response;
+            }
+
+            if (request.Amount <= 0)
             {
                 response.Success = false;
                 response.Message = "Số tiền giao dịch phải lớn hơn 0";
                 return response;
             }
-            if (request.Type.ToString() == WalletTransactionType.Withdraw.ToString() && request.Amount <= 50000)
+
+            if (request.Type == WalletTransactionType.Withdraw && request.Amount <= 50_000)
             {
                 response.Success = false;
                 response.Message = "Số tiền rút về phải lớn hơn 50.000";
                 return response;
             }
-            var wallet = await _walletRepository.GetByShopIdAsync(Guid.Parse(shopId));
+
+            var wallet = await _walletRepository.GetByShopIdAsync(shopGuid);
             if (wallet == null)
             {
                 response.Success = false;
                 response.Message = "Không tìm thấy thông tin ví";
                 return response;
             }
-            if (request.Type.ToString() == WalletTransactionType.Withdraw.ToString() || request.Type.ToString() == WalletTransactionType.System.ToString())
-            {
-                if (wallet.Balance < request.Amount)
-                {
-                    response.Success = false;
-                    response.Message = "Số tiền trong ví không đủ để thực hiện giao dịch";
-                    return response;
-                }
 
-                    request.Amount = request.Amount * -1;
-                walletTransaction.Target = Guid.Empty.ToString();
-            }
-            if (request.Status == WalletTransactionStatus.Success && request.Type ==    WalletTransactionType.Deposit) { 
-                wallet.Balance += request.Amount;
-                wallet.SetModifier("system");
-            
-            }
-            
-            walletTransaction.Type = request.Type.ToString();
-            walletTransaction.Amount = request.Amount;
-            walletTransaction.Status = request.Status.ToString();
-            if (!request.Description.IsNullOrEmpty())
+            // ===== 2) Xác định dòng tiền và kiểm tra số dư =====
+            // Tiền vào ví (deposit, refund về ví, ...): dương
+            // Tiền ra ví (withdraw, system trừ, ...): âm
+            var isOutflow = request.Type == WalletTransactionType.Withdraw
+                            || request.Type == WalletTransactionType.System;
+
+            decimal signedAmount = isOutflow ? -request.Amount : request.Amount;
+
+            if (isOutflow && wallet.Balance < request.Amount)
             {
-                walletTransaction.Description = request.Description;
+                response.Success = false;
+                response.Message = "Số tiền trong ví không đủ để thực hiện giao dịch";
+                return response;
             }
-            walletTransaction.WalletId = wallet.Id;
-            walletTransaction.BankAccount = wallet.BankName;
-            walletTransaction.BankNumber = wallet.BankAccountNumber;
-            if (!request.TransactionId.IsNullOrEmpty())
+
+            // ===== 3) Khởi tạo transaction =====
+            var walletTransaction = new WalletTransaction
             {
-                walletTransaction.TransactionId = request.TransactionId;
-            }
-            if (!request.ShopMembershipId.HasValue)
-            {
+                Type = request.Type.ToString(),
+                Amount = signedAmount,
+                Status = request.Status.ToString(),
+                Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description,
+                WalletId = wallet.Id,
+                // Chuẩn hóa tên ngân hàng: "MBBank" / "MB Bank" -> "MB"
+                BankAccount = NormalizeBankName(wallet.BankName),
+                BankNumber = wallet.BankAccountNumber,
+                TransactionId = string.IsNullOrWhiteSpace(request.TransactionId) ? null : request.TransactionId,
+                Target = isOutflow ? Guid.Empty.ToString() : null
+            };
+
+            if (request.ShopMembershipId.HasValue)
                 walletTransaction.ShopMembershipId = request.ShopMembershipId;
-            }
-            if (request.OrderId.HasValue)
-            {
-                walletTransaction.OrderId = request.OrderId;
-            }
+
+            if (!request.OrderId.IsNullOrEmpty())
+                walletTransaction.OrderId = request.OrderId.ToString();
+
             if (request.RefundId.HasValue)
-            {
                 walletTransaction.RefundId = request.RefundId;
-            }
-            if (string.IsNullOrWhiteSpace(request.Description))
+
+            // Build mô tả nếu không truyền
+            if (string.IsNullOrWhiteSpace(walletTransaction.Description))
             {
+                var absAmount = Math.Abs(signedAmount);
                 walletTransaction.Description = BuildVnDescription(
                     request.Type,
-                    request.Amount,
+                    absAmount,                     // mô tả nên dùng số dương
                     wallet.BankName,
                     wallet.BankAccountNumber,
                     walletTransaction.TransactionId,
@@ -111,25 +121,46 @@ namespace ShopService.Application.Services
                     walletTransaction.ShopMembershipId
                 );
             }
-            else
-            {
-                walletTransaction.Description = request.Description;
-            }
+
             walletTransaction.SetCreator(userId);
+
+            // ===== 4) Cập nhật số dư khi giao dịch thành công =====
+            // Quy ước: chỉ khi Status = Success mới ghi vào số dư
+            if (request.Status == WalletTransactionStatus.Success)
+            {
+                wallet.Balance += signedAmount; // deposit tăng, withdraw/system giảm
+                wallet.SetModifier("system");
+            }
+
+            // ===== 5) Lưu DB =====
             try
             {
                 await _walletTransactionRepository.InsertAsync(walletTransaction);
                 await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
+
                 response.Data = walletTransaction;
                 return response;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 response.Success = false;
                 response.Message = "Lỗi khi tạo giao dịch ví";
                 return response;
-
             }
+        }
+        private static string NormalizeBankName(string bankName)
+        {
+            if (string.IsNullOrWhiteSpace(bankName)) return string.Empty;
+
+            var normalizedNoSpace = bankName.Replace(" ", "").Trim().ToLower();
+
+            // Mapping gọn (bỏ khoảng trắng so khớp)
+            return normalizedNoSpace switch
+            {
+                "mbbank" => "MB",
+                "mbbanknganhangquanda" => "MB", // nếu có biến thể hiếm
+                _ => bankName.Trim().Equals("MB Bank", StringComparison.OrdinalIgnoreCase) ? "MB" : bankName.Trim()
+            };
         }
         private static string BuildVnDescription(
     WalletTransactionType type,
@@ -137,7 +168,7 @@ namespace ShopService.Application.Services
     string bankName,
     string bankNumber,
     string? transactionId,
-    Guid? orderId,
+    string? orderId,
     Guid? refundId,
     Guid? shopMembershipId)
         {
@@ -155,8 +186,8 @@ namespace ShopService.Application.Services
                     return $"Yêu cầu rút {Money(normalizedAmount)} về ngân hàng {bankName} - {bankNumber}{suffixTranId}.";
 
                 case WalletTransactionType.Commission:
-                    if (orderId.HasValue)
-                        return $"Thanh toán đơn hàng #{orderId.Value.ToString()[..8]} số tiền {Money(normalizedAmount)}.";
+                    if (!orderId.IsNullOrEmpty())
+                        return $"Thanh toán đơn hàng #{orderId.ToString()[..8]} số tiền {Money(normalizedAmount)}.";
                     return $"Thanh toán đơn hàng số tiền {Money(normalizedAmount)}.";
 
                 
