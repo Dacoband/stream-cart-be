@@ -143,7 +143,7 @@ namespace OrderService.Api.Controllers
         }
 
         [HttpGet("shop")]
-        [Authorize(Roles = "Seller,OperationManager")]
+        [Authorize(Roles = "Seller,OperationManager,Customer")]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<RefundRequestDto>>), 200)]
         public async Task<IActionResult> GetShopRefunds(
             [FromQuery] int pageNumber = 1,
