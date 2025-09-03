@@ -178,6 +178,7 @@ namespace ShopService.Application.Services
                     Type = WalletTransactionType.Commission.ToString(),
                     WalletId = wallet.Id,
                 };
+                transaction.SetCreator(wallet.CreatedBy);
                 await _walletTransactionRepository.InsertAsync(transaction);
                 // Ghi log giao dịch
                 _logger.LogInformation(

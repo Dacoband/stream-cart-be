@@ -2,6 +2,7 @@
 using ProductService.Application.Commands.ImageCommands;
 using ProductService.Application.DTOs.Images;
 using ProductService.Infrastructure.Interfaces;
+using Shared.Common.Extensions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,7 +54,11 @@ namespace ProductService.Application.Handlers.ImageHandlers
             {
                 image.SetUpdatedBy(request.UpdatedBy);
             }
+            if (!request.ImageUrl.IsNullOrEmpty())
+            { 
+                image.ImageUrl = request.ImageUrl;
 
+            }
             // Save changes
             await _imageRepository.ReplaceAsync(image.Id.ToString(), image);
 
