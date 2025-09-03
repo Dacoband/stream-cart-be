@@ -160,27 +160,25 @@ namespace ShopService.Application.Services
                 if (wallet == null)
                 {
                     _logger.LogWarning("Không thể thanh toán: Shop {ShopId} chưa có ví", paymentRequest.ShopId);
-
-                    // Tự động tạo ví cho shop nếu chưa có
-                    wallet = new Wallet
-                    {
-                        OwnerType = "Shop",
-                        Balance = 0,
-                        BankName = shop.BankName,
-                        BankAccountNumber = shop.BankAccountNumber,
-                        ShopId = shop.Id,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    wallet.SetCreator("System");
-
-                    await _walletRepository.InsertAsync(wallet);
-                    _logger.LogInformation("Đã tự động tạo ví mới cho shop {ShopId}", paymentRequest.ShopId);
+                    return false;
                 }
 
                 // Cộng tiền vào ví
                 wallet.AddFunds(paymentRequest.Amount, "System");
                 await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
-
+                var transaction = new WalletTransaction()
+                {
+                    Amount = paymentRequest.Amount,
+                    BankAccount = wallet.BankName,
+                    BankNumber = wallet.BankAccountNumber,
+                    Description = $"Thanh toán đơn hàng {paymentRequest.OrderId}",
+                    OrderId = paymentRequest.OrderId,
+                    Status = WalletTransactionStatus.Success.ToString(),
+                    Target = paymentRequest.ShopId.ToString(),
+                    Type = WalletTransactionType.Commission.ToString(),
+                    WalletId = wallet.Id,
+                };
+                await _walletTransactionRepository.InsertAsync(transaction);
                 // Ghi log giao dịch
                 _logger.LogInformation(
                     "Đã thanh toán {Amount} cho shop {ShopId} từ đơn hàng {OrderId} (phí: {Fee})",

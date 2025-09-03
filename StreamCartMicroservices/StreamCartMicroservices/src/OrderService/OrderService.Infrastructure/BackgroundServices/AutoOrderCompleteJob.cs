@@ -79,7 +79,7 @@ namespace OrderService.Infrastructure.BackgroundServices
             // Gửi yêu cầu thanh toán đến WalletService
             var paymentRequest = new ShopPaymentRequest
             {
-                OrderId = order.Id,
+                OrderId = order.OrderCode,
                 ShopId = order.ShopId,
                 Amount = amountToShop,
                 Fee = fee,
