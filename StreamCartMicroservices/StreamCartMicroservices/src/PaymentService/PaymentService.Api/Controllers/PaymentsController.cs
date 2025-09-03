@@ -8,6 +8,7 @@ using PaymentService.Domain.Enums;
 using PaymentService.Infrastructure.Services;
 using ProductService.Domain.Enums;
 using Shared.Common.Domain.Bases;
+using Shared.Common.Models;
 using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
@@ -1098,6 +1099,7 @@ namespace PaymentService.Api.Controllers
                     CallbackType.Order => await ProcessOrderCallback(request),
                     CallbackType.Deposit => await ProcessDepositCallbackInternal(request),
                     CallbackType.Withdrawal => await ProcessWithdrawalCallbackInternal(request),
+                    CallbackType.Refund => await ProcessRefundCallbackInternal(request), 
                     _ => BadRequest(new { success = false, error = $"Không hỗ trợ loại callback: {orderCode}" })
                 };
             }
@@ -1149,7 +1151,16 @@ namespace PaymentService.Api.Controllers
             _logger.LogInformation("🔍 Analyzing callback - OrderCode: {OrderCode}, TransferType: {TransferType}, Content: {Content}",
                 orderCode, transferType, content);
 
-            // For money OUT (withdrawals)
+            if (orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
+            {
+                return CallbackType.Refund;
+            }
+
+            if (!string.IsNullOrEmpty(content) && content.Contains("REFUND", StringComparison.OrdinalIgnoreCase))
+            {
+                return CallbackType.Refund;
+            }
+
             if (transferType == "out")
             {
                 if (orderCode.StartsWith("WITHDRAW_", StringComparison.OrdinalIgnoreCase) ||
@@ -1158,14 +1169,30 @@ namespace PaymentService.Api.Controllers
                     return CallbackType.Withdrawal;
                 }
 
-                // Check content for withdrawal patterns
+                // ✅ Default to REFUND if transferType is "out" and not withdrawal
+                // Check content for withdrawal patterns first
                 if (!string.IsNullOrEmpty(content) &&
-                    (content.Contains("WITHDRAW", StringComparison.OrdinalIgnoreCase) ||
-                     Regex.IsMatch(content, @"[0-9a-fA-F]{32}", RegexOptions.IgnoreCase)))
+                    content.Contains("WITHDRAW", StringComparison.OrdinalIgnoreCase))
                 {
                     return CallbackType.Withdrawal;
                 }
+
+                // ✅ If "out" but not withdrawal, could be refund
+                if (Regex.IsMatch(orderCode, @"[0-9a-fA-F]{32}", RegexOptions.IgnoreCase))
+                {
+                    // Check if this looks like a refund ID by trying to find it in content
+                    if (!string.IsNullOrEmpty(content) &&
+                        (content.Contains("REFUND", StringComparison.OrdinalIgnoreCase) ||
+                         content.Contains("hoàn", StringComparison.OrdinalIgnoreCase) ||
+                         content.Contains("refund", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return CallbackType.Refund;
+                    }
+                    return CallbackType.Withdrawal; 
+                }
             }
+
+            // For money IN (deposits and orders)
             if (transferType == "in")
             {
                 if (orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
@@ -1193,7 +1220,6 @@ namespace PaymentService.Api.Controllers
                 }
             }
 
-            // Fallback based on transferType
             return transferType == "out" ? CallbackType.Withdrawal : CallbackType.Order;
         }
         /// <summary>
@@ -1244,7 +1270,52 @@ namespace PaymentService.Api.Controllers
                 amount = request.Amount
             });
         }
+        /// <summary>
+        /// ✅ Tạo QR code cho refund request (tương tự rút tiền shop)
+        /// </summary>
+        [HttpPost("refund/{refundRequestId}/generate-qr")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GenerateRefundQrCode(Guid refundRequestId)
+        {
+            try
+            {
+                var requestedBy = _currentUserService.GetUserId().ToString();
 
+                // 1. Lấy thông tin refund request từ OrderService
+                var refundRequest = await _orderServiceClient.GetRefundRequestByIdAsync(refundRequestId);
+                if (refundRequest == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Refund request not found"));
+                }
+
+                
+
+                // 3. Tạo QR code để chuyển tiền cho customer
+                var qrCode = await _qrCodeService.GenerateRefundQrCodeAsync(
+                    refundRequestId,
+                    refundRequest.TotalAmount,
+                    refundRequest.RequestedByUserId,
+                    PaymentMethod.BankTransfer,
+                    refundRequest.BankName,
+                    refundRequest.BankNumber
+                );
+
+                if (string.IsNullOrEmpty(qrCode))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Failed to generate refund QR code"));
+                }
+
+                _logger.LogInformation("Generated refund QR code for refund request {RefundRequestId}", refundRequestId);
+
+                return Ok(ApiResponse<string>.SuccessResult(qrCode, "Refund QR code generated successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating refund QR code for request {RefundRequestId}", refundRequestId);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("An error occurred while generating refund QR code"));
+            }
+        }
         /// <summary>
         /// Processes deposit callbacks
         /// </summary>
@@ -1649,7 +1720,187 @@ namespace PaymentService.Api.Controllers
                 error = $"Lỗi xử lý callback: {ex.Message}"
             });
         }
+        /// <summary>
+        /// ✅ Xử lý callback cho refund - Update RefundRequest status (Money OUT)
+        /// </summary>
+        private async Task<IActionResult> ProcessRefundCallbackInternal(SePayCallbackRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("🔄 Processing refund callback (MONEY OUT): {OrderCode}", request.OrderCode);
 
+                var refundRequestId = ExtractRefundRequestIdFromOrderCode(request.OrderCode!);
+                if (refundRequestId == Guid.Empty)
+                {
+                    refundRequestId = ExtractRefundRequestIdFromContent(request.Content);
+                    if (refundRequestId == Guid.Empty)
+                    {
+                        return BadRequest(new { success = false, error = "Không thể xác định RefundRequestId từ order code hoặc content" });
+                    }
+                }
+
+                _logger.LogInformation("💰 Extracted RefundRequestId: {RefundRequestId} from callback", refundRequestId);
+
+                var refundCallbackDto = new RefundCallbackDto
+                {
+                    TransactionId = request.TransactionId,
+                    Amount = request.Amount,
+                    Status = request.Status == "success" ? "success" : "failed",
+                    Content = request.Content ?? string.Empty,
+                    TransferType = request.TransferType ?? "out"
+                };
+
+                if (request.Status == "success")
+                {
+                    var updateResult = await _orderServiceClient.UpdateRefundRequestStatusAsync(refundRequestId, "Refunded");
+                    if (updateResult)
+                    {
+                        _logger.LogInformation("✅ Updated refund request {RefundRequestId} to Refunded status", refundRequestId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ Failed to update refund request {RefundRequestId} status", refundRequestId);
+                    }
+                    if (!string.IsNullOrEmpty(request.TransactionId))
+                    {
+                        var transactionUpdateResult = await _orderServiceClient.UpdateRefundTransactionIdAsync(refundRequestId, request.TransactionId);
+                        if (transactionUpdateResult)
+                        {
+                            _logger.LogInformation("✅ Updated refund transaction ID {TransactionId} for refund {RefundRequestId}",
+                                request.TransactionId, refundRequestId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ Failed to update refund transaction ID for {RefundRequestId}", refundRequestId);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Refund failed for {RefundRequestId}", refundRequestId);
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    type = "REFUND",
+                    transferType = "OUT", 
+                    message = "Refund callback processed successfully",
+                    refundRequestId = refundRequestId,
+                    status = request.Status == "success" ? "REFUNDED" : "FAILED",
+                    transactionId = request.TransactionId,
+                    amount = request.Amount,
+                    callbackData = refundCallbackDto
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error processing refund callback");
+                throw;
+            }
+        }
+        /// <summary>
+        /// ✅ Extract RefundRequestId từ order code (REFUND_xxxxx) với validation
+        /// </summary>
+        private Guid ExtractRefundRequestIdFromOrderCode(string orderCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(orderCode))
+                {
+                    _logger.LogWarning("OrderCode is null or empty");
+                    return Guid.Empty;
+                }
+
+                _logger.LogInformation("🔍 Extracting RefundRequestId from OrderCode: {OrderCode}", orderCode);
+
+                if (orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
+                {
+                    var refundRequestIdString = orderCode.Substring(6);
+                    var refundRequestId = ParseGuidFromString(refundRequestIdString);
+
+                    if (refundRequestId != Guid.Empty)
+                    {
+                        _logger.LogInformation("✅ Successfully extracted RefundRequestId: {RefundRequestId}", refundRequestId);
+                        return refundRequestId;
+                    }
+                }
+
+                if (orderCode.Length == 32 || orderCode.Length == 36)
+                {
+                    var refundRequestId = ParseGuidFromString(orderCode);
+                    if (refundRequestId != Guid.Empty)
+                    {
+                        _logger.LogInformation("✅ Extracted RefundRequestId from direct GUID: {RefundRequestId}", refundRequestId);
+                        return refundRequestId;
+                    }
+                }
+
+                _logger.LogWarning("⚠️ Could not extract RefundRequestId from OrderCode: {OrderCode}", orderCode);
+                return Guid.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error extracting refund request ID from order code: {OrderCode}", orderCode);
+                return Guid.Empty;
+            }
+        }
+        private Guid ExtractRefundRequestIdFromContent(string? content)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(content))
+                    return Guid.Empty;
+
+                _logger.LogInformation("🔍 Extracting RefundRequestId from Content: {Content}", content);
+
+                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+                var refundPatternWithUnderscore = @"REFUND_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})";
+                var matchWithUnderscore = Regex.Match(content, refundPatternWithUnderscore, RegexOptions.IgnoreCase);
+
+                if (matchWithUnderscore.Success)
+                {
+                    var guidString = matchWithUnderscore.Groups[1].Value;
+                    _logger.LogInformation("✅ Found REFUND_ pattern with GUID: {GuidString}", guidString);
+                    return Guid.Parse(guidString);
+                }
+
+                // ✅ Pattern 2: REFUND + 32 hex characters (như trong content hiện tại)
+                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32,})";
+                var matchDirect = Regex.Match(content, refundPatternDirect, RegexOptions.IgnoreCase);
+
+                if (matchDirect.Success)
+                {
+                    var guidString = matchDirect.Groups[1].Value;
+                    _logger.LogInformation("✅ Found REFUND direct pattern: {GuidString}", guidString);
+
+                    // ✅ Take exactly 32 characters if longer
+                    if (guidString.Length > 32)
+                    {
+                        guidString = guidString.Substring(0, 32);
+                        _logger.LogInformation("✅ Trimmed to 32 chars: {GuidString}", guidString);
+                    }
+
+                    return ParseGuidFromString(guidString);
+                }
+                var guidPattern = @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+                var guidMatch = Regex.Match(content, guidPattern, RegexOptions.IgnoreCase);
+
+                if (guidMatch.Success)
+                {
+                    _logger.LogInformation("✅ Found standard GUID pattern: {GuidString}", guidMatch.Value);
+                    return Guid.Parse(guidMatch.Value);
+                }
+
+                _logger.LogWarning("⚠️ No RefundRequestId pattern found in content");
+                return Guid.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 Error extracting refund request ID from content: {Content}", content);
+                return Guid.Empty;
+            }
+        }
         #endregion
 
         /// <summary>
@@ -1659,7 +1910,8 @@ namespace PaymentService.Api.Controllers
         {
             Order,
             Deposit,
-            Withdrawal
+            Withdrawal,
+            Refund
         }
     }
 }

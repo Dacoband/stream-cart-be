@@ -87,6 +87,8 @@ namespace PaymentService.Application.DTOs
                 return null;
             var patterns = new[]
             {
+                @"REFUND_[0-9a-fA-F]{32}",                  
+                @"REFUND_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
                 @"WITHDRAW_CONFIRM_[0-9a-fA-F]{32}",           
                 @"ORDERS_[0-9a-fA-F,]{32,}",                  
                 @"DEPOSIT[0-9a-fA-F]{32}",                    
@@ -118,7 +120,11 @@ namespace PaymentService.Application.DTOs
         {
             if (string.IsNullOrEmpty(orderCode))
                 return orderCode;
-
+            if (orderCode.StartsWith("REFUND", StringComparison.OrdinalIgnoreCase) &&
+                !orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
+            {
+                return "REFUND_" + orderCode.Substring(6);
+            }
             // Thêm underscore nếu thiếu
             if (orderCode.StartsWith("DEPOSIT", StringComparison.OrdinalIgnoreCase) &&
                 !orderCode.StartsWith("DEPOSIT_", StringComparison.OrdinalIgnoreCase))
@@ -200,7 +206,8 @@ namespace PaymentService.Application.DTOs
                 var orderCode = OrderCode;
                 if (string.IsNullOrEmpty(orderCode))
                     return "UNKNOWN";
-
+                if (orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
+                    return "REFUND";
                 if (orderCode.StartsWith("ORDERS_", StringComparison.OrdinalIgnoreCase))
                     return "BULK_ORDER";
                 if (orderCode.StartsWith("ORDER", StringComparison.OrdinalIgnoreCase))

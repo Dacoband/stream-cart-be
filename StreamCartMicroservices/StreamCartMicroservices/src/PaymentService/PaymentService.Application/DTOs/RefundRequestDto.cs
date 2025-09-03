@@ -1,9 +1,11 @@
-﻿using OrderService.Domain.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace OrderService.Application.DTOs.RefundDTOs
+namespace PaymentService.Application.DTOs
 {
+    /// <summary>
+    /// DTO for refund request information from OrderService
+    /// </summary>
     public class RefundRequestDto
     {
         public Guid Id { get; set; }
@@ -11,7 +13,7 @@ namespace OrderService.Application.DTOs.RefundDTOs
         public string? TrackingCode { get; set; }
         public Guid RequestedByUserId { get; set; }
         public DateTime RequestedAt { get; set; }
-        public RefundStatus Status { get; set; }
+        public int Status { get; set; } 
         public Guid? ProcessedByUserId { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public decimal RefundAmount { get; set; }
@@ -19,7 +21,6 @@ namespace OrderService.Application.DTOs.RefundDTOs
         public decimal TotalAmount { get; set; }
         public string BankName { get; set; } = string.Empty;
         public string BankNumber { get; set; } = string.Empty;
-        public string? TransactionId { get; set; }
         public List<RefundDetailDto> RefundDetails { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
@@ -27,6 +28,9 @@ namespace OrderService.Application.DTOs.RefundDTOs
         public string? LastModifiedBy { get; set; }
     }
 
+    /// <summary>
+    /// DTO for refund detail information
+    /// </summary>
     public class RefundDetailDto
     {
         public Guid Id { get; set; }

@@ -364,6 +364,12 @@ namespace OrderService.Infrastructure.Data
                 entity.Property(e => e.TrackingCode)
                     .HasColumnName("tracking_code")
                     .HasMaxLength(100);
+                entity.Property(e => e.BankName)
+                   .HasColumnName("bank_name")
+                   .HasMaxLength(100);
+                entity.Property(e => e.BankNumber)
+                   .HasColumnName("bank_number")
+                   .HasMaxLength(100);
 
                 entity.Property(e => e.RequestedByUserId)
                     .HasColumnName("requested_by_user_id")

@@ -290,5 +290,54 @@ namespace PaymentService.Infrastructure.Services
                 throw;
             }
         }
+        /// <summary>
+        /// ✅ Tạo QR code cho hoàn tiền refund (chuyển tiền cho customer)
+        /// </summary>
+        public async Task<string> GenerateRefundQrCodeAsync(Guid refundRequestId, decimal amount, Guid userId, PaymentMethod paymentMethod, string bankName, string bankNumber)
+        {
+            try
+            {
+                if (paymentMethod != PaymentMethod.BankTransfer)
+                {
+                    _logger.LogWarning("QR code can only be generated for bank transfers");
+                    return string.Empty;
+                }
+
+                // Format description cho refund - sử dụng REFUND_ prefix
+                string description = $"REFUND_{refundRequestId:N}";
+
+                // Làm tròn số tiền
+                int amountInt = (int)amount;
+
+                // Tham số QR code
+                string template = "compact";
+                string download = "true";
+
+                // ✅ Tạo URL QR code từ SePay cho refund (chuyển tiền ĐẾN customer)
+                // Sử dụng ngân hàng của customer làm đích nhận tiền
+                string qrUrl = $"https://qr.sepay.vn/img?acc={bankNumber}&bank={bankName}" +
+                               $"&amount={amountInt}&des={description}&template={template}&download={download}";
+
+                // Tạo signature để xác thực khi callback
+                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string contentToSign = $"{refundRequestId}|{amount}|{userId}|{timestamp}";
+                string signature = await GenerateSignatureAsync(contentToSign);
+
+                // Lưu thông tin bổ sung vào metadata
+                string metadata = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{contentToSign}|{signature}"));
+
+                // Lưu URL QR code và metadata
+                string qrCodeInfo = $"{qrUrl}|{metadata}";
+
+                _logger.LogInformation("Generated SePay refund QR code for refund request {RefundRequestId}, amount {Amount} to {BankName}-{BankNumber}",
+                    refundRequestId, amount, bankName, bankNumber);
+                return qrCodeInfo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating SePay refund QR code for refund request {RefundRequestId}", refundRequestId);
+                throw;
+            }
+        }
     }
 }

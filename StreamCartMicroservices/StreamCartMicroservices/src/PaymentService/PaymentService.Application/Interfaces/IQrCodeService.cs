@@ -39,6 +39,7 @@ namespace PaymentService.Application.Interfaces
         Task<string> GenerateDepositQrCodeAsync(Guid shopId, decimal amount, Guid userId, PaymentMethod paymentMethod);
         Task<string> GenerateWithdrawalQrCodeAsync(Guid walletTransactionId, decimal amount, Guid userId, PaymentMethod paymentMethod, string? bankAccount, string? bankNumber);
 
+        Task<string> GenerateRefundQrCodeAsync(Guid refundRequestId, decimal amount, Guid userId, PaymentMethod paymentMethod, string bankName, string bankNumber);
 
     }
 }

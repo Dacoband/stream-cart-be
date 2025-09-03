@@ -46,7 +46,8 @@ namespace OrderService.Infrastructure.Services
                 {
                     OrderId = createRefundDto.OrderId,
                     RefundItems = createRefundDto.RefundItems,
-                   // ShippingFee = createRefundDto.ShippingFee,
+                    BankName = createRefundDto.BankName,        
+                    BankNumber = createRefundDto.BankNumber,
                     RequestedBy = userId.ToString()
                 };
 
@@ -82,7 +83,16 @@ namespace OrderService.Infrastructure.Services
                 throw;
             }
         }
+        public async Task<RefundRequestDto> UpdateRefundTransactionIdAsync(UpdateRefundTransactionDto updateTransactionDto)
+        {
+            var command = new UpdateRefundTransactionCommand
+            {
+                RefundRequestId = updateTransactionDto.RefundRequestId,
+                TransactionId = updateTransactionDto.TransactionId
+            };
 
+            return await _mediator.Send(command);
+        }
         public async Task<RefundRequestDto?> GetRefundRequestByIdAsync(Guid refundRequestId)
         {
             try
@@ -104,6 +114,8 @@ namespace OrderService.Infrastructure.Services
                     ProcessedByUserId = refundRequest.ProcessedByUserId,
                     ProcessedAt = refundRequest.ProcessedAt,
                     RefundAmount = refundRequest.RefundAmount,
+                    BankNumber= refundRequest.BankNumber,
+                    BankName= refundRequest.BankName,
                     ShippingFee = refundRequest.ShippingFee,
                     TotalAmount = refundRequest.TotalAmount,
                     CreatedAt = refundRequest.CreatedAt,

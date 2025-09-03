@@ -192,6 +192,41 @@ namespace OrderService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
             }
         }
+        /// <summary>
+        /// ✅ Updates refund transaction ID (for payment callbacks)
+        /// </summary>
+        [HttpPut("transaction")]
+        [ProducesResponseType(typeof(ApiResponse<RefundRequestDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateRefundTransactionId([FromBody] UpdateRefundTransactionDto updateTransactionDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Invalid input data", ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()));
+                }
+
+                var refundRequest = await _refundService.UpdateRefundTransactionIdAsync(updateTransactionDto);
+
+                return Ok(ApiResponse<RefundRequestDto>.SuccessResult(refundRequest, "Refund transaction ID updated successfully"));
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating refund transaction ID for request {RefundRequestId}",
+                    updateTransactionDto.RefundRequestId);
+                return StatusCode(500, ApiResponse<object>.ErrorResult("An error occurred while updating refund transaction ID"));
+            }
+        }
     }
     public class ConfirmRefundDto
     {

@@ -52,7 +52,6 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 if (order.AccountId != userId)
                     throw new UnauthorizedAccessException("You can only create refund requests for your own orders");
 
-                // ✅ Check for duplicate order items in the request
                 var duplicateOrderItems = request.RefundItems
                     .GroupBy(ri => ri.OrderItemId)
                     .Where(g => g.Count() > 1)
@@ -80,8 +79,7 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 {
                     throw new ApplicationException($"Order items already have refund requests: {string.Join(", ", alreadyRefundedItems)}");
                 }
-
-                var refundRequest = new RefundRequest(request.OrderId, userId, order.ShippingFee);
+                var refundRequest = new RefundRequest(request.OrderId, userId, request.BankName, request.BankNumber, order.ShippingFee);
 
                 foreach (var refundItem in request.RefundItems)
                 {
@@ -103,9 +101,6 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
 
                     refundRequest.AddRefundDetail(refundDetail);
                 }
-
-                // ✅ Save refund request with all details in a single transaction
-                // This should handle the foreign key relationships properly
                 await _refundRequestRepository.InsertAsync(refundRequest);
 
                 // ✅ No need to save details separately as they should be cascade saved with the request

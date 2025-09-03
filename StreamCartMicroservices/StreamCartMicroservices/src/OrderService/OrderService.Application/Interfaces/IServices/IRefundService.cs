@@ -41,5 +41,7 @@ namespace OrderService.Application.Interfaces.IServices
             bool isApproved,
             string? reason,
             string modifiedBy);
+        Task<RefundRequestDto> UpdateRefundTransactionIdAsync(UpdateRefundTransactionDto updateTransactionDto);
+
     }
 }
