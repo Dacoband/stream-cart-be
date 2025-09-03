@@ -39,19 +39,18 @@ namespace OrderService.Application.Handlers
                     request.Type,
                     request.OrderID ?? request.ProductID ?? request.LivestreamId);
 
-                // Validate that only one target ID is provided
-                var idCount = new[] { request.OrderID, request.ProductID, request.LivestreamId }
-                    .Count(id => id.HasValue);
+                //// Validate that only one target ID is provided
+                //var idCount = new[] { request.OrderID, request.ProductID, request.LivestreamId }
+                //    .Count(id => id.HasValue);
 
-                if (idCount != 1)
-                {
-                    throw new ArgumentException("Phải chỉ định đúng 1 loại review (Order, Product, hoặc Livestream)");
-                }
+                //if (idCount != 1)
+                //{
+                //    throw new ArgumentException("Phải chỉ định đúng 1 loại review (Order, Product, hoặc Livestream)");
+                //}
 
                 // Validate target exists and get shop info
                 var shopId = await ValidateTargetAndGetShopId(request);
 
-                // Create the review entity
                 var review = new Review(
                     orderId: request.OrderID,
                     productId: request.ProductID,
@@ -73,14 +72,10 @@ namespace OrderService.Application.Handlers
 
                 // Save to repository
                 await _reviewRepository.AddAsync(review);
-
-                // ✅ CẬP NHẬT SHOP RATING
                 if (shopId.HasValue)
                 {
                     await UpdateShopRatingAsync(shopId.Value, request.Rating, request.AccountID.ToString());
                 }
-
-                // Convert to DTO manually (không dùng AutoMapper)
                 var reviewDto = await ConvertToDTO(review);
 
                 _logger.LogInformation("Successfully created review with ID {ReviewId}", review.Id);
