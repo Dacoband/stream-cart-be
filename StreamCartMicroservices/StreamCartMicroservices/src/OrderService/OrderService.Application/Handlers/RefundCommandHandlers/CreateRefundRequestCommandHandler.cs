@@ -45,6 +45,7 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 _logger.LogInformation("Creating refund request for order {OrderId} by user {UserId}", request.OrderId, userId);
 
                 var order = await _orderRepository.GetByIdAsync(request.OrderId.ToString());
+              
                 if (order == null)
                     throw new ApplicationException($"Order with ID {request.OrderId} not found");
 
@@ -106,7 +107,8 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 // If using Entity Framework with proper navigation properties, the details should be saved automatically
 
                 _logger.LogInformation("Refund request created successfully with ID {RefundRequestId}", refundRequest.Id);
-
+                order.OrderStatus = Domain.Enums.OrderStatus.Refunded;
+                await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
                 return new RefundRequestDto
                 {
                     Id = refundRequest.Id,

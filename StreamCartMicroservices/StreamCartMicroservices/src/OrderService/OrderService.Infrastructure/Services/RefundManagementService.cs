@@ -19,17 +19,19 @@ namespace OrderService.Infrastructure.Services
         private readonly IRefundRequestRepository _refundRequestRepository;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<RefundManagementService> _logger;
-
+        private readonly IOrderRepository _orderRepository;
         public RefundManagementService(
             IMediator mediator,
             IRefundRequestRepository refundRequestRepository,
             ICurrentUserService currentUserService,
-            ILogger<RefundManagementService> logger)
+            ILogger<RefundManagementService> logger,
+            IOrderRepository orderRepository)
         {
             _mediator = mediator;
             _refundRequestRepository = refundRequestRepository;
             _currentUserService = currentUserService;
             _logger = logger;
+            _orderRepository = orderRepository;
         }
 
         public async Task<RefundRequestDto> CreateRefundRequestAsync(CreateRefundRequestDto createRefundDto)
@@ -180,7 +182,17 @@ namespace OrderService.Infrastructure.Services
                 // ✅ Sử dụng enum values có sẵn
                 var newStatus = isApproved ? RefundStatus.Confirmed : RefundStatus.Rejected;
                 refund.UpdateStatus(newStatus, modifiedBy);
-
+                var order = await _orderRepository.GetByIdAsync(refund.OrderId.ToString());
+                if (newStatus == RefundStatus.Rejected)
+                {
+                    order.OrderStatus = OrderStatus.Delivered;
+                    _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                }
+                if(newStatus == RefundStatus.Confirmed)
+                {
+                    order.OrderStatus = OrderStatus.Refunded;
+                    _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                }
                 await _refundRequestRepository.ReplaceAsync(refund.Id.ToString(), refund);
 
                 return ConvertToDto(refund);
