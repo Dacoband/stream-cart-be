@@ -35,7 +35,6 @@ namespace OrderService.Domain.Entities
             List<string>? imageUrls = null, 
             string? createdBy = null) : base()
         {
-            ValidateReviewTarget(orderId, productId, livestreamId);
             ValidateRating(rating);
 
             OrderID = orderId;
