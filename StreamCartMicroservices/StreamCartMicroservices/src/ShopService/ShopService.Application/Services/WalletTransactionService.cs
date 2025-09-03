@@ -97,8 +97,8 @@ namespace ShopService.Application.Services
             if (request.ShopMembershipId.HasValue)
                 walletTransaction.ShopMembershipId = request.ShopMembershipId;
 
-            if (request.OrderId.HasValue)
-                walletTransaction.OrderId = request.OrderId;
+            if (!request.OrderId.IsNullOrEmpty())
+                walletTransaction.OrderId = request.OrderId.ToString();
 
             if (request.RefundId.HasValue)
                 walletTransaction.RefundId = request.RefundId;
@@ -165,7 +165,7 @@ namespace ShopService.Application.Services
     string bankName,
     string bankNumber,
     string? transactionId,
-    Guid? orderId,
+    string? orderId,
     Guid? refundId,
     Guid? shopMembershipId)
         {
@@ -183,8 +183,8 @@ namespace ShopService.Application.Services
                     return $"Yêu cầu rút {Money(normalizedAmount)} về ngân hàng {bankName} - {bankNumber}{suffixTranId}.";
 
                 case WalletTransactionType.Commission:
-                    if (orderId.HasValue)
-                        return $"Thanh toán đơn hàng #{orderId.Value.ToString()[..8]} số tiền {Money(normalizedAmount)}.";
+                    if (!orderId.IsNullOrEmpty())
+                        return $"Thanh toán đơn hàng #{orderId.ToString()[..8]} số tiền {Money(normalizedAmount)}.";
                     return $"Thanh toán đơn hàng số tiền {Money(normalizedAmount)}.";
 
                 

@@ -476,7 +476,7 @@ namespace OrderService.Infrastructure.Services
             // Gửi yêu cầu thanh toán đến WalletService
             var paymentRequest = new ShopPaymentRequest
             {
-                OrderId = order.Id,
+                OrderId = order.OrderCode,
                 ShopId = order.ShopId,
                 Amount = totalAmount,
                 Fee = 0,

@@ -8,7 +8,7 @@ namespace ShopService.Application.DTOs.Wallet
 {
     public class ShopPaymentDTO
     {
-        public Guid OrderId { get; set; }
+        public string? OrderId { get; set; }
         public Guid ShopId { get; set; }
         public decimal Amount { get; set; }
         public decimal Fee { get; set; }

@@ -19,7 +19,7 @@ namespace ShopService.Domain.Entities
         public string? TransactionId { get; set; }
         public Guid WalletId { get; set; }
         public Guid? ShopMembershipId { get; set; }
-        public Guid? OrderId { get; set; }
+        public string? OrderId { get; set; }
         public Guid? RefundId { get; set; }
     }
 }
