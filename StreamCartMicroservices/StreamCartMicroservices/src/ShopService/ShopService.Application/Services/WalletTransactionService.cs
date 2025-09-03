@@ -18,10 +18,13 @@ namespace ShopService.Application.Services
     {
         private readonly IWalletTransactionRepository _walletTransactionRepository;
         private readonly IWalletRepository _walletRepository;
-        public WalletTransactionService(IWalletTransactionRepository walletTransactionRepository, IWalletRepository walletRepository)
+        private readonly IShopRepository _shopRepository; // ✅ THÊM DEPENDENCY
+
+        public WalletTransactionService(IWalletTransactionRepository walletTransactionRepository, IWalletRepository walletRepository, IShopRepository shopRepository)
         {
             _walletTransactionRepository = walletTransactionRepository;
             _walletRepository = walletRepository;
+            _shopRepository = shopRepository;
         }
         public async Task<ApiResponse<WalletTransaction>> CreateWalletTransaction(
     CreateWalletTransactionDTO request,
@@ -367,6 +370,107 @@ namespace ShopService.Application.Services
                 return ApiResponse<WalletTransaction>.ErrorResult($"Lỗi khi cập nhật trạng thái: {ex.Message}");
             }
         }
+        public async Task<ApiResponse<ListWalletransationDTO>> GetUserWalletTransactionList(FilterWalletTransactionDTO filter, Guid userId)
+        {
+            var all = await _walletTransactionRepository.GetAllAsync();
+            var query = all.AsQueryable();
 
+            filter ??= new FilterWalletTransactionDTO();
+
+            // 1) Lọc theo Types (enum) -> cột string
+            if (filter.Types is { Count: > 0 })
+            {
+                var typeStrings = filter.Types.Select(t => t.ToString()).ToList();
+                query = query.Where(x => typeStrings.Contains(x.Type));
+            }
+
+            // 2) Lọc theo Status (enum) -> cột string
+            if (filter.Status is { Count: > 0 })
+            {
+                var statusStrings = filter.Status.Select(s => s.ToString()).ToList();
+                query = query.Where(x => statusStrings.Contains(x.Status));
+            }
+
+            // 3) Lọc theo Target
+            if (!string.IsNullOrWhiteSpace(filter.Target))
+            {
+                query = query.Where(x => x.Target == filter.Target);
+            }
+
+            // 4) ✅ QUAN TRỌNG: Lọc theo UserId thông qua wallet của các shop mà user sở hữu
+            var userShops = await _shopRepository.GetAllAsync();
+            var userShopIds = userShops.Where(shop => shop.CreatedBy == userId.ToString() || shop.LastModifiedBy == userId.ToString())
+                                      .Select(shop => shop.Id)
+                                      .ToList();
+
+            if (userShopIds.Any())
+            {
+                var userWallets = new List<Guid>();
+                foreach (var shopId in userShopIds)
+                {
+                    var wallet = await _walletRepository.GetByShopIdAsync(shopId);
+                    if (wallet != null)
+                    {
+                        userWallets.Add(wallet.Id);
+                    }
+                }
+
+                query = query.Where(x => userWallets.Contains(x.WalletId));
+            }
+            else
+            {
+                // Nếu user không có shop nào, trả về empty list
+                return ApiResponse<ListWalletransationDTO>.SuccessResult(
+                    new ListWalletransationDTO { Items = new List<WalletTransaction>(), TotalCount = 0, TotalPage = 0 },
+                    "User chưa có giao dịch ví nào");
+            }
+
+            // 5) Lọc theo thời gian
+            DateTime? from = filter.FromTime;
+            DateTime? to = filter.ToTime;
+
+            if (from.HasValue && to.HasValue && from.Value > to.Value)
+                (from, to) = (to, from);
+
+            if (from.HasValue)
+            {
+                var fromUtc = DateTime.SpecifyKind(from.Value, DateTimeKind.Utc);
+                query = query.Where(x => x.CreatedAt >= fromUtc);
+            }
+
+            if (to.HasValue)
+            {
+                var toInclusive = to.Value.Kind == DateTimeKind.Unspecified
+                    ? to.Value.Date.AddDays(1).AddTicks(-1)
+                    : to.Value;
+
+                var toUtc = DateTime.SpecifyKind(toInclusive, DateTimeKind.Utc);
+                query = query.Where(x => x.CreatedAt <= toUtc);
+            }
+
+            // 6) Sắp xếp & phân trang
+            query = query.OrderByDescending(x => x.CreatedAt);
+
+            const int MAX_PAGE_SIZE = 200;
+            int pageIndex = filter.PageIndex <= 0 ? 1 : filter.PageIndex;
+            int pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, MAX_PAGE_SIZE);
+
+            int totalCount = query.Count();
+            int totalPage = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var items = query.Skip((pageIndex - 1) * pageSize)
+                             .Take(pageSize)
+                             .ToList();
+
+            var result = new ListWalletransationDTO
+            {
+                Items = items,
+                TotalCount = totalCount,
+                TotalPage = totalPage
+            };
+
+            var message = $"Lấy {items.Count} giao dịch của user (trang {pageIndex}/{totalPage}, kích thước {pageSize}) / tổng {totalCount}.";
+            return ApiResponse<ListWalletransationDTO>.SuccessResult(result, message);
+        }
     }
 }

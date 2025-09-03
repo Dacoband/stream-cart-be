@@ -223,6 +223,88 @@ namespace ShopService.Api.Controllers
                 return false;
             }
         }
+        /// <summary>
+        /// Lấy danh sách giao dịch ví của user hiện tại
+        /// </summary>
+        [HttpGet("user/transactions")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<ListWalletransationDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetUserWalletTransactions([FromQuery] FilterWalletTransactionDTO filter)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
+
+            try
+            {
+                Guid userId = _currentUserService.GetUserId();
+
+                if (userId == Guid.Empty)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin User ID"));
+                }
+
+                var query = new GetUserWalletTransactionQuery
+                {
+                    UserId = userId,
+                    Filter = filter ?? new FilterWalletTransactionDTO()
+                };
+
+                var apiResponse = await _mediator.Send(query);
+
+                if (apiResponse.Success)
+                {
+                    return Ok(apiResponse);
+                }
+                else
+                {
+                    return BadRequest(apiResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy giao dịch ví của user {UserId}", _currentUserService.GetUserId());
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy giao dịch ví của user: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy giao dịch ví của user cụ thể (cho admin)
+        /// </summary>
+        [HttpGet("admin/user/{userId}/transactions")]
+        [Authorize(Roles = "Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<ListWalletransationDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetUserWalletTransactionsByAdmin(Guid userId, [FromQuery] FilterWalletTransactionDTO filter)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu nhập vào không hợp lệ"));
+
+            try
+            {
+                var query = new GetUserWalletTransactionQuery
+                {
+                    UserId = userId,
+                    Filter = filter ?? new FilterWalletTransactionDTO()
+                };
+
+                var apiResponse = await _mediator.Send(query);
+
+                if (apiResponse.Success)
+                {
+                    return Ok(apiResponse);
+                }
+                else
+                {
+                    return BadRequest(apiResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi admin lấy giao dịch ví của user {UserId}", userId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy giao dịch ví của user: {ex.Message}"));
+            }
+        }
         public class UpdateWalletBalanceRequest
         {
             public decimal Amount { get; set; }

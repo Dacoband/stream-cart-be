@@ -79,6 +79,7 @@ namespace ProductService.Application.Handlers.ProductHandlers
 
                     FinalPrice = finalPrice,
                     StockQuantity = p.StockQuantity,
+                    ReserveStock = p.ReserveStock,
                     IsActive = p.IsActive,
                     Weight = p.Weight,
                     Length = p.Length,
