@@ -436,11 +436,11 @@ namespace OrderService.Infrastructure.Services
                     return null;
                 }
 
-                if (order.AccountId != Guid.Parse(customerId) && customerId.ToString() != "system")
-                {
-                    _logger.LogWarning("Khách hàng {CustomerId} không có quyền xác nhận đơn hàng {OrderId}", customerId, orderId);
-                    return null;
-                }
+                //if (order.AccountId != Guid.Parse(customerId) && customerId.ToString() != "system")
+                //{
+                //    _logger.LogWarning("Khách hàng {CustomerId} không có quyền xác nhận đơn hàng {OrderId}", customerId, orderId);
+                //    return null;
+                //}
 
                 if (order.OrderStatus != OrderStatus.Shipped)
                 {

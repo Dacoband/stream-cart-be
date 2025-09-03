@@ -128,6 +128,8 @@ namespace OrderService.Infrastructure.BackgroundServices
             if (newOrderStatus == OrderStatus.Delivered)
             {
                 order.SetActualDeliveryDate(latestLog.UpdatedDate.ToUtcSafe(), "system-delivery-tracking");
+                order.PaymentStatus = PaymentStatus.Paid;
+                
             }
 
             await _orderRepository.ReplaceAsync(order.Id.ToString(), order);

@@ -20,7 +20,7 @@ namespace OrderService.Domain.Entities
         public decimal FinalAmount { get;  set; }
         public decimal CommissionFee { get;  set; }
         public decimal NetAmount { get;  set; }
-        public PaymentStatus PaymentStatus { get; private set; }
+        public PaymentStatus PaymentStatus { get;  set; }
         public string PaymentMethod { get; private set; } = "COD"; 
 
         public string CustomerNotes { get; private set; }
