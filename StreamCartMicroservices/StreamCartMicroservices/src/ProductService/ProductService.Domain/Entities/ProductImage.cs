@@ -7,7 +7,7 @@ namespace ProductService.Domain.Entities
     {
         public Guid ProductId { get; private set; }
         public Guid? VariantId { get; private set; }
-        public string ImageUrl { get; private set; }
+        public string ImageUrl { get;  set; }
         public bool IsPrimary { get; private set; }
         public int DisplayOrder { get; private set; }
         public string AltText { get; private set; }

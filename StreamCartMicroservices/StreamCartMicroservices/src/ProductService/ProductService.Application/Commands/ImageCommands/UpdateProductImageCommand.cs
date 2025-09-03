@@ -15,5 +15,6 @@ namespace ProductService.Application.Commands.ImageCommands
         public int? DisplayOrder { get; set; }
         public string? AltText { get; set; }
         public string? UpdatedBy { get; set; }
+        public string? ImageUrl { get; set; }   
     }
 }
