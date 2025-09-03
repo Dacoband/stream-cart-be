@@ -11,5 +11,7 @@ namespace OrderService.Application.Commands.RefundCommands
         public List<RefundItemDto> RefundItems { get; set; } = new();
         //public decimal ShippingFee { get; set; }
         public string RequestedBy { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankNumber { get; set; } = string.Empty;
     }
 }

@@ -44,7 +44,8 @@ namespace OrderService.Infrastructure.Services
                 {
                     OrderId = createRefundDto.OrderId,
                     RefundItems = createRefundDto.RefundItems,
-                   // ShippingFee = createRefundDto.ShippingFee,
+                    BankName = createRefundDto.BankName,        
+                    BankNumber = createRefundDto.BankNumber,
                     RequestedBy = userId.ToString()
                 };
 
@@ -102,6 +103,8 @@ namespace OrderService.Infrastructure.Services
                     ProcessedByUserId = refundRequest.ProcessedByUserId,
                     ProcessedAt = refundRequest.ProcessedAt,
                     RefundAmount = refundRequest.RefundAmount,
+                    BankNumber= refundRequest.BankNumber,
+                    BankName= refundRequest.BankName,
                     ShippingFee = refundRequest.ShippingFee,
                     TotalAmount = refundRequest.TotalAmount,
                     CreatedAt = refundRequest.CreatedAt,

@@ -1,16 +1,19 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using PaymentService.Domain.Enums;
+using Shared.Common.Models;
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 
 namespace PaymentService.Infrastructure.Services
 {
@@ -19,6 +22,7 @@ namespace PaymentService.Infrastructure.Services
         private readonly HttpClient _httpClient;
         private readonly ILogger<OrderServiceClient> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public OrderServiceClient(
             HttpClient httpClient,
@@ -37,6 +41,11 @@ namespace PaymentService.Infrastructure.Services
             }
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
         }
 
         // Forward the user's JWT token to the other service
@@ -183,6 +192,103 @@ namespace PaymentService.Infrastructure.Services
             }
         }
 
+        public async Task<RefundRequestDto?> GetRefundRequestByIdAsync(Guid refundRequestId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting refund request details for ID: {RefundRequestId}", refundRequestId);
+
+                ForwardUserToken();
+
+                var response = await _httpClient.GetAsync($"api/refund/{refundRequestId}");
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Refund request with ID {RefundRequestId} not found", refundRequestId);
+                    return null;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to get refund request {RefundRequestId}. Status code: {StatusCode}",
+                        refundRequestId, response.StatusCode);
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("Refund request API response: {Content}", json);
+
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<RefundRequestDto>>(json, _jsonOptions);
+
+                return apiResponse?.Data;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting refund request {RefundRequestId}", refundRequestId);
+                return null;
+            }
+        }
+        public async Task<bool> UpdateRefundRequestStatusAsync(Guid refundRequestId, string status)
+        {
+            try
+            {
+                _logger.LogInformation("Updating refund request {RefundRequestId} status to {Status}",
+                    refundRequestId, status);
+
+                ForwardUserToken();
+
+                // ✅ FIX: Convert string status to enum integer value
+                int statusValue = ConvertRefundStatusToInt(status);
+
+                var updateDto = new
+                {
+                    RefundRequestId = refundRequestId,
+                    NewStatus = statusValue // ✅ Gửi số thay vì string
+                };
+
+                var json = JsonSerializer.Serialize(updateDto, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PutAsync("api/refund/status", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Successfully updated refund request {RefundRequestId} status to {Status} (value: {StatusValue})",
+                        refundRequestId, status, statusValue);
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to update refund request {RefundRequestId} status. Status: {StatusCode}, Error: {Error}",
+                    refundRequestId, response.StatusCode, errorContent);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating refund request {RefundRequestId} status", refundRequestId);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// ✅ Convert string refund status to corresponding enum integer value
+        /// </summary>
+        private int ConvertRefundStatusToInt(string status)
+        {
+            return status?.ToLower() switch
+            {
+                "created" => 0,
+                "confirmed" => 1,
+                "packed" => 2,
+                "ondelivery" => 3,
+                "delivered" => 4,
+                "completed" => 5,
+                "refunded" => 6, // ✅ Đúng giá trị 6
+                "rejected" => 7,
+                _ => throw new ArgumentException($"Unknown refund status: {status}")
+            };
+        }
         // Internal DTO for handling numeric enum values from the API
         private class OrderResponseDto
         {

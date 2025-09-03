@@ -26,5 +26,11 @@ namespace PaymentService.Application.Interfaces
         Task<OrderDto?> GetOrderByIdAsync(Guid orderId);
 
         Task UpdateOrderStatusAsync(Guid orderId, OrderStatus orderStatus);
+        Task<RefundRequestDto?> GetRefundRequestByIdAsync(Guid refundRequestId);
+
+        /// <summary>
+        /// ✅ Cập nhật trạng thái refund request
+        /// </summary>
+        Task<bool> UpdateRefundRequestStatusAsync(Guid refundRequestId, string status);
     }
 }
