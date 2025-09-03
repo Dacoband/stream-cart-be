@@ -64,6 +64,9 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.StockQuantity)
                     .HasColumnName("stock_quantity");
 
+                entity.Property(e => e.ReserveStock)
+                   .HasColumnName("reserve_stock");
+
                 entity.Property(e => e.Weight)
                     .HasColumnName("weight")
                     .HasColumnType("decimal(10,2)");

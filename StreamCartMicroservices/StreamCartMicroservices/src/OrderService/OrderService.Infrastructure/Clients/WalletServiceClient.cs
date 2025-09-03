@@ -25,7 +25,7 @@ namespace OrderService.Infrastructure.Clients
             _logger = logger;
 
             // Cấu hình base URL từ configuration
-            var walletServiceUrl = configuration["ServiceUrls:WalletService"];
+            var walletServiceUrl = configuration["ServiceUrls:ShopService"];
             if (!string.IsNullOrEmpty(walletServiceUrl))
             {
                 _httpClient.BaseAddress = new Uri(walletServiceUrl);
@@ -36,7 +36,7 @@ namespace OrderService.Infrastructure.Clients
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync($"api/wallets/shop-payment", paymentRequest);
+                var response = await _httpClient.PostAsJsonAsync($"api/wallet/shop-payment", paymentRequest);
                 response.EnsureSuccessStatusCode();
 
                 _logger.LogInformation("Thanh toán cho shop thành công: Đơn hàng {OrderId}, Shop {ShopId}, Số tiền {Amount}",
