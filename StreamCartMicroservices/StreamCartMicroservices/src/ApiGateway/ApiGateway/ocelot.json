@@ -808,6 +808,19 @@
       "SwaggerKey": "order"
     },
     {
+      "DownstreamPathTemplate": "/api/refunds/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "order-service",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/refunds/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT" ],
+      "SwaggerKey": "order"
+    },
+    {
       "DownstreamPathTemplate": "/api/reviews/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

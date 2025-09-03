@@ -27,6 +27,7 @@ namespace ProductService.Domain.Entities
         public decimal? DiscountPrice { get; private set; }
 
         public int StockQuantity { get; private set; }
+        public int ReserveStock { get; private set; } = 0;
 
         public bool IsActive { get; private set; }
 
@@ -186,6 +187,43 @@ namespace ProductService.Domain.Entities
         public bool HasSufficientStock(int requestedQuantity)
         {
             return StockQuantity >= requestedQuantity;
+        }
+        public bool AddReserveStock(int quantity)
+        {
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            if (StockQuantity < quantity)
+                return false;
+
+            StockQuantity -= quantity;
+            ReserveStock += quantity;
+            LastModifiedAt = DateTime.UtcNow;
+            return true;
+        }
+        public void RemoveReserveStock(int quantity)
+        {
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            var actualQuantity = Math.Min(quantity, ReserveStock);
+
+            StockQuantity += actualQuantity;
+            ReserveStock -= actualQuantity;
+            LastModifiedAt = DateTime.UtcNow;
+        }
+        public bool ConvertReserveToSold(int quantity)
+        {
+            if (quantity <= 0)
+                throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+            if (ReserveStock < quantity)
+                return false;
+
+            ReserveStock -= quantity;
+            QuantitySold += quantity;
+            LastModifiedAt = DateTime.UtcNow;
+            return true;
         }
     }
 }

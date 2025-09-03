@@ -116,7 +116,7 @@ namespace LivestreamService.Infrastructure.Extensions
                 q.AddTrigger(opts => opts
                     .ForJob(monitoringJobKey)
                     .WithIdentity("LivestreamTimeMonitoringTrigger")
-                    .WithCronSchedule("0 */5 * * * ?") 
+                    .WithCronSchedule("0 */1 * * * ?") 
                     .WithDescription("Monitor active livestream time"));
             });
 

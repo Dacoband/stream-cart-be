@@ -65,6 +65,9 @@ namespace OrderService.Infrastructure.Extensions
             services.AddScoped<IReviewRepository,ReviewRepository>();
             services.AddSingleton<IOrderNotificationQueue, OrderNotificationQueue>();
             services.AddHostedService<OrderNotificationWorker>();
+            services.AddScoped<IRefundService, RefundManagementService>(); 
+            services.AddScoped<IRefundRequestRepository, RefundRequestRepository>();
+            services.AddScoped<IRefundDetailRepository, RefundDetailRepository>();  
 
             // Messaging
             services.AddScoped<IMessagePublisher, MessagePublisher>();
@@ -99,7 +102,7 @@ namespace OrderService.Infrastructure.Extensions
 
             services.AddHttpClient<IWalletServiceClient, WalletServiceClient>(client =>
             {
-                var baseUrl = configuration["ServiceUrls:WalletService"];
+                var baseUrl = configuration["ServiceUrls:ShopService"];
                 if (!string.IsNullOrEmpty(baseUrl))
                     client.BaseAddress = new Uri(baseUrl);
             });
@@ -173,6 +176,13 @@ namespace OrderService.Infrastructure.Extensions
                     .ForJob(autoCompleteKey)
                     .WithIdentity("auto-complete-delivered-orders-trigger")
                     .WithCronSchedule("0 30 0 * * ?"));
+                var refundTrackingJobKey = new JobKey("RefundTrackingStatusUpdateJob");
+                q.AddJob<RefundTrackingStatusUpdateJob>(opts => opts.WithIdentity(refundTrackingJobKey));
+                q.AddTrigger(opts => opts
+                    .ForJob(refundTrackingJobKey)
+                    .WithIdentity("RefundTrackingStatusUpdateTrigger")
+                    .WithCronSchedule("0 */5 * * * ?")
+                    .WithDescription("Update refund status based on delivery tracking"));
             });
             services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
             // Nếu có service chạy nền theo interval ngoài Quartz

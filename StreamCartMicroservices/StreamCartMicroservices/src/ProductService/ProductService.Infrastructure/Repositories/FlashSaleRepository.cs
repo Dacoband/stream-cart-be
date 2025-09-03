@@ -100,6 +100,28 @@ namespace ProductService.Infrastructure.Repositories
             return FlashSaleSlotHelper.GetAvailableSlotsForDate(date, slotsToExclude);
         }
 
+        //public async Task<List<Guid>> GetProductsWithoutFlashSaleAsync(Guid shopId, DateTime startTime, DateTime endTime)
+        //{
+        //    var utcStartTime = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
+        //    var utcEndTime = endTime.Kind == DateTimeKind.Utc ? endTime : DateTime.SpecifyKind(endTime, DateTimeKind.Utc);
+
+        //    var shopProductIds = await _dbContext.Products
+        //        .Where(p => p.ShopId == shopId && !p.IsDeleted && p.IsActive)
+        //        .Select(p => p.Id)
+        //        .ToListAsync();
+
+        //    var productsWithFlashSale = await _dbSet
+        //        .Where(fs => !fs.IsDeleted &&
+        //                   shopProductIds.Contains(fs.ProductId) &&
+        //                   ((fs.StartTime <= utcStartTime && fs.EndTime >= utcStartTime) ||
+        //                    (fs.StartTime <= utcEndTime && fs.EndTime >= utcEndTime) ||
+        //                    (fs.StartTime >= utcStartTime && fs.EndTime <= utcEndTime)))
+        //        .Select(fs => fs.ProductId)
+        //        .Distinct()
+        //        .ToListAsync();
+
+        //    return shopProductIds.Except(productsWithFlashSale).ToList();
+        //}
         public async Task<List<Guid>> GetProductsWithoutFlashSaleAsync(Guid shopId, DateTime startTime, DateTime endTime)
         {
             var utcStartTime = startTime.Kind == DateTimeKind.Utc ? startTime : DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
@@ -110,19 +132,8 @@ namespace ProductService.Infrastructure.Repositories
                 .Select(p => p.Id)
                 .ToListAsync();
 
-            var productsWithFlashSale = await _dbSet
-                .Where(fs => !fs.IsDeleted &&
-                           shopProductIds.Contains(fs.ProductId) &&
-                           ((fs.StartTime <= utcStartTime && fs.EndTime >= utcStartTime) ||
-                            (fs.StartTime <= utcEndTime && fs.EndTime >= utcEndTime) ||
-                            (fs.StartTime >= utcStartTime && fs.EndTime <= utcEndTime)))
-                .Select(fs => fs.ProductId)
-                .Distinct()
-                .ToListAsync();
-
-            return shopProductIds.Except(productsWithFlashSale).ToList();
+            return shopProductIds;
         }
-
 
         public async Task<bool> IsSlotAvailableAsync(int slot, DateTime startTime, DateTime endTime, Guid? excludeFlashSaleId = null)
         {
@@ -160,6 +171,31 @@ namespace ProductService.Infrastructure.Repositories
                            shopProductIds.Contains(fs.ProductId))
                 .OrderByDescending(fs => fs.CreatedAt)
                 .ToListAsync();
+        }
+        public async Task<List<int>> GetAvailableSlotsAsync(DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                if (startDate.Date == DateTime.UtcNow.Date)
+                {
+                    return await GetAvailableSlotsAsync(startDate); 
+                }
+
+                var occupiedSlots = await _dbSet
+                    .Where(fs => !fs.IsDeleted &&
+                               fs.StartTime < endDate &&
+                               fs.EndTime > startDate)
+                    .Select(fs => fs.Slot)
+                    .Distinct()
+                    .ToListAsync();
+
+                var allSlots = Enumerable.Range(1, 8).ToList();
+                return allSlots.Except(occupiedSlots).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error getting available slots for date range {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}: {ex.Message}", ex);
+            }
         }
     }
 }

@@ -51,6 +51,9 @@ namespace ShopService.Infrastructure.Data
                 entity.Property(e => e.CoverImageURL)
                     .HasColumnName("cover_image_url")
                     .HasMaxLength(500);
+                entity.Property(e => e.BusinessLicenseImageURL)
+                    .HasColumnName("business_license_image_url")
+                    .HasMaxLength(500);
 
                 entity.Property(e => e.RatingAverage)
                     .HasColumnName("rating_average")
