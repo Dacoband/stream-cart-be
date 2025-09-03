@@ -63,6 +63,7 @@ namespace OrderService.Domain.Entities
 
  
         public string BankNumber { get; set; } = string.Empty;
+        public string? TransactionId { get; set; }
 
         /// <summary>
         /// Collection of refund details
@@ -152,6 +153,11 @@ namespace OrderService.Domain.Entities
                    TotalAmount >= 0 &&
                    !string.IsNullOrWhiteSpace(BankName) &&
                    !string.IsNullOrWhiteSpace(BankNumber);
+        }
+        public void UpdateTransactionId(string transactionId, string modifiedBy)
+        {
+            TransactionId = transactionId;
+            SetModifier(modifiedBy);
         }
     }
 }

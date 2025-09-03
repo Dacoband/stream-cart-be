@@ -198,9 +198,9 @@ namespace PaymentService.Infrastructure.Services
             {
                 _logger.LogInformation("Getting refund request details for ID: {RefundRequestId}", refundRequestId);
 
-                ForwardUserToken();
+              //  ForwardUserToken();
 
-                var response = await _httpClient.GetAsync($"api/refund/{refundRequestId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/refunds/{refundRequestId}");
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
@@ -249,7 +249,7 @@ namespace PaymentService.Infrastructure.Services
                 var json = JsonSerializer.Serialize(updateDto, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PutAsync("api/refund/status", content);
+                var response = await _httpClient.PutAsync("api/refunds/status", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -267,6 +267,45 @@ namespace PaymentService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating refund request {RefundRequestId} status", refundRequestId);
+                return false;
+            }
+        }
+        public async Task<bool> UpdateRefundTransactionIdAsync(Guid refundRequestId, string transactionId)
+        {
+            try
+            {
+                _logger.LogInformation("Updating refund transaction ID for refund {RefundRequestId} to {TransactionId}",
+                    refundRequestId, transactionId);
+
+                ForwardUserToken();
+
+                var updateDto = new
+                {
+                    RefundRequestId = refundRequestId,
+                    TransactionId = transactionId
+                };
+
+                var json = JsonSerializer.Serialize(updateDto, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PutAsync("api/refunds/transaction", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Successfully updated refund transaction ID for {RefundRequestId}",
+                        refundRequestId);
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to update refund transaction ID. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating refund transaction ID for {RefundRequestId}", refundRequestId);
                 return false;
             }
         }

@@ -19,6 +19,7 @@ namespace OrderService.Application.DTOs.RefundDTOs
         public decimal TotalAmount { get; set; }
         public string BankName { get; set; } = string.Empty;
         public string BankNumber { get; set; } = string.Empty;
+        public string? TransactionId { get; set; }
         public List<RefundDetailDto> RefundDetails { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;

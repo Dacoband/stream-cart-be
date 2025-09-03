@@ -1274,7 +1274,6 @@ namespace PaymentService.Api.Controllers
         /// ✅ Tạo QR code cho refund request (tương tự rút tiền shop)
         /// </summary>
         [HttpPost("refund/{refundRequestId}/generate-qr")]
-        [Authorize(Roles = "Admin,OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GenerateRefundQrCode(Guid refundRequestId)
@@ -1290,11 +1289,7 @@ namespace PaymentService.Api.Controllers
                     return NotFound(ApiResponse<object>.ErrorResult("Refund request not found"));
                 }
 
-                // 2. Kiểm tra status phải là Completed mới được tạo QR
-                if (refundRequest.Status != "Completed")
-                {
-                    return BadRequest(ApiResponse<object>.ErrorResult($"Refund status must be Completed. Current status: {refundRequest.Status}"));
-                }
+                
 
                 // 3. Tạo QR code để chuyển tiền cho customer
                 var qrCode = await _qrCodeService.GenerateRefundQrCodeAsync(
@@ -1766,6 +1761,19 @@ namespace PaymentService.Api.Controllers
                     {
                         _logger.LogWarning("⚠️ Failed to update refund request {RefundRequestId} status", refundRequestId);
                     }
+                    if (!string.IsNullOrEmpty(request.TransactionId))
+                    {
+                        var transactionUpdateResult = await _orderServiceClient.UpdateRefundTransactionIdAsync(refundRequestId, request.TransactionId);
+                        if (transactionUpdateResult)
+                        {
+                            _logger.LogInformation("✅ Updated refund transaction ID {TransactionId} for refund {RefundRequestId}",
+                                request.TransactionId, refundRequestId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ Failed to update refund transaction ID for {RefundRequestId}", refundRequestId);
+                        }
+                    }
                 }
                 else
                 {
@@ -1808,7 +1816,7 @@ namespace PaymentService.Api.Controllers
 
                 if (orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
                 {
-                    var refundRequestIdString = orderCode.Substring(7); 
+                    var refundRequestIdString = orderCode.Substring(6);
                     var refundRequestId = ParseGuidFromString(refundRequestIdString);
 
                     if (refundRequestId != Guid.Empty)
@@ -1844,29 +1852,52 @@ namespace PaymentService.Api.Controllers
                 if (string.IsNullOrEmpty(content))
                     return Guid.Empty;
 
-                var refundPattern = @"REFUND_([0-9a-fA-F]{32})";
-                var match = Regex.Match(content, refundPattern, RegexOptions.IgnoreCase);
+                _logger.LogInformation("🔍 Extracting RefundRequestId from Content: {Content}", content);
 
-                if (match.Success)
+                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+                var refundPatternWithUnderscore = @"REFUND_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})";
+                var matchWithUnderscore = Regex.Match(content, refundPatternWithUnderscore, RegexOptions.IgnoreCase);
+
+                if (matchWithUnderscore.Success)
                 {
-                    var guidString = match.Groups[1].Value;
-                    var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
-                    return Guid.Parse(formattedGuid);
+                    var guidString = matchWithUnderscore.Groups[1].Value;
+                    _logger.LogInformation("✅ Found REFUND_ pattern with GUID: {GuidString}", guidString);
+                    return Guid.Parse(guidString);
                 }
 
+                // ✅ Pattern 2: REFUND + 32 hex characters (như trong content hiện tại)
+                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32,})";
+                var matchDirect = Regex.Match(content, refundPatternDirect, RegexOptions.IgnoreCase);
+
+                if (matchDirect.Success)
+                {
+                    var guidString = matchDirect.Groups[1].Value;
+                    _logger.LogInformation("✅ Found REFUND direct pattern: {GuidString}", guidString);
+
+                    // ✅ Take exactly 32 characters if longer
+                    if (guidString.Length > 32)
+                    {
+                        guidString = guidString.Substring(0, 32);
+                        _logger.LogInformation("✅ Trimmed to 32 chars: {GuidString}", guidString);
+                    }
+
+                    return ParseGuidFromString(guidString);
+                }
                 var guidPattern = @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
                 var guidMatch = Regex.Match(content, guidPattern, RegexOptions.IgnoreCase);
 
                 if (guidMatch.Success)
                 {
+                    _logger.LogInformation("✅ Found standard GUID pattern: {GuidString}", guidMatch.Value);
                     return Guid.Parse(guidMatch.Value);
                 }
 
+                _logger.LogWarning("⚠️ No RefundRequestId pattern found in content");
                 return Guid.Empty;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error extracting refund request ID from content: {Content}", content);
+                _logger.LogError(ex, "💥 Error extracting refund request ID from content: {Content}", content);
                 return Guid.Empty;
             }
         }

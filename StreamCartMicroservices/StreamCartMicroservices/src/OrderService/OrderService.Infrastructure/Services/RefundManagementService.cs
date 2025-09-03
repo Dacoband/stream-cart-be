@@ -81,7 +81,16 @@ namespace OrderService.Infrastructure.Services
                 throw;
             }
         }
+        public async Task<RefundRequestDto> UpdateRefundTransactionIdAsync(UpdateRefundTransactionDto updateTransactionDto)
+        {
+            var command = new UpdateRefundTransactionCommand
+            {
+                RefundRequestId = updateTransactionDto.RefundRequestId,
+                TransactionId = updateTransactionDto.TransactionId
+            };
 
+            return await _mediator.Send(command);
+        }
         public async Task<RefundRequestDto?> GetRefundRequestByIdAsync(Guid refundRequestId)
         {
             try

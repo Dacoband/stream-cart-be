@@ -32,5 +32,7 @@ namespace PaymentService.Application.Interfaces
         /// ✅ Cập nhật trạng thái refund request
         /// </summary>
         Task<bool> UpdateRefundRequestStatusAsync(Guid refundRequestId, string status);
+        Task<bool> UpdateRefundTransactionIdAsync(Guid refundRequestId, string transactionId);
+
     }
 }

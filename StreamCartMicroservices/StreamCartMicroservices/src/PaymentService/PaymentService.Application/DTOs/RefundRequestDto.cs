@@ -13,7 +13,7 @@ namespace PaymentService.Application.DTOs
         public string? TrackingCode { get; set; }
         public Guid RequestedByUserId { get; set; }
         public DateTime RequestedAt { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public int Status { get; set; } 
         public Guid? ProcessedByUserId { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public decimal RefundAmount { get; set; }
