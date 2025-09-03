@@ -102,7 +102,7 @@ namespace OrderService.Infrastructure.Extensions
 
             services.AddHttpClient<IWalletServiceClient, WalletServiceClient>(client =>
             {
-                var baseUrl = configuration["ServiceUrls:WalletService"];
+                var baseUrl = configuration["ServiceUrls:ShopService"];
                 if (!string.IsNullOrEmpty(baseUrl))
                     client.BaseAddress = new Uri(baseUrl);
             });

@@ -261,7 +261,25 @@ namespace ProductService.Application.Services
                     errorMessages.Add($"Sản phẩm {productName} đã có FlashSale trong khoảng thời gian trùng lặp");
                     return;
                 }
+                bool reserveSuccess = false;
+                if (variantId.HasValue)
+                {
+                    reserveSuccess = true; 
+                }
+                else
+                {
+                    reserveSuccess = product.AddReserveStock(finalQuantityAvailable);
+                    if (reserveSuccess)
+                    {
+                        await _productRepository.ReplaceAsync(product.Id.ToString(), product);
+                    }
+                }
 
+                if (!reserveSuccess)
+                {
+                    errorMessages.Add($"Không thể reserve stock cho sản phẩm {productName}");
+                    return;
+                }
                 var flashSale = new FlashSale()
                 {
                     ProductId = productId,
@@ -708,6 +726,15 @@ namespace ProductService.Application.Services
 
             try
             {
+                if (!existingFlashSale.VariantId.HasValue)
+                {
+                    var remainingQuantity = existingFlashSale.QuantityAvailable - existingFlashSale.QuantitySold;
+                    if (remainingQuantity > 0)
+                    {
+                        existingProduct.RemoveReserveStock(remainingQuantity);
+                        await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                    }
+                }
                 existingFlashSale.Delete(userId);
                 await _flashSaleRepository.ReplaceAsync(existingFlashSale.Id.ToString(), existingFlashSale);
                 return response;

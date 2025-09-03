@@ -211,17 +211,6 @@ namespace ProductService.Application.Services
                 }
 
             }
-            //Check Unique Name
-            if (!string.IsNullOrEmpty(category.CategoryName))
-            {
-                var existingName = await _categoryRepo.FindOneAsync(x => x.CategoryName == category.CategoryName && x.IsDeleted == false);
-                if (existingName != null)
-                {
-                    result.Success = false;
-                    result.Message = "Tên danh mục sản phẩm đã tồn tại";
-                    return result;
-                }
-            }
 
             try
             {

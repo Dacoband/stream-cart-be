@@ -41,17 +41,6 @@ namespace OrderService.Api.Controllers
             try
             {
                 var userId = _currentUserService.GetUserId();
-
-                // ✅ VALIDATION: Chỉ 1 trong 3 ID được có giá trị
-                var idCount = new[] { request.OrderID, request.ProductID, request.LivestreamId }
-                    .Count(id => id.HasValue);
-
-                if (idCount != 1)
-                {
-                    return BadRequest(ApiResponse<object>.ErrorResult("Phải chỉ định đúng 1 loại review (Order, Product, hoặc Livestream)"));
-                }
-
-                // ✅ AUTO-DETERMINE TYPE
                 var reviewType = request.OrderID.HasValue ? ReviewType.Order
                                : request.ProductID.HasValue ? ReviewType.Product
                                : ReviewType.Livestream;
