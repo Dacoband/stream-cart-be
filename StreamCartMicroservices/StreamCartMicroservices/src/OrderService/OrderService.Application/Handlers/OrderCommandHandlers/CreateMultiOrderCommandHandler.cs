@@ -35,13 +35,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             private readonly IAccountServiceClient _accountServiceClient;
             private readonly ICurrentUserService _currentUserService;
             private readonly IOrderNotificationQueue _orderNotificationQueue;
+            private readonly ILivestreamServiceClient _livestreamServiceClient; // ✅ ADDED
 
         public CreateMultiOrderCommandHandler(
                 IOrderRepository orderRepository,
                 IProductServiceClient productServiceClient,
                 IShopServiceClient shopServiceClient,
                 ILogger<CreateMultiOrderCommandHandler> logger,
-                IPublishEndpoint publishEndpoint, IAdressServiceClient adressServiceClient, IMembershipServiceClient membershipServiceClient, IShopVoucherClientService shopVoucherClientService, IAccountServiceClient accountServiceClient, ICurrentUserService currentUserService, IOrderNotificationQueue notificationQueue)
+                IPublishEndpoint publishEndpoint, IAdressServiceClient adressServiceClient, IMembershipServiceClient membershipServiceClient, IShopVoucherClientService shopVoucherClientService, IAccountServiceClient accountServiceClient, ICurrentUserService currentUserService, IOrderNotificationQueue notificationQueue, ILivestreamServiceClient livestreamServiceClient)
         {
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _productServiceClient = productServiceClient ?? throw new ArgumentNullException(nameof(productServiceClient));
@@ -54,6 +55,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             _accountServiceClient = accountServiceClient;
             _currentUserService = currentUserService;
             _orderNotificationQueue = notificationQueue;
+            _livestreamServiceClient = livestreamServiceClient ?? throw new ArgumentNullException(nameof(livestreamServiceClient));
         }
 
         public async Task<ApiResponse<List<OrderDto>>> Handle(CreateMultiOrderCommand request, CancellationToken cancellationToken)
@@ -126,6 +128,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     await _orderRepository.InsertAsync(order);
                     foreach (var orderItem in itemResult.Data)
                     {
+                        await UpdateStockBasedOnOrderTypeAsync(orderItem, request.LivestreamId);
                         if (orderItem.VariantId.HasValue)
                         {
                             
@@ -259,8 +262,111 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 Data = new List<OrderDto>()
             };
         }
+        private async Task UpdateStockBasedOnOrderTypeAsync(OrderItem orderItem, Guid? livestreamId)
+        {
+            try
+            {
+                if (livestreamId.HasValue)
+                {
+                    // ✅ LIVESTREAM ORDER: CHỈ cập nhật stock của livestream product
+                    _logger.LogInformation("🎥 Processing LIVESTREAM order - updating livestream product stock only for livestreamId {LivestreamId}, productId {ProductId}",
+                        livestreamId.Value, orderItem.ProductId);
 
+                    await UpdateLivestreamProductStockAsync(livestreamId.Value, orderItem);
+                }
+                else
+                {
+                    // ✅ NORMAL ORDER: Cập nhật stock của Product Service như bình thường
+                    _logger.LogInformation("🛒 Processing NORMAL order - updating product service stock for productId {ProductId}",
+                        orderItem.ProductId);
 
+                    await UpdateProductServiceStockAsync(orderItem);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error updating stock for product {ProductId}", orderItem.ProductId);
+            }
+        }
+        private async Task UpdateProductServiceStockAsync(OrderItem orderItem)
+        {
+            try
+            {
+                bool productStockSuccess = false;
+                bool variantStockSuccess = true; // Default true for non-variant products
+
+                if (orderItem.VariantId.HasValue)
+                {
+                    productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
+                        orderItem.ProductId,
+                        -orderItem.Quantity);
+
+                    variantStockSuccess = await _productServiceClient.UpdateVariantStockAsync(
+                        orderItem.VariantId.Value,
+                        -orderItem.Quantity);
+
+                    if (!productStockSuccess || !variantStockSuccess)
+                    {
+                        _logger.LogError("❌ Failed to update Product Service stock for product {ProductId} variant {VariantId}",
+                            orderItem.ProductId, orderItem.VariantId.Value);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("✅ Updated Product Service stock: Product {ProductId} and Variant {VariantId} decreased by {Quantity}",
+                            orderItem.ProductId, orderItem.VariantId.Value, orderItem.Quantity);
+                    }
+                }
+                else
+                {
+                    productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
+                        orderItem.ProductId,
+                        -orderItem.Quantity);
+
+                    if (!productStockSuccess)
+                    {
+                        _logger.LogError("❌ Failed to update Product Service stock for product {ProductId}", orderItem.ProductId);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("✅ Updated Product Service stock: Product {ProductId} decreased by {Quantity}",
+                            orderItem.ProductId, orderItem.Quantity);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error updating Product Service stock for product {ProductId}", orderItem.ProductId);
+            }
+        }
+        private async Task UpdateLivestreamProductStockAsync(Guid livestreamId, OrderItem orderItem)
+        {
+            try
+            {
+                // Gọi Livestream Service để cập nhật stock
+                var livestreamStockUpdateSuccess = await _livestreamServiceClient.UpdateProductStockAsync(
+                    livestreamId,
+                    orderItem.ProductId.ToString(),
+                    orderItem.VariantId?.ToString(),
+                    -orderItem.Quantity, 
+                    "order-creation");
+
+                if (livestreamStockUpdateSuccess)
+                {
+                    _logger.LogInformation("✅ Updated Livestream Service stock: Product {ProductId} in livestream {LivestreamId} decreased by {Quantity}",
+                        orderItem.ProductId, livestreamId, orderItem.Quantity);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Failed to update livestream product stock for product {ProductId} in livestream {LivestreamId}",
+                        orderItem.ProductId, livestreamId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error updating livestream product stock for product {ProductId} in livestream {LivestreamId}",
+                    orderItem.ProductId, livestreamId);
+            }
+        }
         private Orders CreateOrder(CreateMultiOrderCommand request, CreateOrderByShopDto shopOrder, AddressOfShop shopAddress, AdressDto customerAddress)
         {
             return new Orders(

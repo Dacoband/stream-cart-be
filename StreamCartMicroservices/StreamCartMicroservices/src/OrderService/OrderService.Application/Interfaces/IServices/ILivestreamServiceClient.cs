@@ -23,5 +23,7 @@ namespace OrderService.Application.Interfaces
         /// Lấy thông tin cơ bản của livestream để hiển thị trong review
         /// </summary>
         Task<LivestreamBasicInfoDTO?> GetLivestreamBasicInfoAsync(Guid livestreamId);
+        Task<bool> UpdateProductStockAsync(Guid livestreamId, string productId, string? variantId, int quantityChange, string modifiedBy);
+
     }
 }

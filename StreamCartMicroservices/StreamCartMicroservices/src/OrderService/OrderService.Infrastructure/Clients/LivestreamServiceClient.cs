@@ -1,8 +1,9 @@
-﻿using OrderService.Application.DTOs;
-using OrderService.Application.Interfaces;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OrderService.Application.DTOs;
+using OrderService.Application.Interfaces;
 using Shared.Common.Models;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -136,7 +137,127 @@ namespace OrderService.Infrastructure.Clients
                 return null;
             }
         }
+        public async Task<bool> UpdateProductStockAsync(Guid livestreamId, string productId, string? variantId, int quantityChange, string modifiedBy)
+        {
+            try
+            {
+                _logger.LogInformation("🔄 Updating livestream product stock - LivestreamId: {LivestreamId}, ProductId: {ProductId}, VariantId: {VariantId}, Change: {Change}",
+                    livestreamId, productId, variantId, quantityChange);
 
+                // ✅ FIX: Đầu tiên cần lấy stock hiện tại để tính stock mới
+                var currentProduct = await GetLivestreamProductAsync(livestreamId, productId, variantId);
+                if (currentProduct == null)
+                {
+                    _logger.LogWarning("⚠️ Livestream product not found: ProductId {ProductId}, VariantId {VariantId} in LivestreamId {LivestreamId}",
+                        productId, variantId, livestreamId);
+                    return false;
+                }
+
+                // Tính stock mới
+                var newStock = currentProduct.Stock + quantityChange; // quantityChange đã là âm từ caller
+                if (newStock < 0)
+                {
+                    _logger.LogWarning("⚠️ Cannot update stock to negative value. Current: {Current}, Change: {Change}",
+                        currentProduct.Stock, quantityChange);
+                    return false;
+                }
+
+                // ✅ FIX: Sử dụng đúng endpoint có sẵn
+                var requestBody = new
+                {
+                    stock = newStock,
+                    price = currentProduct.Price // Giữ nguyên giá
+                };
+
+                var jsonContent = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                // ✅ FIX: Sử dụng endpoint thực tế
+                var variantParam = string.IsNullOrEmpty(variantId) ? "null" : variantId;
+                var response = await _httpClient.PatchAsync(
+                    $"api/livestream-products/livestream/{livestreamId}/product/{productId}/variant/{variantParam}/stock",
+                    content);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("✅ Successfully updated livestream product stock for ProductId: {ProductId}, NewStock: {NewStock}",
+                        productId, newStock);
+                    return true;
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("⚠️ Failed to update livestream product stock. Status: {StatusCode}, Response: {Response}",
+                        response.StatusCode, errorContent);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error updating livestream product stock for ProductId: {ProductId} in LivestreamId: {LivestreamId}",
+                    productId, livestreamId);
+                return false;
+            }
+        }
+        private async Task<LivestreamProductInfo?> GetLivestreamProductAsync(Guid livestreamId, string productId, string? variantId)
+        {
+            try
+            {
+                // ✅ Sử dụng endpoint để lấy tất cả sản phẩm trong livestream
+                var response = await _httpClient.GetAsync($"api/livestream-products/livestream/{livestreamId}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<IEnumerable<LivestreamProductInfo>>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (apiResponse?.Data == null)
+                {
+                    return null;
+                }
+
+                // Tìm sản phẩm cụ thể
+                var targetVariantId = string.IsNullOrEmpty(variantId) ? string.Empty : variantId;
+
+                var product = apiResponse.Data.FirstOrDefault(p =>
+                    p.ProductId == productId &&
+                    (string.IsNullOrEmpty(p.VariantId) ? string.Empty : p.VariantId) == targetVariantId);
+
+                if (product != null)
+                {
+                    _logger.LogInformation("✅ Found livestream product: ProductId={ProductId}, VariantId={VariantId}, CurrentStock={Stock}",
+                        productId, variantId ?? "null", product.Stock);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Livestream product not found: ProductId={ProductId}, VariantId={VariantId}",
+                        productId, variantId ?? "null");
+                }
+
+                return product;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting livestream product info");
+                return null;
+            }
+        }
+    }
+    public class LivestreamProductInfo
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string VariantId { get; set; } = string.Empty;
+        public int Stock { get; set; }
+        public decimal Price { get; set; }
     }
     public class BooleanToStringConverter : JsonConverter<string>
     {
@@ -161,5 +282,6 @@ namespace OrderService.Infrastructure.Clients
         {
             writer.WriteStringValue(value);
         }
+
     }
 }

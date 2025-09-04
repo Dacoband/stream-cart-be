@@ -7,6 +7,7 @@ using OrderService.Application.Commands.OrderCommands;
 using OrderService.Application.DTOs;
 using OrderService.Application.DTOs.OrderDTOs;
 using OrderService.Application.Interfaces.IServices;
+using OrderService.Application.Queries.OrderQueries;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Enums;
 using Shared.Common.Domain.Bases;
@@ -916,6 +917,42 @@ namespace OrderService.Api.Controllers
             {
                 _logger.LogError(ex, "❌ Error creating order from live cart for livestream {LivestreamId}", livestreamId);
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi: {ex.Message}"));
+            }
+        }
+        /// <summary>
+        /// Lấy doanh thu và sản phẩm có đơn hàng của livestream
+        /// </summary>
+        /// <param name="livestreamId">ID của livestream</param>
+        /// <returns>Doanh thu và sản phẩm của livestream</returns>
+        [HttpGet("livestream/{livestreamId}/revenue")]
+       // [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [ProducesResponseType(typeof(ApiResponse<LivestreamRevenueDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetLivestreamRevenue(Guid livestreamId)
+        {
+            try
+            {
+                _logger.LogInformation("📊 Getting revenue for livestream {LivestreamId}", livestreamId);
+
+                var query = new GetLivestreamRevenueQuery
+                {
+                    LivestreamId = livestreamId
+                };
+
+                var result = await _mediator.Send(query);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult($"Không tìm thấy dữ liệu cho livestream {livestreamId}"));
+                }
+
+                return Ok(ApiResponse<LivestreamRevenueDto>.SuccessResult(result,
+                    $"📊 Livestream có {result.TotalOrders} đơn hàng, doanh thu {result.TotalRevenue:N0}đ"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting livestream revenue for {LivestreamId}", livestreamId);
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy doanh thu livestream: {ex.Message}"));
             }
         }
     }
