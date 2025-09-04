@@ -16,6 +16,7 @@ namespace ShopService.Application.Interfaces
         public Task<ApiResponse<ListShopMembershipDTO>> FilterShopMembership(FilterShopMembership filter);
         public Task<ApiResponse<DetailShopMembershipDTO>> DeleteShopMembership(string id, string userId);
         public Task<ApiResponse<DetailShopMembershipDTO>> UpdateShopMembership(string shopId, int remaingLivstream);
-
+        public Task<ApiResponse<int>> UpdateLivestreamRemaining(int usedMinutes, string shopId);
+        public Task<int> GetRemainingLivestream(string shopId);
     }
 }

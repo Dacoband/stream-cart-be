@@ -18,7 +18,7 @@ namespace ShopService.Domain.Entities
         public DateTime StartDate { get; set; }
         [Column(TypeName = "timestamp without time zone")]
 
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public int RemainingLivestream { get; set; }
         public string Status {  get; set; }
         public int? MaxProduct { get; set; }
