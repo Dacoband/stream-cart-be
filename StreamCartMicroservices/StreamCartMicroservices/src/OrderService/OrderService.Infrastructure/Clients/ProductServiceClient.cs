@@ -191,5 +191,75 @@ namespace OrderService.Infrastructure.Clients
                 return false;
             }
         }
+        public async Task<List<FlashSaleDetailDTO>> GetCurrentFlashSalesAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting current flash sales...");
+
+                var resp = await _httpClient.GetAsync("https://brightpa.me/api/flashsales/current");
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to get current flash sales. Status: {StatusCode}", resp.StatusCode);
+                    return new List<FlashSaleDetailDTO>();
+                }
+
+                var payload = await resp.Content.ReadFromJsonAsync<ApiResponse<List<FlashSaleDetailDTO>>>();
+                if (payload == null)
+                {
+                    _logger.LogWarning("Empty body when getting current flash sales.");
+                    return new List<FlashSaleDetailDTO>();
+                }
+
+                if (!payload.Success)
+                {
+                    _logger.LogWarning("Get current flash sales unsuccessful: {Message}", payload.Message);
+                    return new List<FlashSaleDetailDTO>();
+                }
+
+                return payload.Data ?? new List<FlashSaleDetailDTO>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current flash sales");
+                return new List<FlashSaleDetailDTO>();
+            }
+        }
+
+        /// <summary>
+        /// PATCH /api/flashsales/{id}/sold  (body: int quantity)
+        /// </summary>
+        public async Task<bool> IncreaseFlashSaleSoldAsync(Guid flashSaleId, int quantity)
+        {
+            try
+            {
+                _logger.LogInformation("Increasing flash sale sold: {FlashSaleId} by {Quantity}", flashSaleId, quantity);
+
+                // Body là số nguyên (JSON number)
+                var resp = await _httpClient.PatchAsJsonAsync(
+                    $"https://brightpa.me/api/flashsales/{flashSaleId}/sold",
+                    quantity
+                );
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to increase flash sale sold. Status: {StatusCode}", resp.StatusCode);
+                    return false;
+                }
+
+                // Nếu muốn đọc dữ liệu trả về:
+                // var payload = await resp.Content.ReadFromJsonAsync<ApiResponse<FlashSaleDetailDto>>();
+                // return payload?.Success == true;
+
+                _logger.LogInformation("Successfully increased flash sale sold for {FlashSaleId}", flashSaleId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error increasing flash sale sold for {FlashSaleId}", flashSaleId);
+                return false;
+            }
+        }
+
     }
 }

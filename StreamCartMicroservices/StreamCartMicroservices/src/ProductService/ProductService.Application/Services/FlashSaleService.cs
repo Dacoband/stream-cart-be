@@ -1870,5 +1870,104 @@ namespace ProductService.Application.Services
 
             return "Unknown";
         }
+
+        public async Task<ApiResponse<DetailFlashSaleDTO>> UpdateFlashSaleStock(string flashSaleId, int quantity)
+        {
+            var response = new ApiResponse<DetailFlashSaleDTO>
+            {
+                Success = true,
+                Message = "Cập nhật QuantitySold cho FlashSale thành công",
+            };
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(flashSaleId))
+                {
+                    response.Success = false;
+                    response.Message = "flashSaleId không hợp lệ";
+                    return response;
+                }
+
+                if (quantity <= 0)
+                {
+                    response.Success = false;
+                    response.Message = "Số lượng mua phải lớn hơn 0";
+                    return response;
+                }
+
+                var flashSale = await _flashSaleRepository.GetByIdAsync(flashSaleId);
+                if (flashSale == null || flashSale.IsDeleted)
+                {
+                    response.Success = false;
+                    response.Message = "Không tìm thấy FlashSale";
+                    return response;
+                }
+
+                // Không chạm vào stock sản phẩm/variant – chỉ tăng QuantitySold
+                var remaining = flashSale.QuantityAvailable - flashSale.QuantitySold;
+                if (quantity > remaining)
+                {
+                    response.Success = false;
+                    response.Message = $"Số lượng còn lại của FlashSale không đủ (yêu cầu {quantity}, còn {remaining})";
+                    return response;
+                }
+
+                flashSale.QuantitySold += quantity;
+                flashSale.SetModifier("system"); // hoặc truyền userId nếu bạn có
+                await _flashSaleRepository.ReplaceAsync(flashSale.Id.ToString(), flashSale);
+
+                // Build DTO trả về
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+                string? productImageUrl = null;
+                string productName = "Unknown Product";
+                string variantName = "";
+
+                try
+                {
+                    var product = await _productRepository.GetByIdAsync(flashSale.ProductId.ToString());
+                    productName = product?.ProductName ?? productName;
+
+                    var primaryImage = await _productImageRepository.GetPrimaryImageAsync(flashSale.ProductId, flashSale.VariantId);
+                    productImageUrl = primaryImage?.ImageUrl;
+
+                    if (flashSale.VariantId.HasValue)
+                    {
+                        variantName = await GetVariantNameAsync(flashSale.VariantId.Value) ?? "";
+                    }
+                }
+                catch { /* silent */ }
+
+                var (price, stock) = await GetPriceAndStockAsync(flashSale.ProductId, flashSale.VariantId);
+
+                response.Data = new DetailFlashSaleDTO
+                {
+                    Id = flashSale.Id,
+                    ProductId = flashSale.ProductId,
+                    VariantId = flashSale.VariantId,
+                    FlashSalePrice = flashSale.FlashSalePrice,
+                    QuantityAvailable = flashSale.QuantityAvailable,
+                    QuantitySold = flashSale.QuantitySold,
+                    StartTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.StartTime, tz),
+                    EndTime = TimeZoneInfo.ConvertTimeFromUtc(flashSale.EndTime, tz),
+                    Slot = flashSale.Slot,
+                    IsActive = flashSale.IsValid(),
+                    ProductName = productName,
+                    VariantName = variantName,
+                    ProductImageUrl = productImageUrl,
+                    Price = price,
+                    Stock = stock
+                };
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = "Lỗi khi cập nhật QuantitySold: " + ex.Message;
+                return response;
+            }
+        }
+
     }
 }

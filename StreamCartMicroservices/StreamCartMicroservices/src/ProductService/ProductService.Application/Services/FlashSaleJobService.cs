@@ -44,11 +44,15 @@ namespace ProductService.Application.Services
                 var isRunning = fs.StartTime <= now && now < fs.EndTime;
                 var isEnded = now >= fs.EndTime;
 
-                if (isRunning)
+                // 🔹 NEW: Nếu đã bán hết thì coi như kết thúc
+                var isSoldOut = fs.QuantitySold >= fs.QuantityAvailable;
+
+                if (isRunning && !isSoldOut)
                 {
                     if (fs.VariantId == null)
                     {
-                        try {
+                        try
+                        {
                             var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
                             if (product != null)
                             {
@@ -64,7 +68,7 @@ namespace ProductService.Application.Services
                                     {
                                         ProductId = product.Id,
                                         ProductName = product.ProductName,
-                                        Price = product.BasePrice - fs.FlashSalePrice,
+                                        Price = fs.FlashSalePrice, // giá flash sale
                                         Stock = product.StockQuantity
                                     };
 
@@ -74,16 +78,16 @@ namespace ProductService.Application.Services
                                 }
                             }
                         }
-                        catch (Exception ex) {
-                        _logger.LogWarning(ex.Message);
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error updating product for flash sale");
                         }
-                        
                     }
                     else
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
-                        if (variant != null)
+                        if (variant != null && product != null)
                         {
                             variant.UpdatePrice(variant.Price, fs.FlashSalePrice);
                             product.StartTime = fs.StartTime;
@@ -97,7 +101,7 @@ namespace ProductService.Application.Services
                                 {
                                     ProductId = fs.ProductId,
                                     VariantId = variant.Id,
-                                    Price =variant.Price-fs.FlashSalePrice,
+                                    Price = fs.FlashSalePrice
                                 };
 
                                 await _publishEndpoint.Publish(productEvent);
@@ -107,12 +111,11 @@ namespace ProductService.Application.Services
                         }
                     }
                 }
-                else if (isEnded)
+                else if (isEnded || isSoldOut) // 🔹 NEW: nếu hết hạn hoặc bán hết thì reset giá
                 {
                     if (fs.VariantId == null)
                     {
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                        
                         if (product != null)
                         {
                             product.UpdatePricing(product.BasePrice, 0);
@@ -135,8 +138,8 @@ namespace ProductService.Application.Services
                     {
                         var variant = await _variantRepo.GetByIdAsync(fs.VariantId.ToString());
                         var product = await _productRepo.GetByIdAsync(fs.ProductId.ToString());
-                       
-                        if (variant != null)
+
+                        if (variant != null && product != null)
                         {
                             product.StartTime = null;
                             product.EndTime = null;
@@ -155,7 +158,9 @@ namespace ProductService.Application.Services
                         }
                     }
 
-                   
+                    // 🔹 Mark flash sale as ended
+                    fs.EndTime = DateTime.Now; // hoặc thêm field IsEnded nếu có
+                    await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
                 }
             }
 

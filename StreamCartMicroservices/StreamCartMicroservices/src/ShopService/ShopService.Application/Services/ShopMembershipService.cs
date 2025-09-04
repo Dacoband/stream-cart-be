@@ -114,10 +114,11 @@ namespace ShopService.Application.Services
                     Status = status,
                     RemainingLivestream = membership.MaxLivestream,
                     Commission = membership.Commission,
-                    MaxProduct = membership.MaxProduct
+                    MaxProduct = membership.MaxProduct,
+                    MaxLivestream = membership.MaxLivestream,
                 };
                 shopMembership.SetCreator(userId);
-
+                shopMembership.SetModifier(userId);  
                 // Trừ tiền ví
                 wallet.Balance -= membership.Price;
                 wallet.SetModifier(userId);
