@@ -84,7 +84,8 @@ namespace ShopService.Domain.Entities
             EndDate = endDate;
             AvailableQuantity = availableQuantity;
             UsedQuantity = 0;
-            IsActive = true;
+            var now = DateTime.UtcNow;
+            IsActive = startDate <= now;
         }
 
         public void UpdateDescription(string description)
