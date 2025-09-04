@@ -36,5 +36,9 @@ namespace OrderService.Application.Interfaces.IServices
         /// <returns>True if successful</returns>
         Task<bool> UpdateVariantStockAsync(Guid variantId, int quantity);
         Task<bool> UpdateProductQuantitySoldAsync(Guid productId, int quantityChange);
+        Task<List<FlashSaleDetailDTO>> GetCurrentFlashSalesAsync();
+        Task<bool> IncreaseFlashSaleSoldAsync(Guid flashSaleId, int quantity);
+    
+
     }
 }

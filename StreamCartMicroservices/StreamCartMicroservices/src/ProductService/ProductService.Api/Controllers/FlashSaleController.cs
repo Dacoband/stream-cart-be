@@ -481,5 +481,38 @@ namespace ProductService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật FlashSale: {ex.Message}"));
             }
         }
+        [HttpPatch("{id}/sold")]
+        [AllowAnonymous] // nếu chỉ cho service nội bộ gọi, có thể thêm auth/policy phù hợp
+        [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateFlashSaleSold([FromRoute] string id, [FromBody] int quantity)
+        {
+            if (!ModelState.IsValid )
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+
+            if (quantity <= 0)
+                return BadRequest(ApiResponse<object>.ErrorResult("Số lượng mua phải lớn hơn 0"));
+
+            try
+            {
+                var result = await _flashSaleService.UpdateFlashSaleStock(id, quantity);
+
+                if (!result.Success)
+                {
+                    // Trả về 404 nếu không tìm thấy
+                    if ((result.Message ?? string.Empty).Contains("Không tìm thấy FlashSale", StringComparison.OrdinalIgnoreCase))
+                        return NotFound(ApiResponse<object>.ErrorResult(result.Message!));
+
+                    return BadRequest(ApiResponse<object>.ErrorResult(result.Message!));
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật QuantitySold: {ex.Message}"));
+            }
+        }
     }
 }

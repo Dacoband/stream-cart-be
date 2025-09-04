@@ -15,6 +15,7 @@ using OrderService.Domain.Enums;
     using Shared.Messaging.Event.OrderEvents;
     using System;
     using System.Collections.Generic;
+using System.Net.WebSockets;
 using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
@@ -66,7 +67,14 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
             var accessToken = _currentUserService.GetAccessToken();
             _logger.LogInformation("Creating multiple orders for account {AccountId}", request.AccountId);
+            var currentFlashSales = await _productServiceClient.GetCurrentFlashSalesAsync();
+            var flashIndex = (currentFlashSales ?? new List<FlashSaleDetailDTO>())
+                .GroupBy(fs => (fs.ProductId, fs.VariantId ?? Guid.Empty))
+                .ToDictionary(g => g.Key, g => g.First().Id);
 
+            // 🔹 NEW: cache tránh gọi GET trùng
+            var productCache = new Dictionary<Guid, ProductDto>();
+            var variantCache = new Dictionary<Guid, VariantDto>();
             foreach (var shopOrder in request.OrdersByShop)
             {
                 try
@@ -120,6 +128,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     {
                         if (orderItem.VariantId.HasValue)
                         {
+                            
                             var productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
                                 orderItem.ProductId,
                                 -orderItem.Quantity); 
@@ -139,6 +148,35 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             {
                                 _logger.LogInformation("✅ Updated stock: Product {ProductId} and Variant {VariantId} decreased by {Quantity}",
                                     orderItem.ProductId, orderItem.VariantId.Value, orderItem.Quantity);
+                                // Cập nhật FlashSale đã bán nếu có
+                                if (!variantCache.TryGetValue(orderItem.VariantId.Value, out var variantDto))
+                                {
+                                    variantDto = await _productServiceClient.GetVariantByIdAsync(orderItem.VariantId.Value);
+                                    if (variantDto != null) variantCache[orderItem.VariantId.Value] = variantDto;
+                                }
+
+                                if (variantDto?.FlashSalePrice.HasValue == true && variantDto.FlashSalePrice.Value > 0)
+                                {
+                                    if (flashIndex.TryGetValue((orderItem.ProductId, orderItem.VariantId.Value), out var flashSaleId))
+                                    {
+                                        var ok = await _productServiceClient.IncreaseFlashSaleSoldAsync(flashSaleId, orderItem.Quantity);
+                                        if (!ok)
+                                        {
+                                            _logger.LogWarning("Failed to increase flash sale sold. FS={FlashSaleId}, Product={ProductId}, Variant={VariantId}",
+                                                flashSaleId, orderItem.ProductId, orderItem.VariantId.Value);
+                                        }
+                                        else
+                                        {
+                                            _logger.LogInformation("✅ Increased FS sold: FS={FlashSaleId} +{Qty}", flashSaleId, orderItem.Quantity);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _logger.LogDebug("No active FlashSale mapped for Product {ProductId}, Variant {VariantId}",
+                                            orderItem.ProductId, orderItem.VariantId.Value);
+                                    }
+                                }
+
                             }
                         }
                         else

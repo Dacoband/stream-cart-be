@@ -25,5 +25,6 @@ namespace ProductService.Application.Interfaces
         Task<ApiResponse<List<FlashSaleSlotSimpleDTO>>> GetShopFlashSaleSimpleAsync(string shopId);
         Task<ApiResponse<bool>> DeleteFlashSaleSlotAsync(DeleteFlashSaleSlotDTO request, string userId, string shopId);
         Task<ApiResponse<DetailFlashSaleDTO>> UpdateFlashSalePriceQuantityAsync(UpdateFlashSalePriceQuantityDTO request, string flashSaleId, string userId, string shopId);
+        Task<ApiResponse<DetailFlashSaleDTO>> UpdateFlashSaleStock(string flashSaleId, int quantity);
     }
 }
