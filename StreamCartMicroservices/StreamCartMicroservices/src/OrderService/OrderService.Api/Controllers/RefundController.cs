@@ -227,6 +227,39 @@ namespace OrderService.Api.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult("An error occurred while updating refund transaction ID"));
             }
         }
+        [HttpGet("user")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<RefundRequestDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUserRefunds(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] RefundStatus? status = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var userId = _currentUserService.GetUserId();
+                if (userId == Guid.Empty)
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Không tìm thấy thông tin User ID"));
+                }
+
+                var result = await _refundService.GetRefundRequestsByUserIdAsync(
+                    userId, pageNumber, pageSize, status, fromDate, toDate);
+
+                return Ok(ApiResponse<PagedResult<RefundRequestDto>>.SuccessResult(
+                    result, "Lấy danh sách yêu cầu hoàn tiền thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user refunds for user {UserId}", _currentUserService.GetUserId());
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    ApiResponse<object>.ErrorResult("Có lỗi xảy ra khi lấy danh sách yêu cầu hoàn tiền"));
+            }
+        }
     }
     public class ConfirmRefundDto
     {
