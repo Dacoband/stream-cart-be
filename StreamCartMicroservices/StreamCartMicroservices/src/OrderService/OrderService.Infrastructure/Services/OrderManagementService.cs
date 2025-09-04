@@ -451,14 +451,47 @@ namespace OrderService.Infrastructure.Services
                 // Cập nhật trạng thái đơn hàng
                 order.UpdateStatus(OrderStatus.Completed, customerId.ToString());
                 await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
+                var orderItems = await _orderItemRepository.GetByOrderIdAsync(order.Id);
+                foreach (var orderItem in orderItems)
+                {
+                    if (orderItem.VariantId.HasValue)
+                    {
+                        // Có variant: chỉ cộng QuantitySold cho Product (variant không có QuantitySold)
+                        var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                            orderItem.ProductId,
+                            orderItem.Quantity); // Số dương để cộng QuantitySold
 
+                        if (!quantitySoldSuccess)
+                        {
+                            _logger.LogError("Failed to update QuantitySold for product {ProductId} variant {VariantId}",
+                                orderItem.ProductId, orderItem.VariantId.Value);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("✅ Order delivered: Product {ProductId} QuantitySold increased by {Quantity}",
+                                orderItem.ProductId, orderItem.Quantity);
+                        }
+                    }
+                    else
+                    {
+                        // Không có variant: cộng QuantitySold cho Product
+                        var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                            orderItem.ProductId,
+                            orderItem.Quantity); // Số dương để cộng QuantitySold
+
+                        if (!quantitySoldSuccess)
+                        {
+                            _logger.LogError("Failed to update QuantitySold for product {ProductId}", orderItem.ProductId);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("✅ Order delivered: Product {ProductId} QuantitySold increased by {Quantity}",
+                                orderItem.ProductId, orderItem.Quantity);
+                        }
+                    }
+                }
                 // Xử lý thanh toán cho shop
                 await ProcessPaymentToShopAsync(order);
-                //Cập nhật reward
-
-                //Cập nhật rate
-
-                // Chuyển đổi sang DTO
                 return _mapper.Map<OrderDto>(order);
             }
             catch (Exception ex)
@@ -629,6 +662,7 @@ namespace OrderService.Infrastructure.Services
                         order.UpdateStatus(OrderStatus.Completed, request.ModifiedBy);
                         message = "Đơn hàng đã hoàn tất";
                         await ConfirmOrderDeliveredAsync(request.OrderId, request.ModifiedBy);
+
                         break;
 
                     case OrderStatus.Returning:
@@ -750,6 +784,7 @@ namespace OrderService.Infrastructure.Services
                 throw;
             }
         }
+        
         public async Task<double> CalculateUserCompletionRate(Guid userId)
         {
             try

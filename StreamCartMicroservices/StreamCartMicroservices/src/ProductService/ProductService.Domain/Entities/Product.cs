@@ -225,5 +225,14 @@ namespace ProductService.Domain.Entities
             LastModifiedAt = DateTime.UtcNow;
             return true;
         }
+        public void UpdateQuantitySold(int quantityChange)
+        {
+            QuantitySold += quantityChange;
+
+            if (QuantitySold < 0)
+                QuantitySold = 0;
+
+            SetModifier("system");
+        }
     }
 }

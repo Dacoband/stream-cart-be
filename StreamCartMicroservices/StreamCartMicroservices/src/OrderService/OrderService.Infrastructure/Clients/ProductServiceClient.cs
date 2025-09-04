@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -87,7 +87,7 @@ namespace OrderService.Infrastructure.Clients
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Updates product stock quantity
         /// </summary>
@@ -99,22 +99,21 @@ namespace OrderService.Infrastructure.Clients
             try
             {
                 _logger.LogInformation("Updating stock for product ID: {ProductId} by quantity: {Quantity}", productId, quantity);
-                
+
                 var updateStockData = new
                 {
-                    ProductId = productId,
-                    QuantityChange = quantity
+                    QuantityChange = quantity  
                 };
-                
-                var response = await _httpClient.PostAsJsonAsync("/api/products/stock/update", updateStockData);
-                
+
+                var response = await _httpClient.PutAsJsonAsync($"api/products/{productId}/stock", updateStockData);
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to update stock for product ID: {ProductId}. Status code: {StatusCode}", 
+                    _logger.LogWarning("Failed to update stock for product ID: {ProductId}. Status code: {StatusCode}",
                         productId, response.StatusCode);
                     return false;
                 }
-                
+
                 _logger.LogInformation("Successfully updated stock for product ID: {ProductId}", productId);
                 return true;
             }
@@ -124,7 +123,7 @@ namespace OrderService.Infrastructure.Clients
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Updates variant stock quantity
         /// </summary>
@@ -136,28 +135,59 @@ namespace OrderService.Infrastructure.Clients
             try
             {
                 _logger.LogInformation("Updating stock for variant ID: {VariantId} by quantity: {Quantity}", variantId, quantity);
-                
+
                 var updateStockData = new
                 {
-                    VariantId = variantId,
-                    QuantityChange = quantity
+                    QuantityChange = quantity  
                 };
-                
-                var response = await _httpClient.PostAsJsonAsync("https://brightpa.me/api/product-variants/stock/update", updateStockData);
-                
+
+                var response = await _httpClient.PutAsJsonAsync($"api/product-variants/{variantId}/stock", updateStockData);
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to update stock for variant ID: {VariantId}. Status code: {StatusCode}", 
+                    _logger.LogWarning("Failed to update stock for variant ID: {VariantId}. Status code: {StatusCode}",
                         variantId, response.StatusCode);
                     return false;
                 }
-                
+
                 _logger.LogInformation("Successfully updated stock for variant ID: {VariantId}", variantId);
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating stock for variant ID: {VariantId}", variantId);
+                return false;
+            }
+        }
+        public async Task<bool> UpdateProductQuantitySoldAsync(Guid productId, int quantityChange)
+        {
+            try
+            {
+                var request = new
+                {
+                    QuantityChange = quantityChange
+                };
+
+                var response = await _httpClient.PutAsJsonAsync(
+                    $"api/products/{productId}/quantity-sold",
+                    request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("✅ Updated QuantitySold for product {ProductId} by {Quantity}",
+                        productId, quantityChange);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Failed to update QuantitySold for product {ProductId}: {StatusCode}",
+                        productId, response.StatusCode);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error updating QuantitySold for product {ProductId}", productId);
                 return false;
             }
         }

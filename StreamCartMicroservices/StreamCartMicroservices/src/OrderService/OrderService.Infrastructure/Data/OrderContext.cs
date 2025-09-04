@@ -329,8 +329,8 @@ namespace OrderService.Infrastructure.Data
                 entity.HasKey(e => e.Id);
 
                 entity.Property(e => e.ReviewText)
-                    .HasMaxLength(2000)
-                    .IsRequired();
+                      .HasMaxLength(2000);
+
 
                 entity.Property(e => e.Rating)
                     .IsRequired();

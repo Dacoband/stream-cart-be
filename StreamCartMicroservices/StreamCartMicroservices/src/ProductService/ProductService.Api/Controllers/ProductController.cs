@@ -6,11 +6,13 @@ using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Queries.ProductQueries;
 using ProductService.Domain.Enums;
+using ProductService.Infrastructure.Interfaces;
 using Shared.Common.Domain.Bases;
 using Shared.Common.Models;
 using Shared.Common.Services.User;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -25,14 +27,16 @@ namespace ProductService.Api.Controllers
         private readonly ICurrentUserService _currentUserService;
         private readonly IMediator _mediator;
         private readonly ILogger<ProductController> _logger;
+        private readonly IProductRepository _productRepository;
 
-        public ProductController(IProductService productService, IShopServiceClient shopServiceClient,ICurrentUserService currentUserService, IMediator mediator, ILogger<ProductController> logger)
+        public ProductController(IProductService productService, IShopServiceClient shopServiceClient, ICurrentUserService currentUserService, IMediator mediator, ILogger<ProductController> logger, IProductRepository productRepository)
         {
             _productService = productService;
             _shopServiceClient = shopServiceClient;
             _currentUserService = currentUserService;
             _mediator = mediator;
             _logger = logger;
+            _productRepository = productRepository;
         }
 
         [HttpPost]
@@ -685,6 +689,44 @@ namespace ProductService.Api.Controllers
                 _logger.LogError(ex, "Lỗi khi lấy gợi ý tìm kiếm cho shop {ShopId}: {Query}", shopId, q);
                 return Ok(ApiResponse<List<string>>.SuccessResult(new List<string>()));
             }
+        }
+        [HttpPut("{id}/quantity-sold")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> UpdateProductQuantitySold(Guid id, [FromBody] UpdateQuantitySoldRequest request)
+        {
+            try
+            {
+                var product = await _productRepository.GetByIdAsync(id.ToString());
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy sản phẩm"));
+                }
+
+                // Cập nhật QuantitySold
+                product.UpdateQuantitySold(request.QuantityChange);
+
+                if (!string.IsNullOrEmpty(request.UpdatedBy))
+                {
+                    product.SetUpdatedBy(request.UpdatedBy);
+                }
+
+                await _productRepository.ReplaceAsync(product.Id.ToString(), product);
+
+                return Ok(ApiResponse<bool>.SuccessResult(true, "Cập nhật số lượng đã bán thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating quantity sold for product {ProductId}", id);
+                return BadRequest(ApiResponse<object>.ErrorResult("Lỗi khi cập nhật số lượng đã bán"));
+            }
+        }
+
+        public class UpdateQuantitySoldRequest
+        {
+            [Required]
+            public int QuantityChange { get; set; }
+            public string? UpdatedBy { get; set; }
         }
     }
 }

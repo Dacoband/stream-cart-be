@@ -77,12 +77,14 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                 {
                     variant = await _productServiceClient.GetProductVariantAsync(request.ProductId, request.VariantId);
                 }
+                decimal originalPrice = variant?.Price ?? product?.BasePrice ?? 0; 
+                decimal livestreamPrice = request.Price;
                 var livestreamProduct = new LivestreamService.Domain.Entities.LivestreamProduct(
                     request.LivestreamId,
                     request.ProductId,
                     request.VariantId ?? string.Empty,
-                    variant?.Price ?? product?.BasePrice ?? 0,
-                    request.Price,
+                    livestreamPrice,
+                    originalPrice,
                     request.Stock,
                     request.IsPin,
                     request.SellerId.ToString()

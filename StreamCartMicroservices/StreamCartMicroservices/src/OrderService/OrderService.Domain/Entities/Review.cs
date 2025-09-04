@@ -11,8 +11,8 @@ namespace OrderService.Domain.Entities
         public Guid? ProductID { get; private set; }
         public Guid? LivestreamId { get; private set; }
         public Guid AccountID { get; private set; }
-        public int Rating { get; private set; } // 1-5 stars
-        public string ReviewText { get; private set; } = string.Empty;
+        public int Rating { get; private set; } 
+        public string? ReviewText { get; private set; } = string.Empty;
         public bool IsVerifiedPurchase { get; private set; }
         public ReviewType Type { get; private set; }
         public List<string> ImageUrls { get; private set; } = new List<string>();

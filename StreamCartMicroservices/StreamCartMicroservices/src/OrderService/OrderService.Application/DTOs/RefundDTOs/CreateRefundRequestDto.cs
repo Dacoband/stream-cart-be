@@ -45,11 +45,5 @@ namespace OrderService.Application.DTOs.RefundDTOs
         public string Reason { get; set; } = string.Empty;
         [MaxLength(1000)]
         public string? ImageUrl { get; set; }
-        [Required]
-        [StringLength(100, ErrorMessage = "Bank name must not exceed 100 characters")]
-        public string BankName { get; set; } = string.Empty;
-        [Required]
-        [StringLength(50, ErrorMessage = "Bank number must not exceed 50 characters")]
-        public string BankNumber { get; set; } = string.Empty;
     }
 }

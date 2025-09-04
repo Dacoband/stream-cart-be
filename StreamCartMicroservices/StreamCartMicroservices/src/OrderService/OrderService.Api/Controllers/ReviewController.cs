@@ -52,7 +52,7 @@ namespace OrderService.Api.Controllers
                     LivestreamId = request.LivestreamId,
                     AccountID = userId,
                     Rating = (int)request.Rating,
-                    ReviewText = request.ReviewText,
+                    ReviewText = request.ReviewText ?? string.Empty,
                     Type = reviewType,
                     ImageUrls = request.ImageUrls,
                     IsVerifiedPurchase = await CheckVerifiedPurchase(request, userId)
