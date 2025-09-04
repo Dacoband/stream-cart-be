@@ -277,7 +277,7 @@ namespace ShopService.Application.Services
                         Id = x.Id.ToString(),
                         ShopID = x.ShopID,
                         StartDate = x.StartDate,
-                        EndDate = (DateTime)x.EndDate,
+                        EndDate = x.EndDate,
                         RemainingLivestream = x.RemainingLivestream,
                         Status = x.Status,
                         CreatedAt = x.CreatedAt,

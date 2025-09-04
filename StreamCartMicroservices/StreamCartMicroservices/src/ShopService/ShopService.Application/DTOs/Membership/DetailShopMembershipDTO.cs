@@ -11,7 +11,7 @@ namespace ShopService.Application.DTOs.Membership
         public string Id { get; set; }
         public Guid ShopID { get; set; }
         public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public decimal RemainingLivestream { get; set; }
         public string Status {  get; set; }
         public string? CreatedBy { get; set; }
