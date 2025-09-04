@@ -1721,7 +1721,13 @@ namespace PaymentService.Api.Controllers
             });
         }
         /// <summary>
-        /// ✅ Xử lý callback cho refund - Update RefundRequest status (Money OUT)
+        /// Xử lý callback cho refund - Update RefundRequest status (Money OUT)
+        /// </summary>
+        /// <summary>
+        /// Xử lý callback cho refund - Update RefundRequest status (Money OUT)
+        /// </summary>
+        /// <summary>
+        /// Xử lý callback cho refund - Update RefundRequest status (Money OUT)
         /// </summary>
         private async Task<IActionResult> ProcessRefundCallbackInternal(SePayCallbackRequest request)
         {
@@ -1752,6 +1758,7 @@ namespace PaymentService.Api.Controllers
 
                 if (request.Status == "success")
                 {
+                    // 1. Cập nhật trạng thái refund request
                     var updateResult = await _orderServiceClient.UpdateRefundRequestStatusAsync(refundRequestId, "Refunded");
                     if (updateResult)
                     {
@@ -1761,6 +1768,8 @@ namespace PaymentService.Api.Controllers
                     {
                         _logger.LogWarning("⚠️ Failed to update refund request {RefundRequestId} status", refundRequestId);
                     }
+
+                    // 2. Cập nhật transaction ID
                     if (!string.IsNullOrEmpty(request.TransactionId))
                     {
                         var transactionUpdateResult = await _orderServiceClient.UpdateRefundTransactionIdAsync(refundRequestId, request.TransactionId);
@@ -1774,6 +1783,77 @@ namespace PaymentService.Api.Controllers
                             _logger.LogWarning("⚠️ Failed to update refund transaction ID for {RefundRequestId}", refundRequestId);
                         }
                     }
+
+                    // 3. ✅ TẠO WALLET TRANSACTION CHO PHÍ SHIP VÀ TRỪ TIỀN VÍ SHOP
+                    try
+                    {
+                        // Lấy thông tin refund request để biết order ID và phí ship THỰC TẾ
+                        var refundRequest = await _orderServiceClient.GetRefundRequestByIdAsync(refundRequestId);
+                        if (refundRequest != null && refundRequest.ShippingFee > 0)
+                        {
+                            // ✅ Lấy thông tin order để tìm shopId
+                            var order = await _orderServiceClient.GetOrderByIdAsync(refundRequest.OrderId);
+                            if (order?.ShopId == null)
+                            {
+                                _logger.LogWarning("⚠️ Could not get order or shopId for refund {RefundRequestId}, orderId {OrderId}",
+                                    refundRequestId, refundRequest.OrderId);
+                                // Không return error, vẫn tiếp tục xử lý refund
+                            }
+                            else
+                            {
+                                // ✅ SỬ DỤNG SHIPPING FEE TỪ REFUND REQUEST VÀ SHOP ID TỪ ORDER
+                                decimal shippingFee = refundRequest.ShippingFee;
+                                Guid shopId = order.ShopId;
+
+                                // Tạo wallet transaction cho phí ship (trừ tiền shop)
+                                var shippingFeeTransactionRequest = new CreateWalletTransactionRequest
+                                {
+                                    Type = 3,
+                                    Amount = -shippingFee,
+                                    ShopId = shopId,
+                                    Status = 0, 
+                                    TransactionId = $"{request.TransactionId}_SHIP",
+                                    Description = $"Phí ship hoàn tiền #{refundRequestId.ToString()[..8]} số tiền {shippingFee:N0}đ",
+                                    CreatedBy = "System"
+                                };
+
+                                var walletResult = await _walletServiceClient.CreateWalletTransactionAsync(shippingFeeTransactionRequest);
+                                if (walletResult)
+                                {
+                                    _logger.LogInformation("✅ Created shipping fee wallet transaction for refund {RefundRequestId}, shopId {ShopId}, amount: {ShippingFee}",
+                                        refundRequestId, shopId, shippingFee);
+
+                                    var balanceUpdateResult = await _walletServiceClient.UpdateWalletBalanceAsync(shopId, -shippingFee, "System");
+                                    if (balanceUpdateResult)
+                                    {
+                                        _logger.LogInformation("✅ Updated shop wallet balance: -{ShippingFee} for shop {ShopId}", shippingFee, shopId);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("⚠️ Failed to update shop wallet balance for refund {RefundRequestId}", refundRequestId);
+                                    }
+                                }
+
+                                else
+                                {
+                                    _logger.LogWarning("⚠️ Failed to create shipping fee wallet transaction for refund {RefundRequestId}", refundRequestId);
+                                }
+                            }
+                        }
+                        else if (refundRequest != null && refundRequest.ShippingFee == 0)
+                        {
+                            _logger.LogInformation("ℹ️ No shipping fee to charge for refund {RefundRequestId} (ShippingFee = 0)", refundRequestId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ Could not get refund request details for {RefundRequestId}", refundRequestId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "💥 Error creating shipping fee wallet transaction for refund {RefundRequestId}", refundRequestId);
+                        // Không return error vì refund đã thành công, chỉ log lỗi
+                    }
                 }
                 else
                 {
@@ -1784,7 +1864,7 @@ namespace PaymentService.Api.Controllers
                 {
                     success = true,
                     type = "REFUND",
-                    transferType = "OUT", 
+                    transferType = "OUT",
                     message = "Refund callback processed successfully",
                     refundRequestId = refundRequestId,
                     status = request.Status == "success" ? "REFUNDED" : "FAILED",

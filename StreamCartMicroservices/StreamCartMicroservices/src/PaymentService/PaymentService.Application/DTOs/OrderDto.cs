@@ -13,6 +13,8 @@ namespace PaymentService.Application.DTOs
         public string OrderNumber { get; set; } = string.Empty;
         public Guid UserId { get; set; }
         public decimal TotalAmount { get; set; }
+        public Guid ShopId { get; set; } // ✅ THÊM ShopId
+
         public OrderStatus Status { get; set; }
         public PaymentStatus PaymentStatus { get; set; } // Removed the invalid semicolon
     }
