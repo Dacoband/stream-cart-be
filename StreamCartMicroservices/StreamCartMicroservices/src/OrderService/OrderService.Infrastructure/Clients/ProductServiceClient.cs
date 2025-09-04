@@ -138,10 +138,10 @@ namespace OrderService.Infrastructure.Clients
 
                 var updateStockData = new
                 {
-                    QuantityChange = quantity  
+                    Quantity = quantity
                 };
 
-                var response = await _httpClient.PutAsJsonAsync($"api/product-variants/{variantId}/stock", updateStockData);
+                var response = await _httpClient.PatchAsJsonAsync($"https://brightpa.me/api/product-variants/{variantId}/stock", updateStockData);
 
                 if (!response.IsSuccessStatusCode)
                 {
