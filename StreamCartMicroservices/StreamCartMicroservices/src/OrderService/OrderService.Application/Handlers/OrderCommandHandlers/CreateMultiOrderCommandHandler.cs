@@ -127,9 +127,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             var variantStockSuccess = await _productServiceClient.UpdateVariantStockAsync(
                                 orderItem.VariantId.Value,
                                 -orderItem.Quantity);
-                            var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
-                                orderItem.ProductId,
-                                orderItem.Quantity);
+                            //var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                            //    orderItem.ProductId,
+                            //    orderItem.Quantity);
                             if (!productStockSuccess || !variantStockSuccess)
                             {
                                 _logger.LogError("Failed to update stock for product {ProductId} variant {VariantId}",
@@ -146,9 +146,9 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                             var stockUpdateSuccess = await _productServiceClient.UpdateProductStockAsync(
                                 orderItem.ProductId,
                                 -orderItem.Quantity); 
-                            var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
-                                orderItem.ProductId,
-                                orderItem.Quantity);
+                            //var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                            //    orderItem.ProductId,
+                            //    orderItem.Quantity);
                             if (!stockUpdateSuccess)
                             {
                                 _logger.LogError("Failed to update stock for product {ProductId}", orderItem.ProductId);
