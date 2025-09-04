@@ -228,8 +228,10 @@ namespace ShopService.Domain.Entities
                 ? orderAmount * (Value / 100)
                 : Value;
 
-            if (MaxValue.HasValue && discount > MaxValue.Value)
+            if (MaxValue.HasValue && MaxValue.Value > 0 && discount > MaxValue.Value)
+            {
                 discount = MaxValue.Value;
+            }
 
             return Math.Min(discount, orderAmount);
         }
