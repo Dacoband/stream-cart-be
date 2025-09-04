@@ -151,6 +151,7 @@ namespace LivestreamService.Application.Handlers.LivestreamProduct
                             IsPin = product.IsPin,
                             Price = product.Price,
                             Stock = product.Stock,
+                            OriginalPrice = product.OriginalPrice,
                             ProductStock = 0,
                             CreatedAt = product.CreatedAt,
                             LastModifiedAt = product.LastModifiedAt,

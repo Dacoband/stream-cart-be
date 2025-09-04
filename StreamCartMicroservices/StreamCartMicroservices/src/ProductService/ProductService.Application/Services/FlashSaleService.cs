@@ -216,7 +216,7 @@ namespace ProductService.Application.Services
                 var product = await _productRepository.GetByIdAsync(productId.ToString());
 
                 int maxStock;
-                decimal maxPrice;
+                decimal originalPrice;
                 string productName = product.ProductName;
                 string variantName = "";
 
@@ -229,13 +229,13 @@ namespace ProductService.Application.Services
                         return;
                     }
                     maxStock = variant.Stock;
-                    maxPrice = variant.Price;
+                    originalPrice = variant.Price;
                     variantName = await GetVariantNameAsync(variantId.Value) ?? variant.SKU ?? $"Variant {variantId}";
                 }
                 else
                 {
                     maxStock = product.StockQuantity;
-                    maxPrice = product.BasePrice;
+                    originalPrice = product.BasePrice;
                     variantName = "";
                 }
 
@@ -247,9 +247,9 @@ namespace ProductService.Application.Services
                     return;
                 }
 
-                if (flashSalePrice >= maxPrice)
+                if (flashSalePrice >= originalPrice)
                 {
-                    errorMessages.Add($"Giá FlashSale ({flashSalePrice:N0}đ) phải thấp hơn giá gốc ({maxPrice:N0}đ) của {productName}");
+                    errorMessages.Add($"Giá FlashSale ({flashSalePrice:N0}đ) phải thấp hơn giá gốc ({originalPrice:N0}đ) của {productName}");
                     return;
                 }
 
@@ -264,7 +264,18 @@ namespace ProductService.Application.Services
                 bool reserveSuccess = false;
                 if (variantId.HasValue)
                 {
-                    reserveSuccess = true; 
+                    var variant = await _productVariantRepository.GetByIdAsync(variantId.ToString());
+                    if (variant != null && variant.CanReserveStock(finalQuantityAvailable))
+                    {
+                        variant.ReserveStockForFlashSale(finalQuantityAvailable, userId);
+                        await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                        reserveSuccess = true;
+                    }
+                    else
+                    {
+                        errorMessages.Add($"Variant {variantId} không đủ stock để reserve cho Flash Sale (cần: {finalQuantityAvailable}, có: {variant?.Stock ?? 0})");
+                        return;
+                    }
                 }
                 else
                 {
@@ -321,7 +332,9 @@ namespace ProductService.Application.Services
                     IsActive = true,
                     ProductName = productName,
                     VariantName = variantName,
-                    ProductImageUrl = productImageUrl
+                    ProductImageUrl = productImageUrl,
+                    Price = originalPrice,
+                    Stock = maxStock
                 };
                 results.Add(result);
             }
@@ -726,11 +739,22 @@ namespace ProductService.Application.Services
 
             try
             {
-                if (!existingFlashSale.VariantId.HasValue)
+                var remainingQuantity = existingFlashSale.QuantityAvailable - existingFlashSale.QuantitySold;
+                if (remainingQuantity > 0)
                 {
-                    var remainingQuantity = existingFlashSale.QuantityAvailable - existingFlashSale.QuantitySold;
-                    if (remainingQuantity > 0)
+                    if (existingFlashSale.VariantId.HasValue)
                     {
+                        // ✅ NEW: Release reserved stock for Variant
+                        var variant = await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString());
+                        if (variant != null)
+                        {
+                            variant.ReleaseReservedStock(remainingQuantity, userId);
+                            await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                        }
+                    }
+                    else
+                    {
+                        // ✅ EXISTING: Release reserved stock for Product
                         existingProduct.RemoveReserveStock(remainingQuantity);
                         await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
                     }
@@ -1063,7 +1087,9 @@ namespace ProductService.Application.Services
                 response.Message = "Chỉ có thể áp dụng 1 FlashSale cho cùng 1 thời điểm";
                 return response;
             }
-            if (request.QuantityAvailable.HasValue && !existingFlashSale.VariantId.HasValue)
+
+            // ✅ FIX: Handle quantity changes for BOTH Product AND Variant
+            if (request.QuantityAvailable.HasValue)
             {
                 var oldQuantity = existingFlashSale.QuantityAvailable;
                 var newQuantity = request.QuantityAvailable.Value;
@@ -1071,50 +1097,98 @@ namespace ProductService.Application.Services
 
                 if (quantityDifference != 0)
                 {
-                    var currentAvailableStock = existingProduct.StockQuantity + existingProduct.ReserveStock;
-
-                    if (newQuantity > currentAvailableStock)
+                    if (existingFlashSale.VariantId.HasValue)
                     {
-                        response.Success = false;
-                        response.Message = $"Không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
-                        return response;
-                    }
-
-                    if (quantityDifference > 0)
-                    {
-                        // Tăng số lượng: Reserve thêm stock
-                        bool reserveSuccess = existingProduct.AddReserveStock(quantityDifference);
-                        if (!reserveSuccess)
+                        // ✅ NEW: Handle Variant quantity changes
+                        var variant = await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString());
+                        if (variant == null)
                         {
                             response.Success = false;
-                            response.Message = $"Không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
+                            response.Message = "Không tìm thấy variant";
                             return response;
                         }
-                        await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+
+                        var currentAvailableStock = variant.GetTotalStock(); // Stock + ReserveStock
+
+                        if (newQuantity > currentAvailableStock)
+                        {
+                            response.Success = false;
+                            response.Message = $"Variant không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
+                            return response;
+                        }
+
+                        if (quantityDifference > 0)
+                        {
+                            // Tăng số lượng: Reserve thêm stock từ variant
+                            if (!variant.CanReserveStock(quantityDifference))
+                            {
+                                response.Success = false;
+                                response.Message = $"Variant không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
+                                return response;
+                            }
+                            variant.ReserveStockForFlashSale(quantityDifference, userId);
+                            await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                        }
+                        else if (quantityDifference < 0)
+                        {
+                            // Giảm số lượng: Release reserved stock về variant
+                            var returnAmount = Math.Abs(quantityDifference);
+                            variant.ReleaseReservedStock(returnAmount, userId);
+                            await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                        }
                     }
-                    else if (quantityDifference < 0)
+                    else
                     {
-                        var returnAmount = Math.Abs(quantityDifference);
-                        existingProduct.RemoveReserveStock(returnAmount);
-                        await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                        // ✅ EXISTING: Handle Product quantity changes
+                        var currentAvailableStock = existingProduct.StockQuantity + existingProduct.ReserveStock;
+
+                        if (newQuantity > currentAvailableStock)
+                        {
+                            response.Success = false;
+                            response.Message = $"Sản phẩm không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
+                            return response;
+                        }
+
+                        if (quantityDifference > 0)
+                        {
+                            // Tăng số lượng: Reserve thêm stock
+                            bool reserveSuccess = existingProduct.AddReserveStock(quantityDifference);
+                            if (!reserveSuccess)
+                            {
+                                response.Success = false;
+                                response.Message = $"Không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
+                                return response;
+                            }
+                            await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                        }
+                        else if (quantityDifference < 0)
+                        {
+                            var returnAmount = Math.Abs(quantityDifference);
+                            existingProduct.RemoveReserveStock(returnAmount);
+                            await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                        }
                     }
                 }
             }
-                // Validate giá và số lượng
-                var maxStock = Guid.Empty.Equals(existingFlashSale.VariantId)
-                 ? existingProduct.StockQuantity + existingProduct.ReserveStock 
-                : (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.Stock ?? 0;
 
-            if (request.QuantityAvailable.HasValue && request.QuantityAvailable.Value > maxStock)
+            // ✅ Validate giá và số lượng cho cả Product và Variant
+            if (request.QuantityAvailable.HasValue)
             {
-                response.Success = false;
-                response.Message = "Không đủ số lượng sản phẩm tồn kho để áp dụng FlashSale";
-                return response;
+                var maxStock = existingFlashSale.VariantId.HasValue && existingFlashSale.VariantId != Guid.Empty
+                    ? (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.GetTotalStock() ?? 0
+                    : existingProduct.StockQuantity + existingProduct.ReserveStock;
+
+                if (request.QuantityAvailable.Value > maxStock)
+                {
+                    response.Success = false;
+                    response.Message = "Không đủ số lượng sản phẩm tồn kho để áp dụng FlashSale";
+                    return response;
+                }
             }
 
-            var maxPrice = Guid.Empty.Equals(existingFlashSale.VariantId)
-                ? existingProduct.BasePrice
-                : (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.Price ?? 0;
+            var maxPrice = existingFlashSale.VariantId.HasValue && existingFlashSale.VariantId != Guid.Empty
+                ? (await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString()))?.Price ?? 0
+                : existingProduct.BasePrice;
 
             if (request.FLashSalePrice.HasValue && request.FLashSalePrice.Value >= maxPrice)
             {
@@ -1620,47 +1694,93 @@ namespace ProductService.Application.Services
                     return response;
                 }
 
-                if (request.QuantityAvailable.HasValue && !existingFlashSale.VariantId.HasValue)
+                // ✅ FIX: Handle quantity changes for both Product and Variant
+                if (request.QuantityAvailable.HasValue)
                 {
                     var oldQuantity = existingFlashSale.QuantityAvailable;
                     var newQuantity = request.QuantityAvailable.Value;
                     var quantityDifference = newQuantity - oldQuantity;
-                    var currentAvailableStock = existingProduct.StockQuantity + existingProduct.ReserveStock;
 
-                    if (newQuantity > currentAvailableStock)
+                    if (quantityDifference != 0)
                     {
-                        response.Success = false;
-                        response.Message = $"Không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
-                        return response;
-                    }
-
-                    if (quantityDifference > 0)
-                    {
-
-                        bool reserveSuccess = existingProduct.AddReserveStock(quantityDifference);
-                        if (!reserveSuccess)
+                        if (existingFlashSale.VariantId.HasValue)
                         {
-                            response.Success = false;
-                            response.Message = $"Không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
-                            return response;
+                            // ✅ NEW: Handle Variant quantity changes
+                            var variant = await _productVariantRepository.GetByIdAsync(existingFlashSale.VariantId.ToString());
+                            if (variant == null)
+                            {
+                                response.Success = false;
+                                response.Message = "Không tìm thấy variant";
+                                return response;
+                            }
+
+                            var currentAvailableStock = variant.GetTotalStock(); 
+
+                            if (newQuantity > currentAvailableStock)
+                            {
+                                response.Success = false;
+                                response.Message = $"Variant không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
+                                return response;
+                            }
+
+                            if (quantityDifference > 0)
+                            {
+                                // Tăng số lượng: Reserve thêm stock từ variant
+                                if (!variant.CanReserveStock(quantityDifference))
+                                {
+                                    response.Success = false;
+                                    response.Message = $"Variant không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
+                                    return response;
+                                }
+                                variant.ReserveStockForFlashSale(quantityDifference, userId);
+                                await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+
+                              
+                            }
+                            else if (quantityDifference < 0)
+                            {
+                                // Giảm số lượng: Release reserved stock về variant
+                                var returnAmount = Math.Abs(quantityDifference);
+                                variant.ReleaseReservedStock(returnAmount, userId);
+                                await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                            }
                         }
+                        else
+                        {
+                            // ✅ EXISTING: Handle Product quantity changes
+                            var currentAvailableStock = existingProduct.StockQuantity + existingProduct.ReserveStock;
 
-                        await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
-                       
-                    }
-                    else if (quantityDifference < 0)
-                    {
-                        var returnAmount = Math.Abs(quantityDifference);
-                  
+                            if (newQuantity > currentAvailableStock)
+                            {
+                                response.Success = false;
+                                response.Message = $"Sản phẩm không đủ tồn kho để áp dụng FlashSale (yêu cầu: {newQuantity}, khả dụng: {currentAvailableStock})";
+                                return response;
+                            }
 
-                        existingProduct.RemoveReserveStock(returnAmount);
-                        await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
-                       
+                            if (quantityDifference > 0)
+                            {
+                                // Tăng số lượng: Reserve thêm stock
+                                bool reserveSuccess = existingProduct.AddReserveStock(quantityDifference);
+                                if (!reserveSuccess)
+                                {
+                                    response.Success = false;
+                                    response.Message = $"Không đủ stock để tăng số lượng FlashSale lên {newQuantity}";
+                                    return response;
+                                }
+                                await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                            }
+                            else if (quantityDifference < 0)
+                            {
+                                // Giảm số lượng: Release reserved stock
+                                var returnAmount = Math.Abs(quantityDifference);
+                                existingProduct.RemoveReserveStock(returnAmount);
+                                await _productRepository.ReplaceAsync(existingProduct.Id.ToString(), existingProduct);
+                            }
+                        }
                     }
-                    // quantityDifference == 0: Không thay đổi, không cần làm gì
                 }
 
-                // Validate giá nếu có thay đổi
+                // ✅ Validate giá nếu có thay đổi
                 if (request.FLashSalePrice.HasValue)
                 {
                     var maxPrice = existingFlashSale.VariantId.HasValue && existingFlashSale.VariantId != Guid.Empty
@@ -1673,12 +1793,19 @@ namespace ProductService.Application.Services
                         response.Message = "Giá FlashSale phải thấp hơn giá sản phẩm";
                         return response;
                     }
+
+                    existingFlashSale.FlashSalePrice = request.FLashSalePrice.Value;
+                }
+
+                if (request.QuantityAvailable.HasValue)
+                {
+                    existingFlashSale.QuantityAvailable = request.QuantityAvailable.Value;
                 }
 
                 existingFlashSale.SetModifier(userId);
                 await _flashSaleRepository.ReplaceAsync(existingFlashSale.Id.ToString(), existingFlashSale);
 
-                // ✅ TRẢ VỀ KẾT QUẢ VỚI THÔNG TIN ĐẦY ĐỦ
+                // ✅ Trả về kết quả với thông tin đầy đủ
                 var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
                 string? productImageUrl = null;
                 string productName = existingProduct.ProductName;

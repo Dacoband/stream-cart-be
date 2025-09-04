@@ -211,8 +211,8 @@ namespace LivestreamService.Application.Handlers
                         livestreamId,
                         productItem.ProductId,
                         productItem.VariantId ?? string.Empty,
-                        originalPrice,      // ✅ Giá gốc
-                        livestreamPrice,    // ✅ Giá livestream
+                        livestreamPrice,
+                         originalPrice, 
                         finalStock,
                         productItem.IsPin,
                         sellerId.ToString()

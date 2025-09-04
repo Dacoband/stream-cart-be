@@ -42,6 +42,12 @@ namespace OrderService.Application.Interfaces.IServices
             string? reason,
             string modifiedBy);
         Task<RefundRequestDto> UpdateRefundTransactionIdAsync(UpdateRefundTransactionDto updateTransactionDto);
-
+        Task<PagedResult<RefundRequestDto>> GetRefundRequestsByUserIdAsync(
+           Guid userId,
+           int pageNumber = 1,
+           int pageSize = 10,
+           RefundStatus? status = null,
+           DateTime? fromDate = null,
+           DateTime? toDate = null);
     }
 }
