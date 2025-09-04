@@ -22,17 +22,13 @@ namespace ShopService.Application.DTOs.Membership
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
 
-        [Range(1, int.MaxValue, ErrorMessage = "Thời hạn ít nhất là 1 tháng")]
         public int? Duration { get; set; } =0;
 
-        [Range(0, int.MaxValue, ErrorMessage = "Số lượng sản phẩm tối đa phải lớn hơn 0")]
         public int? MaxModerator { get; set; } =0;
 
         [Range(0, int.MaxValue, ErrorMessage = "Thời gian Livestream tối đa phải lớn hơn 0(phút)")]
         public int MaxLivestream { get; set; }
 
-        [Range(0, 100, ErrorMessage = "Phần trăm hoa hồng phải từ 0-100%")]
-        [Column(TypeName = "decimal(5,2)")]
         public decimal? Commission { get; set; } = 0;
     }
 }
