@@ -223,5 +223,30 @@ namespace OrderService.Infrastructure.Services
                 }).ToList()
             };
         }
+        public async Task<PagedResult<RefundRequestDto>> GetRefundRequestsByUserIdAsync(
+    Guid userId, int pageNumber = 1, int pageSize = 10,
+    RefundStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            try
+            {
+                _logger.LogInformation("Getting refund requests for user {UserId}", userId);
+
+                var refunds = await _refundRequestRepository.GetPagedRefundRequestsAsync(
+                    pageNumber, pageSize, status, null, userId, fromDate, toDate);
+
+                var refundDtos = refunds.Items.Select(ConvertToDto).ToList();
+
+                return new PagedResult<RefundRequestDto>(
+                    refundDtos,
+                    refunds.TotalCount,
+                    refunds.CurrentPage,
+                    refunds.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting refund requests for user {UserId}", userId);
+                throw;
+            }
+        }
     }
 }
