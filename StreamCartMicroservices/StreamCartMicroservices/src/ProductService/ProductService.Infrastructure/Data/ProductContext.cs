@@ -147,6 +147,9 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.Price)
                     .HasColumnType("decimal(18, 2)")
                     .IsRequired();
+                entity.Property(e => e.ReserveStock)
+                    .HasColumnName("reserve_stock")
+                    .IsRequired();
 
                 entity.Property(e => e.FlashSalePrice)
                     .HasColumnType("decimal(18, 2)");
