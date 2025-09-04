@@ -1845,6 +1845,9 @@ namespace PaymentService.Api.Controllers
                 return Guid.Empty;
             }
         }
+        /// <summary>
+        /// ✅ Extract RefundRequestId từ content với logic sửa lỗi cắt chuỗi
+        /// </summary>
         private Guid ExtractRefundRequestIdFromContent(string? content)
         {
             try
@@ -1854,7 +1857,7 @@ namespace PaymentService.Api.Controllers
 
                 _logger.LogInformation("🔍 Extracting RefundRequestId from Content: {Content}", content);
 
-                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (với dấu gạch dưới)
                 var refundPatternWithUnderscore = @"REFUND_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})";
                 var matchWithUnderscore = Regex.Match(content, refundPatternWithUnderscore, RegexOptions.IgnoreCase);
 
@@ -1865,24 +1868,25 @@ namespace PaymentService.Api.Controllers
                     return Guid.Parse(guidString);
                 }
 
-                // ✅ Pattern 2: REFUND + 32 hex characters (như trong content hiện tại)
-                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32,})";
+                // ✅ Pattern 2: REFUND + 32 hex characters (trường hợp như "REFUND22bc1c98c2d84425af1796c653d45bc3")
+                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32})";
                 var matchDirect = Regex.Match(content, refundPatternDirect, RegexOptions.IgnoreCase);
 
                 if (matchDirect.Success)
                 {
                     var guidString = matchDirect.Groups[1].Value;
-                    _logger.LogInformation("✅ Found REFUND direct pattern: {GuidString}", guidString);
+                    _logger.LogInformation("✅ Found REFUND direct pattern (32 chars): {GuidString}", guidString);
 
-                    // ✅ Take exactly 32 characters if longer
-                    if (guidString.Length > 32)
+                    // ✅ FIX: Parse exactly 32 characters to GUID format
+                    if (guidString.Length == 32)
                     {
-                        guidString = guidString.Substring(0, 32);
-                        _logger.LogInformation("✅ Trimmed to 32 chars: {GuidString}", guidString);
+                        var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                        _logger.LogInformation("✅ Converted to GUID format: {FormattedGuid}", formattedGuid);
+                        return Guid.Parse(formattedGuid);
                     }
-
-                    return ParseGuidFromString(guidString);
                 }
+
+                // ✅ Pattern 3: Tìm GUID format có sẵn trong content
                 var guidPattern = @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
                 var guidMatch = Regex.Match(content, guidPattern, RegexOptions.IgnoreCase);
 
@@ -1892,7 +1896,22 @@ namespace PaymentService.Api.Controllers
                     return Guid.Parse(guidMatch.Value);
                 }
 
-                _logger.LogWarning("⚠️ No RefundRequestId pattern found in content");
+                // ✅ Pattern 4: Fallback - tìm bất kỳ chuỗi 32 ký tự hex nào
+                var hex32Pattern = @"[0-9a-fA-F]{32}";
+                var hex32Match = Regex.Match(content, hex32Pattern, RegexOptions.IgnoreCase);
+
+                if (hex32Match.Success)
+                {
+                    var guidString = hex32Match.Value;
+                    _logger.LogInformation("✅ Found 32-char hex pattern: {GuidString}", guidString);
+
+                    // Format to GUID
+                    var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                    _logger.LogInformation("✅ Converted fallback to GUID format: {FormattedGuid}", formattedGuid);
+                    return Guid.Parse(formattedGuid);
+                }
+
+                _logger.LogWarning("⚠️ No RefundRequestId pattern found in content: {Content}", content);
                 return Guid.Empty;
             }
             catch (Exception ex)

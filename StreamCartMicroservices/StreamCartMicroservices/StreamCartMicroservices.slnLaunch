@@ -3,19 +3,11 @@
     "Name": "New Profile",
     "Projects": [
       {
-        "Path": "src\\AccountService\\AccountService.Api\\AccountService.Api.csproj",
-        "Action": "Start"
-      },
-      {
-        "Path": "src\\LivestreamService\\LivestreamService.Api\\LivestreamService.Api.csproj",
-        "Action": "Start"
-      },
-      {
         "Path": "src\\ProductService\\ProductService.Api\\ProductService.Api.csproj",
         "Action": "Start"
       },
       {
-        "Path": "src\\ShopService\\ShopService.Api\\ShopService.Api.csproj",
+        "Path": "src\\OrderService\\OrderService.Api\\OrderService.Api.csproj",
         "Action": "Start"
       }
     ]

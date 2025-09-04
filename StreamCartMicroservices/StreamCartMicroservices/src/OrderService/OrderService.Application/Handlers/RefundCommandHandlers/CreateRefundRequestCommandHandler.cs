@@ -78,7 +78,7 @@ namespace OrderService.Application.Handlers.RefundCommandHandlers
                 {
                     throw new ApplicationException($"Order items already have refund requests: {string.Join(", ", alreadyRefundedItems)}");
                 }
-                var refundRequest = new RefundRequest(request.OrderId, userId, request.BankName, request.BankNumber, order.ShippingFee);
+                var refundRequest = new RefundRequest(request.OrderId, userId, request.BankName, request.BankNumber, 0);
 
                 foreach (var refundItem in request.RefundItems)
                 {
