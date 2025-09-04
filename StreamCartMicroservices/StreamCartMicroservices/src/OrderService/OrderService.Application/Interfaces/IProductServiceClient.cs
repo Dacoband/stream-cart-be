@@ -35,5 +35,6 @@ namespace OrderService.Application.Interfaces.IServices
         /// <param name="quantity">Quantity change (negative for decrease)</param>
         /// <returns>True if successful</returns>
         Task<bool> UpdateVariantStockAsync(Guid variantId, int quantity);
+        Task<bool> UpdateProductQuantitySoldAsync(Guid productId, int quantityChange);
     }
 }

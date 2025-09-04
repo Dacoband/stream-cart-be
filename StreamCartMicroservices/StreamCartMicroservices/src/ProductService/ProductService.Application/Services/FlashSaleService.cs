@@ -216,7 +216,7 @@ namespace ProductService.Application.Services
                 var product = await _productRepository.GetByIdAsync(productId.ToString());
 
                 int maxStock;
-                decimal maxPrice;
+                decimal originalPrice;
                 string productName = product.ProductName;
                 string variantName = "";
 
@@ -229,13 +229,13 @@ namespace ProductService.Application.Services
                         return;
                     }
                     maxStock = variant.Stock;
-                    maxPrice = variant.Price;
+                    originalPrice = variant.Price;
                     variantName = await GetVariantNameAsync(variantId.Value) ?? variant.SKU ?? $"Variant {variantId}";
                 }
                 else
                 {
                     maxStock = product.StockQuantity;
-                    maxPrice = product.BasePrice;
+                    originalPrice = product.BasePrice;
                     variantName = "";
                 }
 
@@ -247,9 +247,9 @@ namespace ProductService.Application.Services
                     return;
                 }
 
-                if (flashSalePrice >= maxPrice)
+                if (flashSalePrice >= originalPrice)
                 {
-                    errorMessages.Add($"Giá FlashSale ({flashSalePrice:N0}đ) phải thấp hơn giá gốc ({maxPrice:N0}đ) của {productName}");
+                    errorMessages.Add($"Giá FlashSale ({flashSalePrice:N0}đ) phải thấp hơn giá gốc ({originalPrice:N0}đ) của {productName}");
                     return;
                 }
 
@@ -264,7 +264,13 @@ namespace ProductService.Application.Services
                 bool reserveSuccess = false;
                 if (variantId.HasValue)
                 {
-                    reserveSuccess = true; 
+                    var variant = await _productVariantRepository.GetByIdAsync(variantId.ToString());
+                    if (variant != null && variant.Stock >= finalQuantityAvailable)
+                    {
+                        variant.DecrementStock(finalQuantityAvailable);
+                        await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                        reserveSuccess = true;
+                    }
                 }
                 else
                 {
@@ -321,7 +327,9 @@ namespace ProductService.Application.Services
                     IsActive = true,
                     ProductName = productName,
                     VariantName = variantName,
-                    ProductImageUrl = productImageUrl
+                    ProductImageUrl = productImageUrl,
+                    Price = originalPrice,
+                    Stock = maxStock
                 };
                 results.Add(result);
             }

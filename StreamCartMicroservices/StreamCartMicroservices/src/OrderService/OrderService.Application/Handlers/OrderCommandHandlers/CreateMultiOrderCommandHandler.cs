@@ -116,7 +116,51 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     }
                     // Lưu đơn hàng ban đầu
                     await _orderRepository.InsertAsync(order);
+                    foreach (var orderItem in itemResult.Data)
+                    {
+                        if (orderItem.VariantId.HasValue)
+                        {
+                            var productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
+                                orderItem.ProductId,
+                                -orderItem.Quantity); 
 
+                            var variantStockSuccess = await _productServiceClient.UpdateVariantStockAsync(
+                                orderItem.VariantId.Value,
+                                -orderItem.Quantity);
+                            var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                                orderItem.ProductId,
+                                orderItem.Quantity);
+                            if (!productStockSuccess || !variantStockSuccess)
+                            {
+                                _logger.LogError("Failed to update stock for product {ProductId} variant {VariantId}",
+                                    orderItem.ProductId, orderItem.VariantId.Value);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("✅ Updated stock: Product {ProductId} and Variant {VariantId} decreased by {Quantity}",
+                                    orderItem.ProductId, orderItem.VariantId.Value, orderItem.Quantity);
+                            }
+                        }
+                        else
+                        {
+                            var stockUpdateSuccess = await _productServiceClient.UpdateProductStockAsync(
+                                orderItem.ProductId,
+                                -orderItem.Quantity); 
+                            var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                                orderItem.ProductId,
+                                orderItem.Quantity);
+                            if (!stockUpdateSuccess)
+                            {
+                                _logger.LogError("Failed to update stock for product {ProductId}", orderItem.ProductId);
+                                // Có thể rollback order nếu cần
+                            }
+                            else
+                            {
+                                _logger.LogInformation("✅ Updated stock: Product {ProductId} decreased by {Quantity}",
+                                    orderItem.ProductId, orderItem.Quantity);
+                            }
+                        }
+                    }
                     if (!string.IsNullOrEmpty(shopOrder.VoucherCode))
                     {
                         _logger.LogInformation("Applying voucher {Code} for shop {ShopId}, order amount: {Amount}đ",
