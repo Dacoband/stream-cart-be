@@ -33,5 +33,10 @@ namespace ShopService.Infrastructure.Repositories
         {
             return await _context.ShopMembership.ToListAsync();
         }
+
+        public async Task<List<ShopMembership>> GetAllAciveShopMembership(string shopId)
+        {
+            return await _context.ShopMembership.Include(x => x.Membership).Where(x => x.ShopID.ToString() == shopId && x.StartDate <= DateTime.Now && x.EndDate >= DateTime.Now && x.IsDeleted == false && x.Status != "Ongoing" && x.RemainingLivestream >0).ToListAsync();
+        }
     }
 }

@@ -264,5 +264,66 @@ namespace ShopService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi cập nhật thời gian livestream: {ex.Message}"));
             }
         }
+
+        [HttpPost("livestream/consume")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<int>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> ConsumeLivestream([FromBody] int usedLivestreamMinute)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+
+                var shopId = GetShopIdFromClaims();
+                if (string.IsNullOrWhiteSpace(shopId))
+                    return Unauthorized(ApiResponse<object>.ErrorResult("Không tìm thấy ShopId trong token"));
+
+                var response = await _shopMembershipService.UpdateLivestreamRemaining(usedLivestreamMinute, shopId);
+
+                if (!response.Success &&
+                    (response.Message?.Contains("không có gói", StringComparison.OrdinalIgnoreCase) ?? false))
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult(response.Message!));
+                }
+
+                if (!response.Success)
+                    return BadRequest(ApiResponse<object>.ErrorResult(response.Message ?? "Cập nhật thất bại"));
+
+                // Data = tổng phút còn lại sau khi trừ
+                return Ok(ApiResponse<int>.SuccessResult(response.Data, response.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi trừ phút livestream: {ex.Message}"));
+            }
+        }
+
+        [HttpGet("livestream/remaining")]
+        [Authorize(Roles = "Seller")]
+        [ProducesResponseType(typeof(ApiResponse<int>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetTotalRemainingLivestream([FromQuery]string shopId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(shopId))
+                    return Unauthorized(ApiResponse<object>.ErrorResult("Không tìm thấy ShopId trong token"));
+
+                var total = await _shopMembershipService.GetRemainingLivestream(shopId);
+                return Ok(ApiResponse<int>.SuccessResult(total, "Lấy tổng phút livestream còn lại thành công"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy tổng phút livestream còn lại: {ex.Message}"));
+            }
+        }
+
+        // ====== Helper ======
+        private string? GetShopIdFromClaims() => User.FindFirst("ShopId")?.Value;
     }
 }

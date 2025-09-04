@@ -13,6 +13,7 @@ namespace ShopService.Application.Interfaces
         Task<ShopMembership?> GetActiveMembership(string shopId);
         Task<List<ShopMembership>> GetAll();
         Task<ShopMembership?> GetById(string id);
+        Task<List<ShopMembership>> GetAllAciveShopMembership(string shopId);
 
 
     }
