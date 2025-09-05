@@ -442,15 +442,9 @@ namespace OrderService.Infrastructure.Services
                 //    return null;
                 //}
 
-                if (order.OrderStatus != OrderStatus.Shipped)
-                {
-                    _logger.LogWarning("Đơn hàng {OrderId} không ở trạng thái đã giao, không thể xác nhận", orderId);
-                    return null;
-                }
+                
 
                 // Cập nhật trạng thái đơn hàng
-                order.UpdateStatus(OrderStatus.Completed, customerId.ToString());
-                await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
                 var orderItems = await _orderItemRepository.GetByOrderIdAsync(order.Id);
                 foreach (var orderItem in orderItems)
                 {
@@ -492,7 +486,7 @@ namespace OrderService.Infrastructure.Services
                 }
                 // Xử lý thanh toán cho shop
                 await ProcessPaymentToShopAsync(order);
-                return _mapper.Map<OrderDto>(order);
+                return await MapOrderToDto(order);
             }
             catch (Exception ex)
             {
@@ -500,6 +494,65 @@ namespace OrderService.Infrastructure.Services
                 throw;
             }
         }
+        private async Task<OrderDto> MapOrderToDto(Orders order)
+        {
+            var orderItems = await _orderItemRepository.GetByOrderIdAsync(order.Id);
+
+            var shippingAddressDto = new ShippingAddressDto
+            {
+                FullName = order.ToName,
+                Phone = order.ToPhone,
+                AddressLine1 = order.ToAddress,
+                Ward = order.ToWard,
+                City = order.ToProvince,
+                State = order.ToDistrict,
+                PostalCode = order.ToPostalCode,
+                Country = "Vietnam",
+                IsDefault = false
+            };
+
+            var orderItemDtos = new List<OrderItemDto>();
+            foreach (var item in orderItems)
+            {
+                orderItemDtos.Add(new OrderItemDto
+                {
+                    Id = item.Id,
+                    OrderId = item.OrderId,
+                    ProductId = item.ProductId,
+                    VariantId = item.VariantId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    DiscountAmount = item.DiscountAmount,
+                    TotalPrice = item.TotalPrice,
+                    Notes = item.Notes
+                });
+            }
+            return new OrderDto
+            {
+                Id = order.Id,
+                OrderCode = order.OrderCode,
+                AccountId = order.AccountId,
+                ShopId = order.ShopId,
+                OrderDate = order.OrderDate,
+                OrderStatus = order.OrderStatus,
+                PaymentStatus = order.PaymentStatus,
+                PaymentMethod = order.PaymentMethod,
+                ShippingAddress = shippingAddressDto,
+                ShippingProviderId = order.ShippingProviderId,
+                ShippingFee = order.ShippingFee,
+                TotalPrice = order.TotalPrice,
+                DiscountAmount = order.DiscountAmount,
+                FinalAmount = order.FinalAmount,
+                CustomerNotes = order.CustomerNotes,
+                TrackingCode = order.TrackingCode,
+                EstimatedDeliveryDate = order.EstimatedDeliveryDate,
+                ActualDeliveryDate = order.ActualDeliveryDate,
+                LivestreamId = order.LivestreamId,
+                TimeForShop = order.TimeForShop,
+                Items = orderItemDtos
+            };
+        }
+
         private async Task ProcessPaymentToShopAsync(Orders order)
         {
             // Tính toán số tiền thanh toán cho shop (trừ 10% phí)
@@ -509,11 +562,11 @@ namespace OrderService.Infrastructure.Services
             // Gửi yêu cầu thanh toán đến WalletService
             var paymentRequest = new ShopPaymentRequest
             {
-                OrderId = order.OrderCode,
+                OrderId = order.Id.ToString(),
                 ShopId = order.ShopId,
                 Amount = totalAmount,
                 Fee = 0,
-                TransactionType = "OrderComplete",
+                TransactionType = "Commission",
                 TransactionReference = order.Id.ToString(),
                 Description = $"Thanh toán đơn hàng #{order.OrderCode}"
             };
@@ -752,30 +805,30 @@ namespace OrderService.Infrastructure.Services
                 var recipent = new List<string> { request.ModifiedBy };
 
 
-                var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
-                foreach (var acc in shopAccount)
-                {
-                    recipent.Add(acc.Id.ToString());
-                }
-                var shopRate = await CalculateShopCompletionRate(order.ShopId);
-                var userRate = await CalculateUserCompletionRate(Guid.Parse(order.CreatedBy));
-                var orderChangEvent = new OrderCreatedOrUpdatedEvent()
-                {
-                    OrderCode = order.OrderCode,
-                    Message = message,
-                    UserId = recipent,
-                    OrderStatus = request.NewStatus.ToString(),
-                    ShopRate = shopRate,
-                    UserRate = userRate,
-                    CreatedBy = order.CreatedBy,
-                    ShopId = order.ShopId.ToString(),
+                //var shopAccount = await _accountServiceClient.GetAccountByShopIdAsync(order.ShopId);
+                //foreach (var acc in shopAccount)
+                //{
+                //    recipent.Add(acc.Id.ToString());
+                //}
+                //var shopRate = await CalculateShopCompletionRate(order.ShopId);
+                //var userRate = await CalculateUserCompletionRate(Guid.Parse(order.CreatedBy));
+                //var orderChangEvent = new OrderCreatedOrUpdatedEvent()
+                //{
+                //    OrderCode = order.OrderCode,
+                //    Message = message,
+                //    UserId = recipent,
+                //    OrderStatus = request.NewStatus.ToString(),
+                //    ShopRate = shopRate,
+                //    UserRate = userRate,
+                //    CreatedBy = order.CreatedBy,
+                //    ShopId = order.ShopId.ToString(),
 
-                };
-                if (orderChangEvent.OrderStatus == "Pending")
-                {
-                    orderChangEvent.OrderStatus = null;
-                }
-                await _publishEndpoint.Publish(orderChangEvent);
+                //};
+                //if (orderChangEvent.OrderStatus == "Pending")
+                //{
+                //    orderChangEvent.OrderStatus = null;
+                //}
+                //await _publishEndpoint.Publish(orderChangEvent);
 
                 return orderDto;
             }
