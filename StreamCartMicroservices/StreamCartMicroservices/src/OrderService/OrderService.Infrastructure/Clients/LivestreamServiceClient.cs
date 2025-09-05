@@ -251,6 +251,45 @@ namespace OrderService.Infrastructure.Clients
                 return null;
             }
         }
+        public async Task<LivestreamProductPricing?> GetLivestreamProductPricingAsync(Guid livestreamId, string productId, string? variantId)
+        {
+            try
+            {
+                _logger.LogInformation("🎥 Getting livestream product pricing for ProductId {ProductId}, VariantId {VariantId} in LivestreamId {LivestreamId}",
+                    productId, variantId ?? "null", livestreamId);
+
+                // Get the livestream product from the existing method
+                var livestreamProduct = await GetLivestreamProductAsync(livestreamId, productId, variantId);
+
+                if (livestreamProduct == null)
+                {
+                    _logger.LogWarning("⚠️ Livestream product not found: ProductId={ProductId}, VariantId={VariantId} in LivestreamId={LivestreamId}",
+                        productId, variantId ?? "null", livestreamId);
+                    return null;
+                }
+
+                // Convert to LivestreamProductPricing DTO
+                var pricing = new LivestreamProductPricing
+                {
+                    ProductId = livestreamProduct.ProductId,
+                    VariantId = livestreamProduct.VariantId,
+                    LivestreamPrice = livestreamProduct.Price, // Price in livestream (discounted)
+                    OriginalPrice = livestreamProduct.Price,    // For now, use same price as livestream price
+                    Stock = livestreamProduct.Stock
+                };
+
+                _logger.LogInformation("✅ Found livestream product pricing: ProductId={ProductId}, LivestreamPrice={LivestreamPrice}, Stock={Stock}",
+                    productId, pricing.LivestreamPrice, pricing.Stock);
+
+                return pricing;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting livestream product pricing for ProductId {ProductId} in LivestreamId {LivestreamId}",
+                    productId, livestreamId);
+                return null;
+            }
+        }
     }
     public class LivestreamProductInfo
     {

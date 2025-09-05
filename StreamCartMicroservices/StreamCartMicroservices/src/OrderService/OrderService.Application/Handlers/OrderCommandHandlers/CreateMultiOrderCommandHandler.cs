@@ -35,7 +35,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             private readonly IAccountServiceClient _accountServiceClient;
             private readonly ICurrentUserService _currentUserService;
             private readonly IOrderNotificationQueue _orderNotificationQueue;
-            private readonly ILivestreamServiceClient _livestreamServiceClient; // ✅ ADDED
+            private readonly ILivestreamServiceClient _livestreamServiceClient; 
 
         public CreateMultiOrderCommandHandler(
                 IOrderRepository orderRepository,
@@ -407,30 +407,41 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 decimal unitPrice = 0;
                 decimal discount = 0;
 
-                if (item.VariantId.HasValue)
+                // ✅ FIXED: Check if this is a livestream order and get livestream-specific pricing
+                if (order.LivestreamId.HasValue)
                 {
-                    var variant = await _productServiceClient.GetVariantByIdAsync(item.VariantId.Value);
-                    if (variant == null)
-                        return Fail($"Không tìm thấy phiên bản sản phẩm có mã: {item.VariantId}");
+                    // 🎥 LIVESTREAM ORDER: Get pricing from livestream
+                    var livestreamProduct = await GetLivestreamProductPricingAsync(
+                        order.LivestreamId.Value,
+                        item.ProductId,
+                        item.VariantId?.ToString()
+                    );
 
-                    unitPrice = (decimal)variant.FinalPrice;
-
-                    // Kiểm tra null và tránh chia cho 0
-                    if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
+                    if (livestreamProduct != null)
                     {
-                        unitPrice = variant.FlashSalePrice.Value;
-                        discount = (decimal)(variant.Price - variant.FinalPrice);
+                        unitPrice = livestreamProduct.LivestreamPrice;
+                        discount = Math.Max(0, (livestreamProduct.OriginalPrice - livestreamProduct.LivestreamPrice) * item.Quantity);
+
+                        _logger.LogInformation("🎥 Using livestream pricing for ProductId {ProductId}: LivestreamPrice={LivestreamPrice}, OriginalPrice={OriginalPrice}",
+                            item.ProductId, livestreamProduct.LivestreamPrice, livestreamProduct.OriginalPrice);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ Product {ProductId} not found in livestream {LivestreamId}, using regular pricing as fallback",
+                            item.ProductId, order.LivestreamId.Value);
+
+                        // Fallback to regular pricing
+                        var pricingResult = await GetRegularProductPricingAsync(product, item.VariantId);
+                        unitPrice = pricingResult.UnitPrice;
+                        discount = pricingResult.Discount;
                     }
                 }
                 else
                 {
-                    unitPrice = product.FinalPrice;
-
-                    if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
-                    {
-                        unitPrice = product.FinalPrice;
-                        discount = (decimal)(product.BasePrice - product.FinalPrice);
-                    }
+                    // 🛒 NORMAL ORDER: Use regular product pricing
+                    var pricingResult = await GetRegularProductPricingAsync(product, item.VariantId);
+                    unitPrice = pricingResult.UnitPrice;
+                    discount = pricingResult.Discount;
                 }
 
                 orderItems.Add(new OrderItem(
@@ -441,7 +452,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     discountAmount: discount * item.Quantity,
                     variantId: item.VariantId
                 ));
-                
             }
 
             return Success(orderItems);
@@ -451,6 +461,71 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             ApiResponse<List<OrderItem>> Success(List<OrderItem> data) => new() { Success = true, Data = data };
         }
 
+        /// <summary>
+        /// ✅ NEW: Get livestream-specific product pricing
+        /// </summary>
+        private async Task<LivestreamProductPricing?> GetLivestreamProductPricingAsync(Guid livestreamId, Guid productId, string? variantId)
+        {
+            try
+            {
+                // Call livestream service to get product pricing
+                var livestreamProduct = await _livestreamServiceClient.GetLivestreamProductPricingAsync(
+                    livestreamId,
+                    productId.ToString(),
+                    variantId
+                );
+
+                return livestreamProduct;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting livestream product pricing for ProductId {ProductId} in LivestreamId {LivestreamId}",
+                    productId, livestreamId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// ✅ EXTRACTED: Get regular product pricing (existing logic)
+        /// </summary>
+        private async Task<(decimal UnitPrice, decimal Discount)> GetRegularProductPricingAsync(ProductDto product, Guid? variantId)
+        {
+            decimal unitPrice = 0;
+            decimal discount = 0;
+
+            if (variantId.HasValue)
+            {
+                var variant = await _productServiceClient.GetVariantByIdAsync(variantId.Value);
+                if (variant != null)
+                {
+                    unitPrice = (decimal)variant.FinalPrice;
+
+                    // Check for flash sale pricing
+                    if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
+                    {
+                        unitPrice = variant.FlashSalePrice.Value;
+                        discount = (decimal)(variant.Price - variant.FinalPrice);
+                    }
+                }
+                else
+                {
+                    // Fallback to product price if variant not found
+                    unitPrice = product.FinalPrice;
+                }
+            }
+            else
+            {
+                unitPrice = product.FinalPrice;
+
+                if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+                {
+                    unitPrice = product.FinalPrice;
+                    discount = (decimal)(product.BasePrice - product.FinalPrice);
+                }
+            }
+
+            return (unitPrice, discount);
+        }
         private async Task<ApiResponse<VoucherApplicationDto>> ApplyVoucherAsync(Orders order, string code, string accessToken, Guid shopId)
         {
             try
