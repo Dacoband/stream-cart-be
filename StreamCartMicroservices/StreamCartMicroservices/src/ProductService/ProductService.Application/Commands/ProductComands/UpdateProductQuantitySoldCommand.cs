@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MediatR;
 
-namespace ProductService.Application.Commands.ProductComands
+namespace ProductService.Application.Commands.ProductCommands
 {
-    internal class UpdateProductQuantitySoldCommand
+    public class UpdateProductQuantitySoldCommand : IRequest<bool>
     {
+        public Guid ProductId { get; set; }
+        public int QuantityChange { get; set; }
+        public string? UpdatedBy { get; set; }
     }
 }
