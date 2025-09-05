@@ -677,6 +677,7 @@ namespace OrderService.Infrastructure.Services
 
                     case OrderStatus.Cancelled:
                         order.UpdateStatus(OrderStatus.Cancelled, request.ModifiedBy);
+                        await UpdateStockOnOrderCancelledAsync(order);   // ✅ Đổi sang await
                         message = "Đơn hàng đã bị hủy";
                         break;
 
@@ -930,5 +931,53 @@ namespace OrderService.Infrastructure.Services
                 // ignore if property not present
             }
         }
-      }
+        private async Task UpdateStockOnOrderCancelledAsync(Orders order)
+        {
+            try
+            {
+                // Lấy items từ repo (đừng trông chờ order.Items đã được nạp)
+                var items = await _orderItemRepository.GetByOrderIdAsync(order.Id);
+
+                foreach (var o in items)
+                {
+                    // ✅ Luôn hoàn tồn kho Product (vì lúc tạo đã trừ cả product)
+                    var productRestored = await _productServiceClient.UpdateProductStockAsync(
+                        o.ProductId,
+                        o.Quantity // số dương để cộng lại
+                    );
+
+                    if (!productRestored)
+                    {
+                        _logger.LogError("Failed to restore product stock {ProductId} by +{Quantity}", o.ProductId, o.Quantity);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("✅ Restored product stock {ProductId} by +{Quantity}", o.ProductId, o.Quantity);
+                    }
+
+                    // ✅ Nếu có Variant thì hoàn tồn kho Variant nữa (lúc tạo đã trừ cả variant)
+                    if (o.VariantId.HasValue)
+                    {
+                        var variantRestored = await _productServiceClient.UpdateVariantStockAsync(
+                            o.VariantId.Value,
+                            o.Quantity // số dương để cộng lại
+                        );
+
+                        if (!variantRestored)
+                        {
+                            _logger.LogError("Failed to restore variant stock {VariantId} by +{Quantity}", o.VariantId.Value, o.Quantity);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("✅ Restored variant stock {VariantId} by +{Quantity}", o.VariantId.Value, o.Quantity);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error restoring stock on cancelled order {OrderId}", order.Id);
+            }
+        }
+    }
 }
