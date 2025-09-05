@@ -1928,6 +1928,9 @@ namespace PaymentService.Api.Controllers
         /// <summary>
         /// ✅ Extract RefundRequestId từ content với logic sửa lỗi cắt chuỗi
         /// </summary>
+        /// <summary>
+        /// ✅ Extract RefundRequestId từ content với logic sửa lỗi cắt chuỗi
+        /// </summary>
         private Guid ExtractRefundRequestIdFromContent(string? content)
         {
             try
@@ -1937,8 +1940,9 @@ namespace PaymentService.Api.Controllers
 
                 _logger.LogInformation("🔍 Extracting RefundRequestId from Content: {Content}", content);
 
-                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (với dấu gạch dưới)
-                var refundPatternWithUnderscore = @"REFUND_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})";
+                // ✅ Pattern 1: REFUND_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (có dấu gạch dưới)
+                var refundPatternWithUnderscore =
+                    @"REFUND_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})";
                 var matchWithUnderscore = Regex.Match(content, refundPatternWithUnderscore, RegexOptions.IgnoreCase);
 
                 if (matchWithUnderscore.Success)
@@ -1948,22 +1952,24 @@ namespace PaymentService.Api.Controllers
                     return Guid.Parse(guidString);
                 }
 
-                // ✅ Pattern 2: REFUND + 32 hex characters (trường hợp như "REFUND22bc1c98c2d84425af1796c653d45bc3")
-                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32})";
+                // ✅ Pattern 2: REFUND + 32 hoặc 33 hex characters (ngân hàng đôi khi append thêm 1 ký tự cuối)
+                var refundPatternDirect = @"REFUND([0-9a-fA-F]{32,33})";
                 var matchDirect = Regex.Match(content, refundPatternDirect, RegexOptions.IgnoreCase);
 
                 if (matchDirect.Success)
                 {
                     var guidString = matchDirect.Groups[1].Value;
-                    _logger.LogInformation("✅ Found REFUND direct pattern (32 chars): {GuidString}", guidString);
 
-                    // ✅ FIX: Parse exactly 32 characters to GUID format
-                    if (guidString.Length == 32)
-                    {
-                        var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
-                        _logger.LogInformation("✅ Converted to GUID format: {FormattedGuid}", formattedGuid);
-                        return Guid.Parse(formattedGuid);
-                    }
+                    // Nếu length > 32 thì cắt về 32 ký tự
+                    if (guidString.Length > 32)
+                        guidString = guidString.Substring(0, 32);
+
+                    _logger.LogInformation("✅ Found REFUND direct pattern (trimmed to 32 chars): {GuidString}", guidString);
+
+                    var formattedGuid =
+                        $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                    _logger.LogInformation("✅ Converted to GUID format: {FormattedGuid}", formattedGuid);
+                    return Guid.Parse(formattedGuid);
                 }
 
                 // ✅ Pattern 3: Tìm GUID format có sẵn trong content
@@ -1985,8 +1991,8 @@ namespace PaymentService.Api.Controllers
                     var guidString = hex32Match.Value;
                     _logger.LogInformation("✅ Found 32-char hex pattern: {GuidString}", guidString);
 
-                    // Format to GUID
-                    var formattedGuid = $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
+                    var formattedGuid =
+                        $"{guidString.Substring(0, 8)}-{guidString.Substring(8, 4)}-{guidString.Substring(12, 4)}-{guidString.Substring(16, 4)}-{guidString.Substring(20, 12)}";
                     _logger.LogInformation("✅ Converted fallback to GUID format: {FormattedGuid}", formattedGuid);
                     return Guid.Parse(formattedGuid);
                 }
@@ -2000,6 +2006,7 @@ namespace PaymentService.Api.Controllers
                 return Guid.Empty;
             }
         }
+
         #endregion
 
         /// <summary>
