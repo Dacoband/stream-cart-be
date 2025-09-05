@@ -88,7 +88,7 @@ namespace LivestreamService.Api.Controllers
         /// Lấy danh sách sản phẩm trong livestream
         /// </summary>
         [HttpGet("livestream/{livestreamId}")]
-        [Authorize]
+        //[Authorize]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<LivestreamProductDTO>>), 200)]
         public async Task<IActionResult> GetLivestreamProducts(Guid livestreamId)
         {

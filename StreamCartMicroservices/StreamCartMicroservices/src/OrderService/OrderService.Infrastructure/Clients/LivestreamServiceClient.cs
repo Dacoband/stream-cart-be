@@ -273,8 +273,8 @@ namespace OrderService.Infrastructure.Clients
                 {
                     ProductId = livestreamProduct.ProductId,
                     VariantId = livestreamProduct.VariantId,
-                    LivestreamPrice = livestreamProduct.Price, // Price in livestream (discounted)
-                    OriginalPrice = livestreamProduct.Price,    // For now, use same price as livestream price
+                    LivestreamPrice = livestreamProduct.Price, 
+                    OriginalPrice = livestreamProduct.Price,    
                     Stock = livestreamProduct.Stock
                 };
 
