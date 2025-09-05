@@ -87,8 +87,8 @@ namespace PaymentService.Application.DTOs
                 return null;
             var patterns = new[]
             {
-                @"REFUND_[0-9a-fA-F]{32}",                  
-                @"REFUND_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                @"REFUND_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",  // REFUND_GUID với dấu gạch ngang
+        @"REFUND([0-9a-fA-F]{32})",
                 @"WITHDRAW_CONFIRM_[0-9a-fA-F]{32}",           
                 @"ORDERS_[0-9a-fA-F,]{32,}",                  
                 @"DEPOSIT[0-9a-fA-F]{32}",                    
@@ -121,9 +121,35 @@ namespace PaymentService.Application.DTOs
             if (string.IsNullOrEmpty(orderCode))
                 return orderCode;
             if (orderCode.StartsWith("REFUND", StringComparison.OrdinalIgnoreCase) &&
-                !orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
+         !orderCode.StartsWith("REFUND_", StringComparison.OrdinalIgnoreCase))
             {
-                return "REFUND_" + orderCode.Substring(6);
+                // ✅ Extract phần sau "REFUND" và tìm GUID hợp lệ
+                var afterRefund = orderCode.Substring(6); // Bỏ "REFUND"
+
+                // ✅ Tìm chuỗi 32 ký tự hex hợp lệ đầu tiên
+                var guidPattern = @"([0-9a-fA-F]{32})";
+                var match = Regex.Match(afterRefund, guidPattern, RegexOptions.IgnoreCase);
+
+                if (match.Success)
+                {
+                    var guidHex = match.Groups[1].Value;
+
+                    // ✅ Kiểm tra xem có phải là GUID hợp lệ không
+                    if (guidHex.Length == 32)
+                    {
+                        // Format thành GUID chuẩn để validate
+                        var formattedGuid = $"{guidHex.Substring(0, 8)}-{guidHex.Substring(8, 4)}-{guidHex.Substring(12, 4)}-{guidHex.Substring(16, 4)}-{guidHex.Substring(20, 12)}";
+
+                        // Validate xem có parse được thành GUID không
+                        if (Guid.TryParse(formattedGuid, out _))
+                        {
+                            return $"REFUND_{guidHex}";
+                        }
+                    }
+                }
+
+                // ✅ Fallback: nếu không tìm được pattern hợp lệ, trả về original
+                return orderCode;
             }
             // Thêm underscore nếu thiếu
             if (orderCode.StartsWith("DEPOSIT", StringComparison.OrdinalIgnoreCase) &&
