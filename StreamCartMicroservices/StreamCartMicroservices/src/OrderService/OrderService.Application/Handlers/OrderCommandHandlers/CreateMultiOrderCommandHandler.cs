@@ -438,7 +438,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 }
                 else
                 {
-                    // 🛒 NORMAL ORDER: Use regular product pricing
                     var pricingResult = await GetRegularProductPricingAsync(product, item.VariantId);
                     unitPrice = pricingResult.UnitPrice;
                     discount = pricingResult.Discount;
