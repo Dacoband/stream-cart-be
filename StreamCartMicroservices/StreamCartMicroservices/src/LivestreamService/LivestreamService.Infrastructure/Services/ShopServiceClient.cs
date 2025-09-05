@@ -184,41 +184,15 @@ namespace LivestreamService.Infrastructure.Services
                 return null;
             }
         }
-        //public async Task<bool> UpdateShopMembershipRemainingLivestreamAsync(Guid shopId, int remainingMinutes)
-        //{
-        //    try
-        //    {
-        //        var updateRequest = new { RemainingLivestream = remainingMinutes };
-        //        var jsonContent = JsonSerializer.Serialize(updateRequest);
-        //        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-
-        //        var response = await _httpClient.PutAsync($"/api/shopmembership/shop/{shopId}/remaining-livestream", content);
-
-        //        if (!response.IsSuccessStatusCode)
-        //        {
-        //            _logger.LogWarning("Failed to update remaining livestream for shop {ShopId}: {StatusCode}", shopId, response.StatusCode);
-        //            return false;
-        //        }
-
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error updating remaining livestream for shop {ShopId}", shopId);
-        //        return false;
-        //    }
-        //}
         public async Task<bool> UpdateShopMembershipRemainingLivestreamAsync(Guid shopId, int remainingMinutes)
         {
             try
             {
-                var updateRequest = new
-                {
-                    ShopId = shopId.ToString(),
-                    RemainingLivstream = remainingMinutes
-                };
+                var updateRequest = new { RemainingLivestream = remainingMinutes };
+                var jsonContent = JsonSerializer.Serialize(updateRequest);
+                var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PatchAsJsonAsync("https://brightpa.me/api/shopmembership", updateRequest);
+                var response = await _httpClient.PutAsync($"/api/shopmembership/shop/{shopId}/remaining-livestream", content);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -234,6 +208,32 @@ namespace LivestreamService.Infrastructure.Services
                 return false;
             }
         }
+        //public async Task<bool> UpdateShopMembershipRemainingLivestreamAsync(Guid shopId, int remainingMinutes)
+        //{
+        //    try
+        //    {
+        //        var updateRequest = new
+        //        {
+        //            ShopId = shopId.ToString(),
+        //            RemainingLivstream = remainingMinutes
+        //        };
+
+        //        var response = await _httpClient.PatchAsJsonAsync("https://brightpa.me/api/shopmembership", updateRequest);
+
+        //        if (!response.IsSuccessStatusCode)
+        //        {
+        //            _logger.LogWarning("Failed to update remaining livestream for shop {ShopId}: {StatusCode}", shopId, response.StatusCode);
+        //            return false;
+        //        }
+
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error updating remaining livestream for shop {ShopId}", shopId);
+        //        return false;
+        //    }
+        //}
         private class ApiResponse<T>
         {
             public bool Success { get; set; }

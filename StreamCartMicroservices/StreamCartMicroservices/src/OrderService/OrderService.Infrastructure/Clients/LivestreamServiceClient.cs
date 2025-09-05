@@ -206,8 +206,7 @@ namespace OrderService.Infrastructure.Clients
         {
             try
             {
-                // ✅ Sử dụng endpoint để lấy tất cả sản phẩm trong livestream
-                var response = await _httpClient.GetAsync($"api/livestream-products/livestream/{livestreamId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/livestream-products/livestream/{livestreamId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
