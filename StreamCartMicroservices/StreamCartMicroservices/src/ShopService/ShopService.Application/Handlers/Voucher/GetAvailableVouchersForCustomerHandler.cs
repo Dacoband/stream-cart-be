@@ -31,7 +31,7 @@ namespace ShopService.Application.Handlers.Voucher
                     request.OrderAmount, request.ShopId);
 
                 // Lấy danh sách voucher khả dụng
-                var vouchers = await _voucherRepository.GetValidVouchersForOrderAsync((Guid)request.ShopId, request.OrderAmount);
+                var vouchers = await _voucherRepository.GetValidVouchersForOrderAsync(request.ShopId, request.OrderAmount, request.VoucherType);
                 var result = new List<CustomerVoucherResponseDto>();
 
                 foreach (var voucher in vouchers)

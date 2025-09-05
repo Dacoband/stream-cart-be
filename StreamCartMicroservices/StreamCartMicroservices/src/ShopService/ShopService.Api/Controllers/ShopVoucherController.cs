@@ -87,7 +87,8 @@ namespace ShopService.Api.Controllers
                 {
                     OrderAmount = orderAmount,
                     ShopId = shopId,
-                    SortByDiscountDesc = sortByDiscountDesc
+                    SortByDiscountDesc = sortByDiscountDesc,
+                    VoucherType = voucherType 
                 };
 
                 var result = await _mediator.Send(query);

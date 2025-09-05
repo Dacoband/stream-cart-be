@@ -165,11 +165,12 @@ namespace OrderService.Infrastructure.Clients
             {
                 var request = new
                 {
-                    QuantityChange = quantityChange
+                    QuantityChange = quantityChange,
+                    UpdatedBy = "OrderService"
                 };
 
                 var response = await _httpClient.PutAsJsonAsync(
-                    $"api/products/{productId}/quantity-sold",
+                    $"https://brightpa.me/api/products/{productId}/quantity-sold",
                     request);
 
                 if (response.IsSuccessStatusCode)
