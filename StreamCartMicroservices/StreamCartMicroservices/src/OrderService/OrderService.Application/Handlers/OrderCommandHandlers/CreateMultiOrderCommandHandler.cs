@@ -722,7 +722,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             decimal commissionFee = totalPrice * commissionRate / 100;
 
             order.TotalPrice = totalPrice;
-            order.DiscountAmount = voucherDiscount;
+            order.DiscountAmount = voucherDiscount + itemDiscount;
             //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
             order.FinalAmount = totalPrice - (itemDiscount + order.DiscountAmount) + shippingFee;
             //order.CommissionFee = order.TotalPrice * (commissionFee/100);

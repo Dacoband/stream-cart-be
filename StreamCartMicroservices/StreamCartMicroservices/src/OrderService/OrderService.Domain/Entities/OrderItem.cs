@@ -152,7 +152,7 @@ namespace OrderService.Domain.Entities
         /// </summary>
         private void CalculateTotalPrice()
         {
-            TotalPrice = (Quantity * UnitPrice) ;
+            TotalPrice = (Quantity * UnitPrice) - DiscountAmount;
         }
 
         #endregion
