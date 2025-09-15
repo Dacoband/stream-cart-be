@@ -501,43 +501,78 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         /// <summary>
         /// ✅ EXTRACTED: Get regular product pricing (existing logic)
         /// </summary>
+        //private async Task<(decimal UnitPrice, decimal Discount)> GetRegularProductPricingAsync(ProductDto product, Guid? variantId)
+        //{
+        //    decimal unitPrice = 0;
+        //    decimal discount = 0;
+
+        //    if (variantId.HasValue)
+        //    {
+        //        var variant = await _productServiceClient.GetVariantByIdAsync(variantId.Value);
+        //        if (variant != null)
+        //        {
+        //            unitPrice = (decimal)variant.FinalPrice;
+
+        //            // Check for flash sale pricing
+        //            if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
+        //            {
+        //                unitPrice = variant.FlashSalePrice.Value;
+        //                discount = (decimal)(variant.Price - variant.FinalPrice);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Fallback to product price if variant not found
+        //            unitPrice = product.FinalPrice;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        unitPrice = product.FinalPrice;
+
+        //        if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
+        //        {
+        //            unitPrice = product.FinalPrice;
+        //            discount = (decimal)(product.BasePrice - product.FinalPrice);
+        //        }
+        //    }
+
+        //    return (unitPrice, discount);
+        //}
         private async Task<(decimal UnitPrice, decimal Discount)> GetRegularProductPricingAsync(ProductDto product, Guid? variantId)
         {
-            decimal unitPrice = 0;
-            decimal discount = 0;
+            decimal originalPricePerUnit = 0;
+            decimal discountPerUnit = 0;
 
             if (variantId.HasValue)
             {
                 var variant = await _productServiceClient.GetVariantByIdAsync(variantId.Value);
                 if (variant != null)
                 {
-                    unitPrice = (decimal)variant.FinalPrice;
+                    var original = (decimal)variant.Price;
+                    // Final is flash-sale price if present; otherwise variant.FinalPrice; fallback to original
+                    var final = (decimal)(variant.FlashSalePrice ?? variant.FinalPrice ?? variant.Price);
 
-                    // Check for flash sale pricing
-                    if (variant.FlashSalePrice.HasValue && variant.FlashSalePrice.Value > 0)
-                    {
-                        unitPrice = variant.FlashSalePrice.Value;
-                        discount = (decimal)(variant.Price - variant.FinalPrice);
-                    }
+                    originalPricePerUnit = original;
+                    discountPerUnit = Math.Max(0, original - final);
                 }
                 else
                 {
-                    // Fallback to product price if variant not found
-                    unitPrice = product.FinalPrice;
+                    // Fallback to product
+                    originalPricePerUnit = product.BasePrice;
+                    discountPerUnit = Math.Max(0, product.BasePrice - product.FinalPrice);
                 }
             }
             else
             {
-                unitPrice = product.FinalPrice;
+                var original = product.BasePrice;
+                var final = product.FinalPrice;
 
-                if (product.DiscountPrice.HasValue && product.DiscountPrice.Value > 0)
-                {
-                    unitPrice = product.FinalPrice;
-                    discount = (decimal)(product.BasePrice - product.FinalPrice);
-                }
+                originalPricePerUnit = original;
+                discountPerUnit = Math.Max(0, original - final);
             }
 
-            return (unitPrice, discount);
+            return (originalPricePerUnit, discountPerUnit);
         }
         private async Task<ApiResponse<VoucherApplicationDto>> ApplyVoucherAsync(Orders order, string code, string accessToken, Guid shopId)
         {
@@ -688,8 +723,10 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
             order.TotalPrice = totalPrice;
             order.DiscountAmount = voucherDiscount;
-            order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
-            order.CommissionFee = order.TotalPrice * (commissionFee/100);
+            //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
+            order.FinalAmount = totalPrice - (itemDiscount + order.DiscountAmount) + shippingFee;
+            //order.CommissionFee = order.TotalPrice * (commissionFee/100);
+            order.CommissionFee = commissionFee;
             order.NetAmount = totalPrice - commissionFee;
         }
         private void ScheduleBankTransferDeadlines(Guid orderId)
