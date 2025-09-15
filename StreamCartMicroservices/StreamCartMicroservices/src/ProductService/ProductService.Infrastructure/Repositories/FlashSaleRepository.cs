@@ -176,10 +176,10 @@ namespace ProductService.Infrastructure.Repositories
         {
             try
             {
-                if (startDate.Date == DateTime.UtcNow.Date)
-                {
-                    return await GetAvailableSlotsAsync(startDate); 
-                }
+                //if (startDate.Date == DateTime.UtcNow.Date)
+                //{
+                //    return await GetAvailableSlotsAsync(startDate); 
+                //}
 
                 var occupiedSlots = await _dbSet
                     .Where(fs => !fs.IsDeleted &&
