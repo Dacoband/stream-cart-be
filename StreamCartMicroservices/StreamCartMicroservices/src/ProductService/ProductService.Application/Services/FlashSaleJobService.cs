@@ -159,7 +159,7 @@ namespace ProductService.Application.Services
                     }
 
                     // 🔹 Mark flash sale as ended
-                    fs.EndTime = DateTime.Now; // hoặc thêm field IsEnded nếu có
+                    fs.EndTime = DateTime.UtcNow; 
                     await _flashSaleRepo.ReplaceAsync(fs.Id.ToString(), fs);
                 }
             }
