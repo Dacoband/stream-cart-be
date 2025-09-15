@@ -7,7 +7,7 @@ namespace ProductService.Application.DTOs
         public Guid Id { get; set; }
         public string ShopName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public Boolean Status { get; set; } 
         public string ApprovalStatus { get; set; } = string.Empty;
         public int TotalProduct { get; set; }
         public DateTime CreatedAt { get; set; }
