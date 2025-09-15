@@ -97,8 +97,7 @@ namespace ShopService.Application.Services
                         return Fail("Không thể gia hạn vì cửa hàng chưa có gói thành viên hiện tại");
 
                     startDate = DateTime.SpecifyKind(now, DateTimeKind.Unspecified);
-                  
-                    status = "Ongoing";
+
                 }
                 else
                 {
