@@ -1911,6 +1911,32 @@ namespace ProductService.Application.Services
                     response.Message = $"Số lượng còn lại của FlashSale không đủ (yêu cầu {quantity}, còn {remaining})";
                     return response;
                 }
+                if (flashSale.VariantId.HasValue)
+                {
+                    var variant = await _productVariantRepository.GetByIdAsync(flashSale.VariantId.ToString());
+                    if (variant == null)
+                    {
+                        response.Success = false;
+                        response.Message = "Không tìm thấy variant để trừ reserve";
+                        return response;
+                    }
+
+                    variant.UseReservedStock(quantity, "system");
+                    await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                }
+                else
+                {
+                    var product = await _productRepository.GetByIdAsync(flashSale.ProductId.ToString());
+                    if (product == null)
+                    {
+                        response.Success = false;
+                        response.Message = "Không tìm thấy sản phẩm để trừ reserve";
+                        return response;
+                    }
+
+                    product.ConvertReserveToSold(quantity);
+                    await _productRepository.ReplaceAsync(product.Id.ToString(), product);
+                }
 
                 flashSale.QuantitySold += quantity;
                 flashSale.SetModifier("system"); // hoặc truyền userId nếu bạn có

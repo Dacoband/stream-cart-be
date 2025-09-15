@@ -129,76 +129,87 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                     foreach (var orderItem in itemResult.Data)
                     {
                         await UpdateStockBasedOnOrderTypeAsync(orderItem, request.LivestreamId);
-                        if (orderItem.VariantId.HasValue)
-                        {
-                            
-                            var productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
-                                orderItem.ProductId,
-                                -orderItem.Quantity); 
+                        //if (orderItem.VariantId.HasValue)
+                        //{
 
-                            var variantStockSuccess = await _productServiceClient.UpdateVariantStockAsync(
-                                orderItem.VariantId.Value,
-                                -orderItem.Quantity);
-                            //var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
-                            //    orderItem.ProductId,
-                            //    orderItem.Quantity);
-                            if (!productStockSuccess || !variantStockSuccess)
+                        //    var productStockSuccess = await _productServiceClient.UpdateProductStockAsync(
+                        //        orderItem.ProductId,
+                        //        -orderItem.Quantity); 
+
+                        //    var variantStockSuccess = await _productServiceClient.UpdateVariantStockAsync(
+                        //        orderItem.VariantId.Value,
+                        //        -orderItem.Quantity);
+                        //    //var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
+                        //    //    orderItem.ProductId,
+                        //    //    orderItem.Quantity);
+                        //    if (!productStockSuccess || !variantStockSuccess)
+                        //    {
+                        //        _logger.LogError("Failed to update stock for product {ProductId} variant {VariantId}",
+                        //            orderItem.ProductId, orderItem.VariantId.Value);
+                        //    }
+                        //    else
+                        //    {
+                        //        _logger.LogInformation("✅ Updated stock: Product {ProductId} and Variant {VariantId} decreased by {Quantity}",
+                        //            orderItem.ProductId, orderItem.VariantId.Value, orderItem.Quantity);
+                        //        // Cập nhật FlashSale đã bán nếu có
+                        //        if (!variantCache.TryGetValue(orderItem.VariantId.Value, out var variantDto))
+                        //        {
+                        //            variantDto = await _productServiceClient.GetVariantByIdAsync(orderItem.VariantId.Value);
+                        //            if (variantDto != null) variantCache[orderItem.VariantId.Value] = variantDto;
+                        //        }
+
+                        //        if (variantDto?.FlashSalePrice.HasValue == true && variantDto.FlashSalePrice.Value > 0)
+                        //        {
+                        //            if (flashIndex.TryGetValue((orderItem.ProductId, orderItem.VariantId.Value), out var flashSaleId))
+                        //            {
+                        //                var ok = await _productServiceClient.IncreaseFlashSaleSoldAsync(flashSaleId, orderItem.Quantity);
+                        //                if (!ok)
+                        //                {
+                        //                    _logger.LogWarning("Failed to increase flash sale sold. FS={FlashSaleId}, Product={ProductId}, Variant={VariantId}",
+                        //                        flashSaleId, orderItem.ProductId, orderItem.VariantId.Value);
+                        //                }
+                        //                else
+                        //                {
+                        //                    _logger.LogInformation("✅ Increased FS sold: FS={FlashSaleId} +{Qty}", flashSaleId, orderItem.Quantity);
+                        //                }
+                        //            }
+                        //            else
+                        //            {
+                        //                _logger.LogDebug("No active FlashSale mapped for Product {ProductId}, Variant {VariantId}",
+                        //                    orderItem.ProductId, orderItem.VariantId.Value);
+                        //            }
+                        //        }
+
+                        //    }
+                        //}
+                        //else
+                        //{
+                        //    var stockUpdateSuccess = await _productServiceClient.UpdateProductStockAsync(
+                        //        orderItem.ProductId,
+                        //        -orderItem.Quantity); 
+                        //    if (!stockUpdateSuccess)
+                        //    {
+                        //        _logger.LogError("Failed to update stock for product {ProductId}", orderItem.ProductId);
+                        //        // Có thể rollback order nếu cần
+                        //    }
+                        //    else
+                        //    {
+                        //        _logger.LogInformation("✅ Updated stock: Product {ProductId} decreased by {Quantity}",
+                        //            orderItem.ProductId, orderItem.Quantity);
+                        //    }
+                        //}
+                        var key = (orderItem.ProductId, orderItem.VariantId ?? Guid.Empty);
+                        if (flashIndex.TryGetValue(key, out var flashSaleId))
+                        {
+                            var ok = await _productServiceClient.IncreaseFlashSaleSoldAsync(flashSaleId, orderItem.Quantity);
+                            if (!ok)
                             {
-                                _logger.LogError("Failed to update stock for product {ProductId} variant {VariantId}",
-                                    orderItem.ProductId, orderItem.VariantId.Value);
+                                _logger.LogWarning("Failed to increase flash sale sold. FS={FlashSaleId}, Product={ProductId}, Variant={VariantId}",
+                                    flashSaleId, orderItem.ProductId, orderItem.VariantId);
                             }
                             else
                             {
-                                _logger.LogInformation("✅ Updated stock: Product {ProductId} and Variant {VariantId} decreased by {Quantity}",
-                                    orderItem.ProductId, orderItem.VariantId.Value, orderItem.Quantity);
-                                // Cập nhật FlashSale đã bán nếu có
-                                if (!variantCache.TryGetValue(orderItem.VariantId.Value, out var variantDto))
-                                {
-                                    variantDto = await _productServiceClient.GetVariantByIdAsync(orderItem.VariantId.Value);
-                                    if (variantDto != null) variantCache[orderItem.VariantId.Value] = variantDto;
-                                }
-
-                                if (variantDto?.FlashSalePrice.HasValue == true && variantDto.FlashSalePrice.Value > 0)
-                                {
-                                    if (flashIndex.TryGetValue((orderItem.ProductId, orderItem.VariantId.Value), out var flashSaleId))
-                                    {
-                                        var ok = await _productServiceClient.IncreaseFlashSaleSoldAsync(flashSaleId, orderItem.Quantity);
-                                        if (!ok)
-                                        {
-                                            _logger.LogWarning("Failed to increase flash sale sold. FS={FlashSaleId}, Product={ProductId}, Variant={VariantId}",
-                                                flashSaleId, orderItem.ProductId, orderItem.VariantId.Value);
-                                        }
-                                        else
-                                        {
-                                            _logger.LogInformation("✅ Increased FS sold: FS={FlashSaleId} +{Qty}", flashSaleId, orderItem.Quantity);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _logger.LogDebug("No active FlashSale mapped for Product {ProductId}, Variant {VariantId}",
-                                            orderItem.ProductId, orderItem.VariantId.Value);
-                                    }
-                                }
-
-                            }
-                        }
-                        else
-                        {
-                            var stockUpdateSuccess = await _productServiceClient.UpdateProductStockAsync(
-                                orderItem.ProductId,
-                                -orderItem.Quantity); 
-                            //var quantitySoldSuccess = await _productServiceClient.UpdateProductQuantitySoldAsync(
-                            //    orderItem.ProductId,
-                            //    orderItem.Quantity);
-                            if (!stockUpdateSuccess)
-                            {
-                                _logger.LogError("Failed to update stock for product {ProductId}", orderItem.ProductId);
-                                // Có thể rollback order nếu cần
-                            }
-                            else
-                            {
-                                _logger.LogInformation("✅ Updated stock: Product {ProductId} decreased by {Quantity}",
-                                    orderItem.ProductId, orderItem.Quantity);
+                                _logger.LogInformation("✅ Increased FS sold: FS={FlashSaleId} +{Qty}", flashSaleId, orderItem.Quantity);
                             }
                         }
                     }
@@ -268,7 +279,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             {
                 if (livestreamId.HasValue)
                 {
-                    // ✅ LIVESTREAM ORDER: CHỈ cập nhật stock của livestream product
                     _logger.LogInformation("🎥 Processing LIVESTREAM order - updating livestream product stock only for livestreamId {LivestreamId}, productId {ProductId}",
                         livestreamId.Value, orderItem.ProductId);
 
@@ -276,7 +286,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 }
                 else
                 {
-                    // ✅ NORMAL ORDER: Cập nhật stock của Product Service như bình thường
                     _logger.LogInformation("🛒 Processing NORMAL order - updating product service stock for productId {ProductId}",
                         orderItem.ProductId);
 
@@ -342,6 +351,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         {
             try
             {
+
                 // Gọi Livestream Service để cập nhật stock
                 var livestreamStockUpdateSuccess = await _livestreamServiceClient.UpdateProductStockAsync(
                     livestreamId,
@@ -407,10 +417,8 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 decimal unitPrice = 0;
                 decimal discount = 0;
 
-                // ✅ FIXED: Check if this is a livestream order and get livestream-specific pricing
                 if (order.LivestreamId.HasValue)
                 {
-                    // 🎥 LIVESTREAM ORDER: Get pricing from livestream
                     var livestreamProduct = await GetLivestreamProductPricingAsync(
                         order.LivestreamId.Value,
                         item.ProductId,
@@ -419,6 +427,12 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
 
                     if (livestreamProduct != null)
                     {
+                        if (livestreamProduct.Stock < item.Quantity)
+                        {
+                            _logger.LogWarning("⚠️ Insufficient livestream stock for ProductId {ProductId}: requested {Requested}, available {Available}",
+                                item.ProductId, item.Quantity, livestreamProduct.Stock);
+                            return Fail($"Sản phẩm {product.ProductName} chỉ còn {livestreamProduct.Stock} sản phẩm trong livestream, không đủ cho số lượng yêu cầu {item.Quantity}");
+                        }
                         unitPrice = livestreamProduct.LivestreamPrice;
                         discount = Math.Max(0, (livestreamProduct.OriginalPrice - livestreamProduct.LivestreamPrice) * item.Quantity);
 
