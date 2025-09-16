@@ -444,7 +444,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         _logger.LogWarning("⚠️ Product {ProductId} not found in livestream {LivestreamId}, using regular pricing as fallback",
                             item.ProductId, order.LivestreamId.Value);
 
-                        // Fallback to regular pricing
                         var pricingResult = await GetRegularProductPricingAsync(product, item.VariantId);
                         unitPrice = pricingResult.UnitPrice;
                         discount = pricingResult.Discount;
@@ -473,10 +472,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             ApiResponse<List<OrderItem>> Fail(string msg) => new() { Success = false, Message = msg };
             ApiResponse<List<OrderItem>> Success(List<OrderItem> data) => new() { Success = true, Data = data };
         }
-
-        /// <summary>
-        /// ✅ NEW: Get livestream-specific product pricing
-        /// </summary>
         private async Task<LivestreamProductPricing?> GetLivestreamProductPricingAsync(Guid livestreamId, Guid productId, string? variantId)
         {
             try
@@ -498,9 +493,6 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             }
         }
 
-        /// <summary>
-        /// ✅ EXTRACTED: Get regular product pricing (existing logic)
-        /// </summary>
         //private async Task<(decimal UnitPrice, decimal Discount)> GetRegularProductPricingAsync(ProductDto product, Guid? variantId)
         //{
         //    decimal unitPrice = 0;
@@ -703,7 +695,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 ShippingFee = order.ShippingFee,
                 TotalPrice = order.TotalPrice,
                 DiscountAmount = order.DiscountAmount,
-                FinalAmount = order.FinalAmount,
+                FinalAmount = order.FinalAmount,     
                 CustomerNotes = order.CustomerNotes,
                 TrackingCode = order.TrackingCode,
                 EstimatedDeliveryDate = order.EstimatedDeliveryDate,
@@ -716,18 +708,18 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         }
         private void CalculateOrderTotals(Orders order, decimal commissionRate, decimal voucherDiscount = 0)
         {
-            decimal totalPrice = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+            decimal totalPrice = order.Items.Sum(i => i.TotalPrice * i.Quantity);
             decimal itemDiscount = order.Items.Sum(i => i.DiscountAmount );
             decimal shippingFee = order.ShippingFee ;
-            decimal commissionFee = totalPrice * commissionRate / 100;
+            decimal commissionFee = 10 ;
 
             order.TotalPrice = totalPrice;
-            order.DiscountAmount = voucherDiscount + itemDiscount;
+            order.DiscountAmount = voucherDiscount;
             //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
             order.FinalAmount = totalPrice - (itemDiscount + order.DiscountAmount) + shippingFee;
             //order.CommissionFee = order.TotalPrice * (commissionFee/100);
             order.CommissionFee = commissionFee;
-            order.NetAmount = totalPrice - commissionFee;
+            order.NetAmount = (totalPrice - shippingFee - order.DiscountAmount) * 0.9m;
         }
         private void ScheduleBankTransferDeadlines(Guid orderId)
         {
