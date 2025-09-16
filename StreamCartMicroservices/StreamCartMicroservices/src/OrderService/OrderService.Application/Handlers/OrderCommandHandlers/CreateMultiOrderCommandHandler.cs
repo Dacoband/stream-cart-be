@@ -541,12 +541,12 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                 var variant = await _productServiceClient.GetVariantByIdAsync(variantId.Value);
                 if (variant != null)
                 {
-                    var original = (decimal)variant.Price;
+                    var original = (decimal)variant.Price; 
                     // Final is flash-sale price if present; otherwise variant.FinalPrice; fallback to original
                     var final = (decimal)(variant.FlashSalePrice ?? variant.FinalPrice ?? variant.Price);
-
+                     
                     originalPricePerUnit = original;
-                    discountPerUnit = Math.Max(0, original - final);
+                    discountPerUnit =(decimal) (variant.Price - variant.FinalPrice ?? 0);
                 }
                 else
                 {
@@ -708,7 +708,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
         }
         private void CalculateOrderTotals(Orders order, decimal commissionRate, decimal voucherDiscount = 0)
         {
-            decimal totalPrice = order.Items.Sum(i => i.TotalPrice * i.Quantity);
+            decimal totalPrice = order.Items.Sum(i => i.TotalPrice);
             decimal itemDiscount = order.Items.Sum(i => i.DiscountAmount );
             decimal shippingFee = order.ShippingFee ;
             decimal commissionFee = 10 ;
@@ -716,7 +716,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             order.TotalPrice = totalPrice;
             order.DiscountAmount = voucherDiscount;
             //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
-            order.FinalAmount = totalPrice - (itemDiscount + order.DiscountAmount) + shippingFee;
+            order.FinalAmount = totalPrice -  order.DiscountAmount  + shippingFee;
             //order.CommissionFee = order.TotalPrice * (commissionFee/100);
             order.CommissionFee = commissionFee;
             order.NetAmount = (totalPrice - shippingFee - order.DiscountAmount) * 0.9m;
