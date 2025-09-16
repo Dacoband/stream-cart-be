@@ -719,7 +719,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             order.FinalAmount = totalPrice -  order.DiscountAmount  + shippingFee;
             //order.CommissionFee = order.TotalPrice * (commissionFee/100);
             order.CommissionFee = commissionFee;
-            order.NetAmount = (totalPrice - shippingFee - order.DiscountAmount) * 0.9m;
+            order.NetAmount = (order.FinalAmount - shippingFee - order.DiscountAmount) * 0.9m;
         }
         private void ScheduleBankTransferDeadlines(Guid orderId)
         {
