@@ -730,7 +730,7 @@ namespace OrderService.Infrastructure.Services
 
                     case OrderStatus.Cancelled:
                         order.UpdateStatus(OrderStatus.Cancelled, request.ModifiedBy);
-                        await UpdateStockOnOrderCancelledAsync(order);   // ✅ Đổi sang await
+                        await UpdateStockOnOrderCancelledAsync(order);   
                         message = "Đơn hàng đã bị hủy";
                         break;
 
