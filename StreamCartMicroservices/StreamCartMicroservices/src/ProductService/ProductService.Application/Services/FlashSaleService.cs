@@ -158,24 +158,27 @@ namespace ProductService.Application.Services
                     continue;
                 }
 
-                if (productRequest.VariantIds == null || !productRequest.VariantIds.Any() || productRequest.VariantIds.All(v => v == null))
+                // Trong foreach (var productRequest in request.Products)
+                if (productRequest.VariantItems != null && productRequest.VariantItems.Any())
                 {
-                    await CreateFlashSaleForProduct(
-                        productRequest.ProductId,
-                        null,
-                        productRequest.FlashSalePrice,
-                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
-                        startTime,
-                        endTime,
-                        request.Slot,
-                        userId,
-                        response.Data,
-                        errorMessages);
+                    foreach (var vItem in productRequest.VariantItems)
+                    {
+                        await CreateFlashSaleForProduct(
+                            productRequest.ProductId,
+                            vItem.VariantId,
+                            vItem.FlashSalePrice,
+                            vItem.QuantityAvailable ?? productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                            startTime,
+                            endTime,
+                            request.Slot,
+                            userId,
+                            response.Data,
+                            errorMessages);
+                    }
                 }
-                else
+                else if (productRequest.VariantIds != null && productRequest.VariantIds.Any() && productRequest.VariantIds.All(x => x != null))
                 {
-                    // Create FlashSale for each variant
-                    foreach (var variantId in productRequest.VariantIds)
+                    foreach (var variantId in productRequest.VariantIds!)
                     {
                         await CreateFlashSaleForProduct(
                             productRequest.ProductId,
@@ -189,6 +192,21 @@ namespace ProductService.Application.Services
                             response.Data,
                             errorMessages);
                     }
+                }
+                else
+                {
+                    // Áp cho toàn product
+                    await CreateFlashSaleForProduct(
+                        productRequest.ProductId,
+                        null,
+                        productRequest.FlashSalePrice,
+                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                        startTime,
+                        endTime,
+                        request.Slot,
+                        userId,
+                        response.Data,
+                        errorMessages);
                 }
             }
 

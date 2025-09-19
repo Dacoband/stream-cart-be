@@ -48,12 +48,26 @@ namespace ProductService.Application.DTOs.FlashSale
         }
     }
 
+    public class VariantFlashSaleItemDto
+    {
+        public Guid VariantId { get; set; }
+        [Range(100, double.MaxValue)]
+        public decimal FlashSalePrice { get; set; }
+        [Range(1, int.MaxValue)]
+        public int? QuantityAvailable { get; set; }
+    }
+
     public class CreateFlashSaleProductDTO
     {
         public Guid ProductId { get; set; }
+
+        // OLD (giữ tương thích)
         public List<Guid?>? VariantIds { get; set; }
+        public List<VariantFlashSaleItemDto>? VariantItems { get; set; }
+
         [Range(100, double.MaxValue, ErrorMessage = "Giá FlashSale phải từ 100đ trở lên")]
         public decimal FlashSalePrice { get; set; }
+
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng FlashSale phải từ 1 trở lên")]
         public int? QuantityAvailable { get; set; }
     }
