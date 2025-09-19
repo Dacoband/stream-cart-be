@@ -157,6 +157,7 @@ namespace ProductService.Application.Services
                     errorMessages.Add($"Bạn không có quyền tạo FlashSale cho sản phẩm {productRequest.ProductId}");
                     continue;
                 }
+                bool anyVariantCreated = false;
 
                 // Trong foreach (var productRequest in request.Products)
                 // Thay phần trong CreateFlashSale (bên trong foreach productRequest)
@@ -171,6 +172,21 @@ namespace ProductService.Application.Services
                             variantId,
                             vData.Price,
                             vData.Quantity ?? productRequest.QuantityAvailable,
+                            startTime,
+                            endTime,
+                            request.Slot,
+                            userId,
+                            response.Data,
+                            errorMessages);
+                        anyVariantCreated = true;
+                    }
+                    if (productRequest.FlashSalePrice > 0)
+                    {
+                        await CreateFlashSaleForProduct(
+                            productRequest.ProductId,
+                            null,
+                            productRequest.FlashSalePrice,
+                            productRequest.QuantityAvailable,
                             startTime,
                             endTime,
                             request.Slot,
