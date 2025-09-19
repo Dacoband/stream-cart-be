@@ -4,45 +4,59 @@ using System.Text.Json.Serialization;
 
 namespace ProductService.Application.DTOs.FlashSale
 {
-    public class CreateFlashSaleDTO
+    public class CreateFlashSaleDTO : IValidatableObject
     {
+        [Required]
         public List<CreateFlashSaleProductDTO> Products { get; set; } = new();
 
         [Range(1, 8, ErrorMessage = "Slot phải từ 1 đến 8")]
         public int Slot { get; set; }
-
-        [Range(1, int.MaxValue, ErrorMessage = "Số lượng sản phẩm áp dụng FlashSale phải lớn hơn 0")]
-        public int? QuantityAvailable => Products?.Sum(p => p.QuantityAvailable ?? 0) > 0
-            ? Products.Sum(p => p.QuantityAvailable ?? 0)
-            : null;
 
         [Required(ErrorMessage = "Ngày áp dụng FlashSale là bắt buộc")]
         public DateTime Date { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Date.Date <= DateTime.Now.Date)
-            {
-                yield return new ValidationResult(
-                    "Ngày áp dụng FlashSale phải là ngày mai trở đi",
-                    new[] { nameof(Date) });
-            }
+            //if (Date.Date <= DateTime.UtcNow.Date)
+            //{
+            //    yield return new ValidationResult(
+            //        "Ngày áp dụng FlashSale phải lớn hơn ngày hiện tại",
+            //        new[] { nameof(Date) });
+            //}
 
             if (Products == null || !Products.Any())
             {
                 yield return new ValidationResult(
-                    "Phải có ít nhất một sản phẩm để tạo FlashSale",
+                    "Phải có ít nhất một sản phẩm",
                     new[] { nameof(Products) });
             }
 
-            for (int i = 0; i < Products.Count; i++)
+            foreach (var (p, idx) in Products.Select((p, i) => (p, i)))
             {
-                var product = Products[i];
-                if (product.FlashSalePrice <= 0)
+                if ((p.VariantMap == null || p.VariantMap.Count == 0) && p.FlashSalePrice <= 0)
                 {
                     yield return new ValidationResult(
-                        $"Sản phẩm thứ {i + 1} phải có giá FlashSale hợp lệ (> 0)",
-                        new[] { $"Products[{i}].FlashSalePrice" });
+                        $"Products[{idx}].FlashSalePrice phải > 0 (khi không dùng variant map)",
+                        new[] { $"Products[{idx}].FlashSalePrice" });
+                }
+
+                if (p.VariantMap != null && p.VariantMap.Count > 0)
+                {
+                    foreach (var kv in p.VariantMap)
+                    {
+                        if (kv.Value.Price <= 0)
+                        {
+                            yield return new ValidationResult(
+                                $"Variant {kv.Key} có giá không hợp lệ",
+                                new[] { $"Products[{idx}].VariantMap[{kv.Key}]" });
+                        }
+                        if (kv.Value.Quantity.HasValue && kv.Value.Quantity <= 0)
+                        {
+                            yield return new ValidationResult(
+                                $"Variant {kv.Key} quantity phải > 0",
+                                new[] { $"Products[{idx}].VariantMap[{kv.Key}].quantity" });
+                        }
+                    }
                 }
             }
         }
@@ -50,69 +64,88 @@ namespace ProductService.Application.DTOs.FlashSale
 
     public class CreateFlashSaleProductDTO
     {
+        [Required]
         public Guid ProductId { get; set; }
-        public List<Guid?>? VariantIds { get; set; }
-        [Range(100, double.MaxValue, ErrorMessage = "Giá FlashSale phải từ 100đ trở lên")]
+
+        /// <summary>
+        /// Map variantId -> { price, quantity } hoặc chỉ số (price).
+        /// </summary>
+        [JsonPropertyName("variantMap")]
+        public Dictionary<Guid, VariantFlashSaleValue>? VariantMap { get; set; }
+
+        /// <summary>
+        /// Giá FlashSale áp dụng cho toàn product (khi không có VariantMap)
+        /// </summary>
         public decimal FlashSalePrice { get; set; }
-        [Range(1, int.MaxValue, ErrorMessage = "Số lượng FlashSale phải từ 1 trở lên")]
+
+        /// <summary>
+        /// Số lượng áp dụng chung (fallback cho các variant không khai quantity)
+        /// </summary>
         public int? QuantityAvailable { get; set; }
     }
 
-    public class NullableGuidListConverter : JsonConverter<List<Guid?>?>
+    [JsonConverter(typeof(VariantFlashSaleValueConverter))]
+    public class VariantFlashSaleValue
     {
-        public override List<Guid?>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public decimal Price { get; set; }
+        public int? Quantity { get; set; }
+    }
+
+    public class VariantFlashSaleValueConverter : JsonConverter<VariantFlashSaleValue>
+    {
+        public override VariantFlashSaleValue? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
-                return null;
-
-            if (reader.TokenType != JsonTokenType.StartArray)
-                throw new JsonException("Expected start of array");
-
-            var list = new List<Guid?>();
-
-            while (reader.Read())
+            // Nếu chỉ là số: coi như price
+            if (reader.TokenType == JsonTokenType.Number)
             {
-                if (reader.TokenType == JsonTokenType.EndArray)
-                    break;
-
-                if (reader.TokenType == JsonTokenType.Null)
-                {
-                    list.Add(null);
-                }
-                else if (reader.TokenType == JsonTokenType.String)
-                {
-                    var guidString = reader.GetString();
-                    if (Guid.TryParse(guidString, out var guid))
-                    {
-                        list.Add(guid);
-                    }
-                    else
-                    {
-                        list.Add(null);
-                    }
-                }
+                if (!reader.TryGetDecimal(out var price))
+                    throw new JsonException("Invalid price number");
+                return new VariantFlashSaleValue { Price = price };
             }
 
-            return list;
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                using var doc = JsonDocument.ParseValue(ref reader);
+                var root = doc.RootElement;
+
+                decimal price = 0;
+                int? quantity = null;
+
+                if (root.TryGetProperty("price", out var priceProp))
+                {
+                    price = priceProp.GetDecimal();
+                }
+                else
+                {
+                    throw new JsonException("Missing 'price' in variantMap object value");
+                }
+
+                if (root.TryGetProperty("quantity", out var qtyProp) && qtyProp.ValueKind != JsonValueKind.Null)
+                {
+                    quantity = qtyProp.GetInt32();
+                }
+
+                return new VariantFlashSaleValue
+                {
+                    Price = price,
+                    Quantity = quantity
+                };
+            }
+
+            if (reader.TokenType == JsonTokenType.Null) return null;
+
+            throw new JsonException("Invalid variant value format");
         }
 
-        public override void Write(Utf8JsonWriter writer, List<Guid?>? value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, VariantFlashSaleValue value, JsonSerializerOptions options)
         {
-            if (value == null)
+            writer.WriteStartObject();
+            writer.WriteNumber("price", value.Price);
+            if (value.Quantity.HasValue)
             {
-                writer.WriteNullValue();
-                return;
+                writer.WriteNumber("quantity", value.Quantity.Value);
             }
-
-            writer.WriteStartArray();
-            foreach (var item in value)
-            {
-                if (item.HasValue)
-                    writer.WriteStringValue(item.Value.ToString());
-                else
-                    writer.WriteNullValue();
-            }
-            writer.WriteEndArray();
+            writer.WriteEndObject();
         }
     }
 }

@@ -158,30 +158,19 @@ namespace ProductService.Application.Services
                     continue;
                 }
 
-                if (productRequest.VariantIds == null || !productRequest.VariantIds.Any() || productRequest.VariantIds.All(v => v == null))
+                // Trong foreach (var productRequest in request.Products)
+                // Thay phần trong CreateFlashSale (bên trong foreach productRequest)
+                if (productRequest.VariantMap != null && productRequest.VariantMap.Count > 0)
                 {
-                    await CreateFlashSaleForProduct(
-                        productRequest.ProductId,
-                        null,
-                        productRequest.FlashSalePrice,
-                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
-                        startTime,
-                        endTime,
-                        request.Slot,
-                        userId,
-                        response.Data,
-                        errorMessages);
-                }
-                else
-                {
-                    // Create FlashSale for each variant
-                    foreach (var variantId in productRequest.VariantIds)
+                    foreach (var kv in productRequest.VariantMap)
                     {
+                        var variantId = kv.Key;
+                        var vData = kv.Value;
                         await CreateFlashSaleForProduct(
                             productRequest.ProductId,
                             variantId,
-                            productRequest.FlashSalePrice,
-                            productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                            vData.Price,
+                            vData.Quantity ?? productRequest.QuantityAvailable,
                             startTime,
                             endTime,
                             request.Slot,
@@ -189,6 +178,20 @@ namespace ProductService.Application.Services
                             response.Data,
                             errorMessages);
                     }
+                }
+                else
+                {
+                    await CreateFlashSaleForProduct(
+                        productRequest.ProductId,
+                        null,
+                        productRequest.FlashSalePrice,
+                        productRequest.QuantityAvailable,
+                        startTime,
+                        endTime,
+                        request.Slot,
+                        userId,
+                        response.Data,
+                        errorMessages);
                 }
             }
 

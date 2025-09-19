@@ -44,7 +44,6 @@ namespace ProductService.Application.Services
                 var isRunning = fs.StartTime <= now && now < fs.EndTime;
                 var isEnded = now >= fs.EndTime;
 
-                // 🔹 NEW: Nếu đã bán hết thì coi như kết thúc
                 var isSoldOut = fs.QuantitySold >= fs.QuantityAvailable;
 
                 if (isRunning && !isSoldOut)
@@ -61,7 +60,6 @@ namespace ProductService.Application.Services
                                 product.EndTime = fs.EndTime;
                                 await _productRepo.ReplaceAsync(product.Id.ToString(), product);
 
-                                // 👇 Chỉ gửi ProductUpdatedEvent nếu chưa gửi thông báo
                                 if (!fs.NotificationSent)
                                 {
                                     var productEvent = new ProductUpdatedEvent()
