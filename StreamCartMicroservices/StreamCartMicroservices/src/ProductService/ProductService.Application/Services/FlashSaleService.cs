@@ -159,32 +159,18 @@ namespace ProductService.Application.Services
                 }
 
                 // Trong foreach (var productRequest in request.Products)
-                if (productRequest.VariantItems != null && productRequest.VariantItems.Any())
+                // Thay phần trong CreateFlashSale (bên trong foreach productRequest)
+                if (productRequest.VariantMap != null && productRequest.VariantMap.Count > 0)
                 {
-                    foreach (var vItem in productRequest.VariantItems)
+                    foreach (var kv in productRequest.VariantMap)
                     {
-                        await CreateFlashSaleForProduct(
-                            productRequest.ProductId,
-                            vItem.VariantId,
-                            vItem.FlashSalePrice,
-                            vItem.QuantityAvailable ?? productRequest.QuantityAvailable ?? request.QuantityAvailable,
-                            startTime,
-                            endTime,
-                            request.Slot,
-                            userId,
-                            response.Data,
-                            errorMessages);
-                    }
-                }
-                else if (productRequest.VariantIds != null && productRequest.VariantIds.Any() && productRequest.VariantIds.All(x => x != null))
-                {
-                    foreach (var variantId in productRequest.VariantIds!)
-                    {
+                        var variantId = kv.Key;
+                        var vData = kv.Value;
                         await CreateFlashSaleForProduct(
                             productRequest.ProductId,
                             variantId,
-                            productRequest.FlashSalePrice,
-                            productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                            vData.Price,
+                            vData.Quantity ?? productRequest.QuantityAvailable,
                             startTime,
                             endTime,
                             request.Slot,
@@ -195,12 +181,11 @@ namespace ProductService.Application.Services
                 }
                 else
                 {
-                    // Áp cho toàn product
                     await CreateFlashSaleForProduct(
                         productRequest.ProductId,
                         null,
                         productRequest.FlashSalePrice,
-                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                        productRequest.QuantityAvailable,
                         startTime,
                         endTime,
                         request.Slot,
