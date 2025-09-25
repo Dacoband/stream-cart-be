@@ -733,7 +733,7 @@ namespace OrderService.Api.Controllers
                         {
                             Date = group.Key,
                             OrderCount = group.Count(),
-                            Revenue = group.Sum(o => o.FinalAmount)
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
                         });
                     }
                 }
@@ -760,7 +760,7 @@ namespace OrderService.Api.Controllers
                             Date = weekStart,
                             Label = $"Week {group.Key.Week}, {group.Key.Year}",
                             OrderCount = group.Count(),
-                            Revenue = group.Sum(o => o.FinalAmount)
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
                         });
                     }
                 }
@@ -777,7 +777,7 @@ namespace OrderService.Api.Controllers
                             Date = new DateTime(group.Key.Year, group.Key.Month, 1),
                             Label = $"{new DateTime(group.Key.Year, group.Key.Month, 1):MMM yyyy}",
                             OrderCount = group.Count(),
-                            Revenue = group.Sum(o => o.FinalAmount)
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
                         });
                     }
                 }
@@ -841,7 +841,7 @@ namespace OrderService.Api.Controllers
                     {
                         LivestreamId = g.Key ?? Guid.Empty,
                         OrderCount = g.Count(),
-                        Revenue = g.Sum(o => o.FinalAmount)
+                        Revenue = g.Sum(o => o.FinalAmount - o.ShippingFee)
                     })
                     .OrderByDescending(s => s.OrderCount)
                     .ToArray();
@@ -850,7 +850,7 @@ namespace OrderService.Api.Controllers
                 {
                     TotalLivestreamOrders = livestreamOrders.Count,
                     TotalNonLivestreamOrders = nonLivestreamOrders.Count,
-                    LivestreamRevenue = livestreamOrders.Sum(o => o.FinalAmount),
+                    LivestreamRevenue = livestreamOrders.Sum(o => o.FinalAmount - o.ShippingFee),
                     NonLivestreamRevenue = nonLivestreamOrders.Sum(o => o.FinalAmount),
                     LivestreamStats = livestreamStats
                 };

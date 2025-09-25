@@ -279,8 +279,8 @@ namespace OrderService.Infrastructure.Repositories
                 var ordersByStatus = orders
                     .GroupBy(o => o.OrderStatus)
                     .ToDictionary(g => g.Key, g => g.Count());
-                
-                var totalRevenue = orders.Sum(o => o.FinalAmount);
+
+                var totalRevenue = orders.Sum(o => o.FinalAmount - o.ShippingFee);
                 var totalCommissionFees = orders.Sum(o => o.CommissionFee);
                 var netRevenue = totalRevenue - totalCommissionFees;
                 
