@@ -289,10 +289,10 @@ namespace LivestreamService.Infrastructure.Hubs
                         // Convert int role to string (assuming 1=Admin, 2=Seller, 3=Customer)
                         return roleInt switch
                         {
-                            1 => "Admin",
+                            1 => "Customer",
                             2 => "Seller",
-                            3 => "Customer",
-                            4 => "Moderator",
+                            //3 => "Customer",
+                            //4 => "Moderator",
                             _ => "Unknown"
                         };
                     }
