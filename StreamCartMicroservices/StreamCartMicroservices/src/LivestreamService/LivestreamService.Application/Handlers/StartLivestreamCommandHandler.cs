@@ -46,15 +46,15 @@ namespace LivestreamService.Application.Handlers
             }
             var requestingUserId = _currentUserService.GetUserId();
             //Valiedate livestream nha 
-            //var membershipValidation = await _membershipService.ValidateRemainingLivestreamTimeAsync(livestream.ShopId);
-            //if (!membershipValidation.IsValid)
-            //{
-            //    throw new InvalidOperationException($"Không thể bắt đầu livestream: {membershipValidation.ErrorMessage}");
-            //}
-            //if (membershipValidation.RemainingMinutes <= 0)
-            //{
-            //    throw new InvalidOperationException("Shop đã hết thời gian livestream trong gói thành viên. Vui lòng gia hạn gói thành viên để tiếp tục livestream.");
-            //}
+            var membershipValidation = await _membershipService.ValidateRemainingLivestreamTimeAsync(livestream.ShopId);
+            if (!membershipValidation.IsValid)
+            {
+                throw new InvalidOperationException($"Không thể bắt đầu livestream: {membershipValidation.ErrorMessage}");
+            }
+            if (membershipValidation.RemainingMinutes <= 0)
+            {
+                throw new InvalidOperationException("Shop đã hết thời gian livestream trong gói thành viên. Vui lòng gia hạn gói thành viên để tiếp tục livestream.");
+            }
             // Start the livestream
             livestream.Start(request.SellerId.ToString(),requestingUserId);
             await _livestreamRepository.ReplaceAsync(livestream.Id.ToString(), livestream);
