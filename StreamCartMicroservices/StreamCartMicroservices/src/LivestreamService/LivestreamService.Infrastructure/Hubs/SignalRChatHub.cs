@@ -1701,7 +1701,20 @@ namespace LivestreamService.Infrastructure.Hubs
                     await Clients.Caller.SendAsync("Error", "Invalid id format");
                     return;
                 }
+                var livestream = await _livestreamRepository.GetByIdAsync(livestreamId);
+                if (livestream == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Livestream không tồn tại");
+                    return;
+                }
 
+                if (!livestream.Status)
+                {
+                    await Clients.Caller.SendAsync("Error", "Livestream đã kết thúc. Không thể thêm sản phẩm vào giỏ hàng.");
+                    _logger.LogWarning("User {UserId} attempted to add to cart for ended livestream {LivestreamId}",
+                        userId, livestreamId);
+                    return;
+                }
                 var sp = Context.GetHttpContext()?.RequestServices;
                 var cartRepository = sp?.GetRequiredService<ILivestreamCartRepository>();
                 var cartItemRepository = sp?.GetRequiredService<ILivestreamCartItemRepository>();

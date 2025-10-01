@@ -139,7 +139,7 @@ namespace ShopService.Application.Services
                 // Bắt đầu transaction
                 await _shopUnitOfWork.BeginTransactionAsync();
 
-                await _shopMembershipRepository.InsertAsync(shopMembership);
+                if (existingShopMembership != null) { await _shopMembershipRepository.ReplaceAsync(existingShopMembership?.Id.ToString(), existingShopMembership); }
                 await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
                 await _walletTransactionRepository.InsertAsync(transaction);
 
