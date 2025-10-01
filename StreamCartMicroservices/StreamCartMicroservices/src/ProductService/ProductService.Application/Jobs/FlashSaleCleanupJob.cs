@@ -49,6 +49,7 @@ namespace ProductService.Application.Jobs
 
             _logger.LogInformation("FlashSaleCleanupJob stopped.");
         }
+
         private async Task ProcessEndedFlashSalesAsync(
             IFlashSaleRepository flashSaleRepo,
             IProductRepository productRepo,
