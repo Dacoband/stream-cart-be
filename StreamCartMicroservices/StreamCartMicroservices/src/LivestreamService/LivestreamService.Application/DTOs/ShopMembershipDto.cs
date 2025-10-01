@@ -23,7 +23,7 @@ namespace LivestreamService.Application.DTOs
         public int Duration { get; set; }
         public bool IsActive => Status == "Ongoing" &&
                                DateTime.UtcNow >= StartDate &&
-                               DateTime.UtcNow <= EndDate &&
+                               //DateTime.UtcNow <= EndDate &&
                                !IsDeleted;
         public bool HasRemainingLivestreamTime => RemainingLivestream > 0;
         public int RemainingLivestreamMinutes => RemainingLivestream;
