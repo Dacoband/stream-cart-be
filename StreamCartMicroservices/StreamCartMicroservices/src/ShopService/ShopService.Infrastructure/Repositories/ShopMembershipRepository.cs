@@ -23,7 +23,7 @@ namespace ShopService.Infrastructure.Repositories
 
         public async Task<ShopMembership?> GetActiveMembership(string shopId)
         {
-            return await _context.ShopMembership.Include(x => x.Membership).Where(x => x.ShopID.ToString() == shopId && x.StartDate <= DateTime.Now && x.EndDate >= DateTime.Now && x.Membership.Type == "New" && x.IsDeleted == false && x.Status == "Ongoing").FirstOrDefaultAsync();
+            return await _context.ShopMembership.Include(x => x.Membership).Where(x => x.ShopID.ToString() == shopId && x.StartDate <= DateTime.Now && x.Membership.Type == "New" && x.IsDeleted == false && x.Status == "Ongoing").FirstOrDefaultAsync();
         }
         public async Task<ShopMembership?> GetById(string id)
         {

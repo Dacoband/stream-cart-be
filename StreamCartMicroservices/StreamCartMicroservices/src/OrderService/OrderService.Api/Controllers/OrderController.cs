@@ -501,7 +501,7 @@ namespace OrderService.Api.Controllers
         /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
         /// <returns>Thống kê đơn hàng</returns>
         [HttpGet("shop/{shopId}/statistics")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<OrderStatisticsDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetShopOrderStatistics(
@@ -547,7 +547,7 @@ namespace OrderService.Api.Controllers
         /// <param name="limit">Số lượng sản phẩm tối đa trả về</param>
         /// <returns>Danh sách sản phẩm bán chạy</returns>
         [HttpGet("shop/{shopId}/top-products")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<TopProductsDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetTopSellingProducts(
@@ -624,7 +624,7 @@ namespace OrderService.Api.Controllers
         /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
         /// <returns>Thống kê khách hàng</returns>
         [HttpGet("shop/{shopId}/customer-statistics")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<CustomerStatisticsDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetCustomerStatistics(
@@ -696,7 +696,7 @@ namespace OrderService.Api.Controllers
         /// <param name="period">Loại thời gian (daily, weekly, monthly)</param>
         /// <returns>Thống kê đơn hàng theo thời gian</returns>
         [HttpGet("shop/{shopId}/time-series")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<OrderTimeSeriesDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetOrderTimeSeries(
@@ -955,6 +955,327 @@ namespace OrderService.Api.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResult($"Lỗi khi lấy doanh thu livestream: {ex.Message}"));
             }
         }
+        /// <summary>
+        /// Lấy thống kê đơn hàng cho toàn hệ thống
+        /// </summary>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <returns>Thống kê đơn hàng hệ thống</returns>
+        [HttpGet("system/statistics")]
+        [Authorize(Roles = "Admin,OperationManager,Moderator")]
+        [ProducesResponseType(typeof(ApiResponse<SystemOrderStatisticsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetSystemOrderStatistics(
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all orders in the system within the time period
+                var ordersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    StartDate = from,
+                    EndDate = to,
+                    PageNumber = 1,
+                    PageSize = 50000  // Large number to get all orders
+                });
+
+                var orders = ordersResult.Items.ToList();
+
+                // Calculate system-wide statistics
+                var totalOrders = orders.Count;
+                var totalRevenue = orders.Sum(o => o.FinalAmount - o.ShippingFee); // Exclude shipping fee
+                var totalShippingFee = orders.Sum(o => o.ShippingFee);
+                var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+                // Order status breakdown
+                var ordersByStatus = orders
+                    .GroupBy(o => o.OrderStatus)
+                    .ToDictionary(g => g.Key.ToString(), g => g.Count());
+
+                // Payment status breakdown
+                var ordersByPaymentStatus = orders
+                    .GroupBy(o => o.PaymentStatus)
+                    .ToDictionary(g => g.Key.ToString(), g => g.Count());
+
+                // Shop performance (top 10)
+                var shopPerformance = orders
+                    .GroupBy(o => o.ShopId)
+                    .Select(g => new ShopPerformanceDTO
+                    {
+                        ShopId = g.Key,
+                        OrderCount = g.Count(),
+                        Revenue = g.Sum(o => o.FinalAmount - o.ShippingFee),
+                        AverageOrderValue = g.Count() > 0 ? g.Sum(o => o.FinalAmount - o.ShippingFee) / g.Count() : 0
+                    })
+                    .OrderByDescending(s => s.Revenue)
+                    .Take(10)
+                    .ToArray();
+
+                // Payment method breakdown
+                var paymentMethodBreakdown = orders
+                    .GroupBy(o => o.PaymentMethod)
+                    .ToDictionary(g => g.Key, g => new PaymentMethodStatsDTO
+                    {
+                        OrderCount = g.Count(),
+                        Revenue = g.Sum(o => o.FinalAmount - o.ShippingFee)
+                    });
+
+                // Livestream vs Non-livestream orders
+                var livestreamOrders = orders.Where(o => o.LivestreamId.HasValue).ToList();
+                var nonLivestreamOrders = orders.Where(o => !o.LivestreamId.HasValue).ToList();
+
+                // Daily order trend (last 30 days)
+                var dailyTrend = orders
+                    .Where(o => o.OrderDate >= DateTime.UtcNow.AddDays(-30))
+                    .GroupBy(o => o.OrderDate.Date)
+                    .Select(g => new DailyOrderTrendDTO
+                    {
+                        Date = g.Key,
+                        OrderCount = g.Count(),
+                        Revenue = g.Sum(o => o.FinalAmount - o.ShippingFee)
+                    })
+                    .OrderBy(d => d.Date)
+                    .ToArray();
+
+                var result = new SystemOrderStatisticsDTO
+                {
+                    // Basic stats
+                    TotalOrders = totalOrders,
+                    TotalRevenue = totalRevenue,
+                    TotalShippingFee = totalShippingFee,
+                    AverageOrderValue = averageOrderValue,
+                    PeriodStart = from,
+                    PeriodEnd = to,
+
+                    // Status breakdowns
+                    OrdersByStatus = ordersByStatus,
+                    OrdersByPaymentStatus = ordersByPaymentStatus,
+
+                    // Detailed counts
+                    CompleteOrderCount = ordersByStatus.GetValueOrDefault("Delivered", 0),
+                    ProcessingOrderCount = ordersByStatus.GetValueOrDefault("Processing", 0) +
+                                         ordersByStatus.GetValueOrDefault("Shipped", 0) +
+                                         ordersByStatus.GetValueOrDefault("Packed", 0),
+                    CanceledOrderCount = ordersByStatus.GetValueOrDefault("Cancelled", 0),
+                    PendingOrderCount = ordersByStatus.GetValueOrDefault("Pending", 0) +
+                                      ordersByStatus.GetValueOrDefault("Waiting", 0),
+
+                    // Shop performance
+                    TopShops = shopPerformance,
+                    TotalActiveShops = shopPerformance.Length,
+
+                    // Payment methods
+                    PaymentMethodBreakdown = paymentMethodBreakdown,
+
+                    // Livestream statistics
+                    LivestreamOrderCount = livestreamOrders.Count,
+                    LivestreamRevenue = livestreamOrders.Sum(o => o.FinalAmount - o.ShippingFee),
+                    NonLivestreamOrderCount = nonLivestreamOrders.Count,
+                    NonLivestreamRevenue = nonLivestreamOrders.Sum(o => o.FinalAmount - o.ShippingFee),
+
+                    // Trends
+                    DailyTrend = dailyTrend
+                };
+
+                return Ok(ApiResponse<SystemOrderStatisticsDTO>.SuccessResult(result, "Lấy thống kê hệ thống thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving system order statistics");
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Lấy thống kê sản phẩm bán chạy nhất toàn hệ thống
+        /// </summary>
+        /// <param name="fromDate">Ngày bắt đầu (tùy chọn)</param>
+        /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
+        /// <param name="limit">Số lượng sản phẩm tối đa trả về</param>
+        /// <returns>Danh sách sản phẩm bán chạy</returns>
+        [HttpGet("system/top-products")]
+        [Authorize(Roles = "Admin,OperationManager,Moderator")]
+        [ProducesResponseType(typeof(ApiResponse<TopProductsDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetSystemTopSellingProducts(
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] int limit = 10)
+        {
+            try
+            {
+                var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
+                var to = toDate ?? DateTime.UtcNow;
+
+                // Get all orders in the system within the time period
+                var ordersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    StartDate = from,
+                    EndDate = to,
+                    PageNumber = 1,
+                    PageSize = 50000
+                });
+
+                var orders = ordersResult.Items
+                    .Where(o => o.OrderDate >= from && o.OrderDate <= to)
+                    .Where(o => o.OrderStatus != OrderStatus.Cancelled);
+
+                // Group orders by product, calculate sales and revenue
+                var productSales = orders
+                    .SelectMany(o => o.Items)
+                    .GroupBy(i => i.ProductId)
+                    .Select(g => new
+                    {
+                        ProductId = g.Key,
+                        Quantity = g.Sum(i => i.Quantity),
+                        Revenue = g.Sum(i => i.TotalPrice)
+                    })
+                    .OrderByDescending(p => p.Quantity)
+                    .Take(limit)
+                    .ToList();
+
+                // Get product details
+                var topProducts = new List<TopProductDTO>();
+                foreach (var product in productSales)
+                {
+                    var productDetails = await _productServiceClient.GetProductByIdAsync(product.ProductId);
+                    if (productDetails != null)
+                    {
+                        topProducts.Add(new TopProductDTO
+                        {
+                            ProductId = product.ProductId,
+                            ProductName = productDetails.ProductName ?? "Unknown Product",
+                            ProductImageUrl = productDetails.PrimaryImageUrl ?? string.Empty,
+                            SalesCount = product.Quantity,
+                            Revenue = product.Revenue
+                        });
+                    }
+                }
+
+                var result = new TopProductsDTO
+                {
+                    Products = topProducts.ToArray()
+                };
+
+                return Ok(ApiResponse<TopProductsDTO>.SuccessResult(result, "Lấy danh sách sản phẩm bán chạy hệ thống thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving system top products");
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Lấy thống kê đơn hàng theo thời gian cho toàn hệ thống
+        /// </summary>
+        /// <param name="fromDate">Ngày bắt đầu</param>
+        /// <param name="toDate">Ngày kết thúc</param>
+        /// <param name="period">Loại thời gian (daily, weekly, monthly)</param>
+        /// <returns>Thống kê đơn hàng theo thời gian</returns>
+        [HttpGet("system/time-series")]
+        [Authorize(Roles = "Admin,OperationManager,Moderator")]
+        [ProducesResponseType(typeof(ApiResponse<OrderTimeSeriesDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> GetSystemOrderTimeSeries(
+            [FromQuery] DateTime fromDate,
+            [FromQuery] DateTime toDate,
+            [FromQuery] string period = "daily")
+        {
+            try
+            {
+                // Get all orders in the system within the time period
+                var ordersResult = await _orderService.SearchOrdersAsync(new OrderSearchParamsDto
+                {
+                    StartDate = fromDate,
+                    EndDate = toDate,
+                    PageNumber = 1,
+                    PageSize = 50000
+                });
+
+                var orders = ordersResult.Items.ToList();
+
+                // Group orders by time period
+                var timeSeriesData = new List<OrderTimePoint>();
+
+                if (period.ToLower() == "daily")
+                {
+                    var dailyGroups = orders
+                        .GroupBy(o => o.OrderDate.Date)
+                        .OrderBy(g => g.Key);
+                    foreach (var group in dailyGroups)
+                    {
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = group.Key,
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
+                        });
+                    }
+                }
+                else if (period.ToLower() == "weekly")
+                {
+                    var weeklyGroups = orders
+                        .GroupBy(o => {
+                            var date = o.OrderDate.Date;
+                            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+                            var weekOfYear = cal.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstDay, DayOfWeek.Monday);
+                            return new { Year = date.Year, Week = weekOfYear };
+                        })
+                        .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Week);
+
+                    foreach (var group in weeklyGroups)
+                    {
+                        var firstOrder = group.OrderBy(o => o.OrderDate).First();
+                        var weekStart = firstOrder.OrderDate.Date;
+
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = weekStart,
+                            Label = $"Week {group.Key.Week}, {group.Key.Year}",
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
+                        });
+                    }
+                }
+                else if (period.ToLower() == "monthly")
+                {
+                    var monthlyGroups = orders
+                        .GroupBy(o => new { o.OrderDate.Year, o.OrderDate.Month })
+                        .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month);
+
+                    foreach (var group in monthlyGroups)
+                    {
+                        timeSeriesData.Add(new OrderTimePoint
+                        {
+                            Date = new DateTime(group.Key.Year, group.Key.Month, 1),
+                            Label = $"{new DateTime(group.Key.Year, group.Key.Month, 1):MMM yyyy}",
+                            OrderCount = group.Count(),
+                            Revenue = group.Sum(o => o.FinalAmount - o.ShippingFee)
+                        });
+                    }
+                }
+
+                var result = new OrderTimeSeriesDTO
+                {
+                    Period = period,
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    DataPoints = timeSeriesData.ToArray()
+                };
+
+                return Ok(ApiResponse<OrderTimeSeriesDTO>.SuccessResult(result, "Lấy thống kê đơn hàng hệ thống theo thời gian thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving system order time series");
+                return BadRequest(ApiResponse<object>.ErrorResult(ex.Message));
+            }
+        }
     }
 
     // DTOs for controller input
@@ -1046,5 +1367,57 @@ namespace OrderService.Api.Controllers
     public class CancelOrderDto
     {
         public string CancelReason { get; set; }
+    }
+    // DTOs for system-wide statistics
+    public class SystemOrderStatisticsDTO
+    {
+        public int TotalOrders { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public decimal TotalShippingFee { get; set; }
+        public decimal AverageOrderValue { get; set; }
+        public DateTime PeriodStart { get; set; }
+        public DateTime PeriodEnd { get; set; }
+
+        // Status breakdowns
+        public Dictionary<string, int> OrdersByStatus { get; set; } = new();
+        public Dictionary<string, int> OrdersByPaymentStatus { get; set; } = new();
+
+        public int CompleteOrderCount { get; set; }
+        public int ProcessingOrderCount { get; set; }
+        public int CanceledOrderCount { get; set; }
+        public int PendingOrderCount { get; set; }
+
+        public ShopPerformanceDTO[] TopShops { get; set; } = Array.Empty<ShopPerformanceDTO>();
+        public int TotalActiveShops { get; set; }
+
+        public Dictionary<string, PaymentMethodStatsDTO> PaymentMethodBreakdown { get; set; } = new();
+
+        public int LivestreamOrderCount { get; set; }
+        public decimal LivestreamRevenue { get; set; }
+        public int NonLivestreamOrderCount { get; set; }
+        public decimal NonLivestreamRevenue { get; set; }
+
+        public DailyOrderTrendDTO[] DailyTrend { get; set; } = Array.Empty<DailyOrderTrendDTO>();
+    }
+
+    public class ShopPerformanceDTO
+    {
+        public Guid ShopId { get; set; }
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
+        public decimal AverageOrderValue { get; set; }
+    }
+
+    public class PaymentMethodStatsDTO
+    {
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class DailyOrderTrendDTO
+    {
+        public DateTime Date { get; set; }
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
     }
 }
