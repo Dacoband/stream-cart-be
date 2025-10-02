@@ -232,7 +232,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         order.VoucherCode = voucherResult.Data.VoucherCode;
                         order.DiscountAmount =  voucherDiscountAmount;
                         order.FinalAmount = voucherResult.Data.FinalAmount;
-
+                        order.NetAmount = order.NetAmount - voucherDiscountAmount;
                         _logger.LogInformation("📊 Order updated - Item Discount: {ItemDiscount}đ, Voucher Discount: {VoucherDiscount}đ, Final: {Final}đ",
                             itemDiscountTotal, voucherDiscountAmount, order.FinalAmount);
                         await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
