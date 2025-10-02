@@ -987,7 +987,7 @@ namespace OrderService.Api.Controllers
 
                 // Calculate system-wide statistics
                 var totalOrders = orders.Count;
-                var totalRevenue = orders.Sum(o => o.FinalAmount - o.ShippingFee); // Exclude shipping fee
+                var totalRevenue = orders.Sum(o => o.FinalAmount - o.ShippingFee - o.NetAmount); // Exclude shipping fee
                 var totalShippingFee = orders.Sum(o => o.ShippingFee);
                 var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 

@@ -280,7 +280,7 @@ namespace OrderService.Infrastructure.Repositories
                     .GroupBy(o => o.OrderStatus)
                     .ToDictionary(g => g.Key, g => g.Count());
 
-                var totalRevenue = orders.Sum(o => o.FinalAmount - o.ShippingFee);
+                var totalRevenue = orders.Sum(o => o.NetAmount);
                 var totalCommissionFees = orders.Sum(o => o.CommissionFee);
                 var netRevenue = totalRevenue - totalCommissionFees;
                 

@@ -144,8 +144,8 @@ namespace ProductService.Domain.Entities
             if (quantity <= 0)
                 throw new ArgumentException("Release quantity must be greater than zero", nameof(quantity));
 
-            if (quantity > ReserveStock)
-                throw new InvalidOperationException($"Cannot release {quantity} items. Only {ReserveStock} reserved");
+            //if (quantity > ReserveStock)
+            //    throw new InvalidOperationException($"Cannot release {quantity} items. Only {ReserveStock} reserved");
 
             ReserveStock -= quantity;
             Stock += quantity;
