@@ -714,12 +714,13 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             decimal commissionFee = 10 ;
 
             order.TotalPrice = totalPrice;
-            order.DiscountAmount = voucherDiscount;
+            order.DiscountAmount = itemDiscount + voucherDiscount;
             //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
             order.FinalAmount = totalPrice -  order.DiscountAmount  + shippingFee;
-            //order.CommissionFee = order.TotalPrice * (commissionFee/100);
-            order.CommissionFee = commissionFee;
-            order.NetAmount = (order.FinalAmount - shippingFee - order.DiscountAmount) * 0.9m;
+            order.CommissionFee = order.TotalPrice * (commissionRate / 100);
+            //order.CommissionFee = commissionFee;
+            //order.NetAmount = (order.FinalAmount - shippingFee - order.DiscountAmount) * 0.9m;
+            order.NetAmount = order.FinalAmount - shippingFee -  order.CommissionFee;
         }
         private void ScheduleBankTransferDeadlines(Guid orderId)
         {
