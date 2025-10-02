@@ -36,7 +36,7 @@ namespace OrderService.Infrastructure.Clients
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync($"https://brightpa.me/api/wallet/shop-payment", paymentRequest);
+                var response = await _httpClient.PostAsJsonAsync($"https://brightpa.me/api/wallets/shop-payment", paymentRequest);
                 response.EnsureSuccessStatusCode();
 
                 _logger.LogInformation("Thanh toán cho shop thành công: Đơn hàng {OrderId}, Shop {ShopId}, Số tiền {Amount}",

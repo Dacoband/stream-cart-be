@@ -144,7 +144,6 @@ namespace OrderService.Infrastructure.Clients
                 _logger.LogInformation("🔄 Updating livestream product stock - LivestreamId: {LivestreamId}, ProductId: {ProductId}, VariantId: {VariantId}, Change: {Change}",
                     livestreamId, productId, variantId, quantityChange);
 
-                // ✅ FIX: Đầu tiên cần lấy stock hiện tại để tính stock mới
                 var currentProduct = await GetLivestreamProductAsync(livestreamId, productId, variantId);
                 if (currentProduct == null)
                 {
@@ -153,8 +152,7 @@ namespace OrderService.Infrastructure.Clients
                     return false;
                 }
 
-                // Tính stock mới
-                var newStock = currentProduct.Stock + quantityChange; // quantityChange đã là âm từ caller
+                var newStock = currentProduct.Stock + quantityChange; 
                 if (newStock < 0)
                 {
                     _logger.LogWarning("⚠️ Cannot update stock to negative value. Current: {Current}, Change: {Change}",
@@ -162,11 +160,10 @@ namespace OrderService.Infrastructure.Clients
                     return false;
                 }
 
-                // ✅ FIX: Sử dụng đúng endpoint có sẵn
                 var requestBody = new
                 {
                     stock = newStock,
-                    price = currentProduct.Price // Giữ nguyên giá
+                    price = currentProduct.Price 
                 };
 
                 var jsonContent = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
@@ -176,11 +173,14 @@ namespace OrderService.Infrastructure.Clients
 
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                // ✅ FIX: Sử dụng endpoint thực tế
-                var variantParam = string.IsNullOrEmpty(variantId) ? "null" : variantId;
-                var response = await _httpClient.PatchAsync(
-                    $"api/livestream-products/livestream/{livestreamId}/product/{productId}/variant/{variantParam}/stock",
-                    content);
+                var baseUrl = $"api/livestream-products/livestream/{livestreamId}/product/{productId}/stock";
+
+                var url = string.IsNullOrEmpty(variantId)
+                    ? baseUrl
+                    : $"{baseUrl}?variantId={variantId}";
+
+                var response = await _httpClient.PatchAsync(url, content);
+
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation("✅ Successfully updated livestream product stock for ProductId: {ProductId}, NewStock: {NewStock}",
@@ -206,8 +206,7 @@ namespace OrderService.Infrastructure.Clients
         {
             try
             {
-                // ✅ Sử dụng endpoint để lấy tất cả sản phẩm trong livestream
-                var response = await _httpClient.GetAsync($"api/livestream-products/livestream/{livestreamId}");
+                var response = await _httpClient.GetAsync($"https://brightpa.me/api/livestream-products/livestream/{livestreamId}");
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -248,6 +247,45 @@ namespace OrderService.Infrastructure.Clients
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting livestream product info");
+                return null;
+            }
+        }
+        public async Task<LivestreamProductPricing?> GetLivestreamProductPricingAsync(Guid livestreamId, string productId, string? variantId)
+        {
+            try
+            {
+                _logger.LogInformation("🎥 Getting livestream product pricing for ProductId {ProductId}, VariantId {VariantId} in LivestreamId {LivestreamId}",
+                    productId, variantId ?? "null", livestreamId);
+
+                // Get the livestream product from the existing method
+                var livestreamProduct = await GetLivestreamProductAsync(livestreamId, productId, variantId);
+
+                if (livestreamProduct == null)
+                {
+                    _logger.LogWarning("⚠️ Livestream product not found: ProductId={ProductId}, VariantId={VariantId} in LivestreamId={LivestreamId}",
+                        productId, variantId ?? "null", livestreamId);
+                    return null;
+                }
+
+                // Convert to LivestreamProductPricing DTO
+                var pricing = new LivestreamProductPricing
+                {
+                    ProductId = livestreamProduct.ProductId,
+                    VariantId = livestreamProduct.VariantId,
+                    LivestreamPrice = livestreamProduct.Price, 
+                    OriginalPrice = livestreamProduct.Price,    
+                    Stock = livestreamProduct.Stock
+                };
+
+                _logger.LogInformation("✅ Found livestream product pricing: ProductId={ProductId}, LivestreamPrice={LivestreamPrice}, Stock={Stock}",
+                    productId, pricing.LivestreamPrice, pricing.Stock);
+
+                return pricing;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting livestream product pricing for ProductId {ProductId} in LivestreamId {LivestreamId}",
+                    productId, livestreamId);
                 return null;
             }
         }

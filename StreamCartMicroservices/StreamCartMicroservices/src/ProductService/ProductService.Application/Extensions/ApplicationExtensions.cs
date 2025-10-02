@@ -106,6 +106,7 @@ namespace ProductService.Application.Extensions
             services.AddScoped<IRequestHandler<GetAllFlashSaleQuery, ApiResponse<List<DetailFlashSaleDTO>>>, GetAllFlashSaleHandler>();
             services.AddScoped<IRequestHandler<GetDetailFlashSaleQuery, ApiResponse<DetailFlashSaleDTO>>, GetDetailFlashSaleHandler>();
             services.AddScoped<IRequestHandler<DeleteFlashSaleCommand, ApiResponse<bool>>, DeleteFlashSaleHandler>();
+            services.AddHostedService<ProductService.Application.Jobs.FlashSaleCleanupJob>();
             return services;
         }
     }

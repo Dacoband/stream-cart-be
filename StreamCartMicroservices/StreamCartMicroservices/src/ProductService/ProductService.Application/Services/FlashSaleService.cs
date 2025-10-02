@@ -157,31 +157,36 @@ namespace ProductService.Application.Services
                     errorMessages.Add($"Bạn không có quyền tạo FlashSale cho sản phẩm {productRequest.ProductId}");
                     continue;
                 }
+                bool anyVariantCreated = false;
 
-                if (productRequest.VariantIds == null || !productRequest.VariantIds.Any() || productRequest.VariantIds.All(v => v == null))
+                // Trong foreach (var productRequest in request.Products)
+                // Thay phần trong CreateFlashSale (bên trong foreach productRequest)
+                if (productRequest.VariantMap != null && productRequest.VariantMap.Count > 0)
                 {
-                    await CreateFlashSaleForProduct(
-                        productRequest.ProductId,
-                        null,
-                        productRequest.FlashSalePrice,
-                        productRequest.QuantityAvailable ?? request.QuantityAvailable,
-                        startTime,
-                        endTime,
-                        request.Slot,
-                        userId,
-                        response.Data,
-                        errorMessages);
-                }
-                else
-                {
-                    // Create FlashSale for each variant
-                    foreach (var variantId in productRequest.VariantIds)
+                    foreach (var kv in productRequest.VariantMap)
                     {
+                        var variantId = kv.Key;
+                        var vData = kv.Value;
                         await CreateFlashSaleForProduct(
                             productRequest.ProductId,
                             variantId,
+                            vData.Price,
+                            vData.Quantity ?? productRequest.QuantityAvailable,
+                            startTime,
+                            endTime,
+                            request.Slot,
+                            userId,
+                            response.Data,
+                            errorMessages);
+                        anyVariantCreated = true;
+                    }
+                    if (productRequest.FlashSalePrice > 0)
+                    {
+                        await CreateFlashSaleForProduct(
+                            productRequest.ProductId,
+                            null,
                             productRequest.FlashSalePrice,
-                            productRequest.QuantityAvailable ?? request.QuantityAvailable,
+                            productRequest.QuantityAvailable,
                             startTime,
                             endTime,
                             request.Slot,
@@ -189,6 +194,20 @@ namespace ProductService.Application.Services
                             response.Data,
                             errorMessages);
                     }
+                }
+                else
+                {
+                    await CreateFlashSaleForProduct(
+                        productRequest.ProductId,
+                        null,
+                        productRequest.FlashSalePrice,
+                        productRequest.QuantityAvailable,
+                        startTime,
+                        endTime,
+                        request.Slot,
+                        userId,
+                        response.Data,
+                        errorMessages);
                 }
             }
 
@@ -1910,6 +1929,32 @@ namespace ProductService.Application.Services
                     response.Success = false;
                     response.Message = $"Số lượng còn lại của FlashSale không đủ (yêu cầu {quantity}, còn {remaining})";
                     return response;
+                }
+                if (flashSale.VariantId.HasValue)
+                {
+                    var variant = await _productVariantRepository.GetByIdAsync(flashSale.VariantId.ToString());
+                    if (variant == null)
+                    {
+                        response.Success = false;
+                        response.Message = "Không tìm thấy variant để trừ reserve";
+                        return response;
+                    }
+
+                    variant.UseReservedStock(quantity, "system");
+                    await _productVariantRepository.ReplaceAsync(variant.Id.ToString(), variant);
+                }
+                else
+                {
+                    var product = await _productRepository.GetByIdAsync(flashSale.ProductId.ToString());
+                    if (product == null)
+                    {
+                        response.Success = false;
+                        response.Message = "Không tìm thấy sản phẩm để trừ reserve";
+                        return response;
+                    }
+
+                    product.ConvertReserveToSold(quantity);
+                    await _productRepository.ReplaceAsync(product.Id.ToString(), product);
                 }
 
                 flashSale.QuantitySold += quantity;

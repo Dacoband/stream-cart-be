@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProductService.Application.Commands.ProductCommands;
 using ProductService.Application.DTOs;
 using ProductService.Application.DTOs.Products;
 using ProductService.Application.Interfaces;
@@ -693,25 +694,27 @@ namespace ProductService.Api.Controllers
         [HttpPut("{id}/quantity-sold")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> UpdateProductQuantitySold(Guid id, [FromBody] UpdateQuantitySoldRequest request)
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UpdateProductQuantitySold(Guid id, [FromBody] UpdateProductQuantitySoldDto request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResult("Dữ liệu không hợp lệ"));
+
             try
             {
-                var product = await _productRepository.GetByIdAsync(id.ToString());
-                if (product == null)
+                var command = new UpdateProductQuantitySoldCommand
+                {
+                    ProductId = id,
+                    QuantityChange = request.QuantityChange,
+                    UpdatedBy = request.UpdatedBy ?? "OrderService"
+                };
+
+                var result = await _mediator.Send(command);
+
+                if (!result)
                 {
                     return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy sản phẩm"));
                 }
-
-                // Cập nhật QuantitySold
-                product.UpdateQuantitySold(request.QuantityChange);
-
-                if (!string.IsNullOrEmpty(request.UpdatedBy))
-                {
-                    product.SetUpdatedBy(request.UpdatedBy);
-                }
-
-                await _productRepository.ReplaceAsync(product.Id.ToString(), product);
 
                 return Ok(ApiResponse<bool>.SuccessResult(true, "Cập nhật số lượng đã bán thành công"));
             }

@@ -8,7 +8,7 @@ namespace LivestreamService.Application.DTOs
         public Guid MembershipId { get; set; }
         public Guid ShopId { get; set; }
         public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public int RemainingLivestream { get; set; }
         public string Status { get; set; } = string.Empty;
         public int? MaxProduct { get; set; }
@@ -23,7 +23,7 @@ namespace LivestreamService.Application.DTOs
         public int Duration { get; set; }
         public bool IsActive => Status == "Ongoing" &&
                                DateTime.UtcNow >= StartDate &&
-                               DateTime.UtcNow <= EndDate &&
+                               //DateTime.UtcNow <= EndDate &&
                                !IsDeleted;
         public bool HasRemainingLivestreamTime => RemainingLivestream > 0;
         public int RemainingLivestreamMinutes => RemainingLivestream;

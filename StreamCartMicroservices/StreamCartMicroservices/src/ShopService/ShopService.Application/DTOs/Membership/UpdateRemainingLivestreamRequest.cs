@@ -31,7 +31,7 @@ namespace ShopService.Application.DTOs.Membership
         public bool IsDeleted { get; set; }
         public bool IsActive => Status == "Ongoing" &&
                                DateTime.UtcNow >= StartDate &&
-                               DateTime.UtcNow <= EndDate &&
+                              // DateTime.UtcNow <= EndDate &&
                                !IsDeleted;
 
         public bool HasRemainingLivestreamTime => RemainingLivestream > 0;

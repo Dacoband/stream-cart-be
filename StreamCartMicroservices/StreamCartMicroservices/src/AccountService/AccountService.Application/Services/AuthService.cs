@@ -221,7 +221,6 @@ namespace AccountService.Application.Services
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
-            // ✅ FIXED: Tạo timestamp chuẩn
             var now = DateTime.UtcNow;
             var claims = new List<Claim>
             {
@@ -229,7 +228,7 @@ namespace AccountService.Application.Services
                 new Claim(ClaimTypes.Name, account.Username),
                 new Claim(ClaimTypes.Email, account.Email),
                 new Claim(ClaimTypes.Role, account.Role.ToString()),
-                new Claim("ShopId", account.ShopId.ToString())
+                new Claim("ShopId", account.ShopId.ToString() ?? "")
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -237,7 +236,7 @@ namespace AccountService.Application.Services
                 Subject = new ClaimsIdentity(claims),
                 IssuedAt = now,
                 NotBefore = now.AddSeconds(-30),
-                Expires = now.AddMinutes(_jwtSettings.ExpiryMinutes + 5), // Thêm 5 phút buffer
+                Expires = now.AddMinutes(_jwtSettings.ExpiryMinutes),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key), 
                     SecurityAlgorithms.HmacSha256Signature),

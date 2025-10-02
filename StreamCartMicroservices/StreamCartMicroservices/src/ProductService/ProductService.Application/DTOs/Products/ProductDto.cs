@@ -24,7 +24,7 @@ namespace ProductService.Application.DTOs
         public bool HasVariant { get; set; }
         public int QuantitySold { get; set; }
         public Guid? ShopId { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } 
         public string? CreatedBy { get; set; }
         public DateTime? LastModifiedAt { get; set; }
         public string? LastModifiedBy { get; set; }

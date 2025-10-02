@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using ShopService.Application.Interfaces;
 using ShopService.Application.Events;
 using Appwrite.Models;
+using System.Net.WebSockets;
 
 namespace ShopService.Application.Handlers
 {
@@ -18,13 +19,15 @@ namespace ShopService.Application.Handlers
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly IAccountServiceClient _accountServiceClient;
         private readonly IAddressServiceClient _addressServiceClient;
+        private readonly IWalletRepository _walletRepository;
 
-        public CreateShopCommandHandler(IShopRepository shopRepository, IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient, IAddressServiceClient addressServiceClient)
+        public CreateShopCommandHandler(IShopRepository shopRepository, IPublishEndpoint publishEndpoint, IAccountServiceClient accountServiceClient, IAddressServiceClient addressServiceClient, IWalletRepository walletRepository)
         {
             _shopRepository = shopRepository;
             _publishEndpoint = publishEndpoint;
             _accountServiceClient = accountServiceClient;
             _addressServiceClient = addressServiceClient;
+            _walletRepository = walletRepository;
         }
 
         public async Task<ShopDto> Handle(CreateShopCommand request, CancellationToken cancellationToken)
@@ -77,6 +80,17 @@ namespace ShopService.Application.Handlers
                 
                 await _accountServiceClient.UpdateAccountShopInfoAsync(request.AccountId, shop.Id);
                 await _shopRepository.InsertAsync(shop);
+                var wallet = new Wallet
+                {
+                    Balance = 0,
+                    BankAccountNumber = request.BankNumber,
+                    BankName = request.BankName,
+                    OwnerType = "Shop",
+                    ShopId = shop.Id,
+                    
+                };
+                wallet.SetCreator(request.CreatedBy);
+                await _walletRepository.InsertAsync(wallet);
                 var result = await _addressServiceClient.CreateAddressAsync(addressDto, request.AccessToken);
 
                 if (!result.Success)

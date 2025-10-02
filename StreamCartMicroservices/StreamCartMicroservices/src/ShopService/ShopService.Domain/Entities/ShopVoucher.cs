@@ -84,7 +84,8 @@ namespace ShopService.Domain.Entities
             EndDate = endDate;
             AvailableQuantity = availableQuantity;
             UsedQuantity = 0;
-            IsActive = true;
+            var now = DateTime.UtcNow;
+            IsActive = startDate <= now;
         }
 
         public void UpdateDescription(string description)
@@ -228,8 +229,10 @@ namespace ShopService.Domain.Entities
                 ? orderAmount * (Value / 100)
                 : Value;
 
-            if (MaxValue.HasValue && discount > MaxValue.Value)
+            if (MaxValue.HasValue && MaxValue.Value > 0 && discount > MaxValue.Value)
+            {
                 discount = MaxValue.Value;
+            }
 
             return Math.Min(discount, orderAmount);
         }

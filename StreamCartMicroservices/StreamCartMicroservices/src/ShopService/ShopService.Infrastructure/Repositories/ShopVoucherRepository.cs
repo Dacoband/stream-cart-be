@@ -118,19 +118,30 @@ namespace ShopService.Infrastructure.Repositories
             };
         }
 
-        public async Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid? shopId, decimal orderAmount)
+        public async Task<IEnumerable<ShopVoucher>> GetValidVouchersForOrderAsync(Guid? shopId, decimal orderAmount, VoucherType? voucherType = null)
         {
             try
             {
                 var now = DateTime.UtcNow;
 
-                _logger.LogInformation("🎫 Getting valid vouchers for order amount: {OrderAmount}đ, ShopId: {ShopId}",
-                    orderAmount, shopId?.ToString() ?? "ALL_SHOPS");
+                _logger.LogInformation("🎫 Getting valid vouchers for order amount: {OrderAmount}đ, ShopId: {ShopId}, VoucherType: {VoucherType}",
+                    orderAmount, shopId?.ToString() ?? "ALL_SHOPS", voucherType?.ToString() ?? "ALL_TYPES");
 
-                // Tạo query cơ bản
+                var allVouchersDebug = await _context.Set<ShopVoucher>()
+                    .Include(v => v.Shop)
+                    .Where(v => !v.IsDeleted)
+                    .ToListAsync();
+
+                _logger.LogInformation("🔍 DEBUG: Total vouchers in database: {Count}", allVouchersDebug.Count);
+
+                foreach (var v in allVouchersDebug.Take(5)) 
+                {
+                    _logger.LogInformation("🔍 DEBUG Voucher: Code={Code}, Type={Type}, MinOrder={MinOrder}, IsActive={IsActive}, Start={Start}, End={End}, Used={Used}/{Available}",
+                        v.Code, v.Type, v.MinOrderAmount, v.IsActive, v.StartDate, v.EndDate, v.UsedQuantity, v.AvailableQuantity);
+                }
                 var query = _context.Set<ShopVoucher>()
                     .Include(v => v.Shop)
-                    .Where(v => v.IsActive &&
+                    .Where(v => 
                                !v.IsDeleted &&
                                v.StartDate <= now &&
                                v.EndDate >= now &&
@@ -141,29 +152,36 @@ namespace ShopService.Infrastructure.Repositories
                 {
                     query = query.Where(v => v.ShopId == shopId.Value);
                 }
+                if (voucherType.HasValue)
+                {
+                    _logger.LogInformation("🔍 Filtering by VoucherType: {VoucherType} (int value: {IntValue})",
+                        voucherType.Value, (int)voucherType.Value);
+                    query = query.Where(v => v.Type == voucherType.Value);
+                }
 
                 var vouchers = await query.ToListAsync();
 
-                
+                _logger.LogInformation("🔍 DEBUG: After filtering, found {Count} vouchers", vouchers.Count);
+
                 var result = vouchers
                     .Select(v => new {
                         Voucher = v,
                         DiscountAmount = CalculateDiscountAmount(v, orderAmount)
                     })
-                    .OrderByDescending(x => x.DiscountAmount) 
-                    .ThenBy(x => x.Voucher.EndDate) 
+                    .OrderByDescending(x => x.DiscountAmount)
+                    .ThenBy(x => x.Voucher.EndDate)
                     .Select(x => x.Voucher)
                     .ToList();
 
-                _logger.LogInformation("✅ Found {Count} valid vouchers for order amount {OrderAmount}đ, ShopId: {ShopId}",
-                    result.Count, orderAmount, shopId?.ToString() ?? "ALL_SHOPS");
+                _logger.LogInformation("✅ Found {Count} valid vouchers for order amount {OrderAmount}đ, ShopId: {ShopId}, VoucherType: {VoucherType}",
+                    result.Count, orderAmount, shopId?.ToString() ?? "ALL_SHOPS", voucherType?.ToString() ?? "ALL_TYPES");
 
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error getting valid vouchers for order amount {OrderAmount}, ShopId: {ShopId}",
-                    orderAmount, shopId);
+                _logger.LogError(ex, "❌ Error getting valid vouchers for order amount {OrderAmount}, ShopId: {ShopId}, VoucherType: {VoucherType}",
+                    orderAmount, shopId, voucherType);
                 throw;
             }
         }
