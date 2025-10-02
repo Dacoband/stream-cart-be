@@ -232,7 +232,7 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
                         order.VoucherCode = voucherResult.Data.VoucherCode;
                         order.DiscountAmount =  voucherDiscountAmount;
                         order.FinalAmount = voucherResult.Data.FinalAmount;
-
+                        order.NetAmount = order.NetAmount - voucherDiscountAmount;
                         _logger.LogInformation("📊 Order updated - Item Discount: {ItemDiscount}đ, Voucher Discount: {VoucherDiscount}đ, Final: {Final}đ",
                             itemDiscountTotal, voucherDiscountAmount, order.FinalAmount);
                         await _orderRepository.ReplaceAsync(order.Id.ToString(), order);
@@ -714,12 +714,13 @@ namespace OrderService.Application.Handlers.OrderCommandHandlers
             decimal commissionFee = 10 ;
 
             order.TotalPrice = totalPrice;
-            order.DiscountAmount = voucherDiscount;
+            order.DiscountAmount = itemDiscount + voucherDiscount;
             //order.FinalAmount = totalPrice - order.DiscountAmount + shippingFee;
             order.FinalAmount = totalPrice -  order.DiscountAmount  + shippingFee;
-            //order.CommissionFee = order.TotalPrice * (commissionFee/100);
-            order.CommissionFee = commissionFee;
-            order.NetAmount = (order.FinalAmount - shippingFee - order.DiscountAmount) * 0.9m;
+            order.CommissionFee = order.TotalPrice * (commissionRate / 100);
+            //order.CommissionFee = commissionFee;
+            //order.NetAmount = (order.FinalAmount - shippingFee - order.DiscountAmount) * 0.9m;
+            order.NetAmount = order.FinalAmount - shippingFee -  order.CommissionFee;
         }
         private void ScheduleBankTransferDeadlines(Guid orderId)
         {
