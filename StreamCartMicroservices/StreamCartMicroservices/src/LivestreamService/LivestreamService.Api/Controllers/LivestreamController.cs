@@ -534,7 +534,7 @@ namespace LivestreamService.Api.Controllers
         /// Get livestream statistics for a shop
         /// </summary>
         [HttpGet("shop/{shopId}/statistics")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamStatisticsDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetLivestreamStatistics(
