@@ -91,12 +91,18 @@ namespace ShopService.Api.Controllers
                 string userId = _currentUserService.GetUserId().ToString();
                 string? shopId = User.FindFirst("ShopId")?.Value;
 
+                string? paymentTransactionId = Request.Headers["X-Payment-Transaction-Id"].FirstOrDefault();
+                string? modifiedBy = Request.Headers["X-Modified-By"].FirstOrDefault() ?? userId;
+
                 var command = new UpdateWalletTransactionCommand()
                 {
                    WalletTransactionId = id,
                    Status = status,
                    ShopId=shopId,
-                   UserId = userId
+                   UserId = userId,
+                   PaymentTransactionId = paymentTransactionId,
+                   ModifiedBy = modifiedBy
+
                 };
                 var apiResponse = await _mediator.Send(command);
                 if (apiResponse.Success == true)

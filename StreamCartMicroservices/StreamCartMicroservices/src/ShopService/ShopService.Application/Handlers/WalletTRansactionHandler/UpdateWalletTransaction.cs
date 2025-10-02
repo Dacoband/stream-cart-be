@@ -20,7 +20,12 @@ namespace ShopService.Application.Handlers.WalletTRansactionHandler
         }
         public async Task<ApiResponse<WalletTransaction>> Handle(UpdateWalletTransactionCommand request, CancellationToken cancellationToken)
         {
-            return await _walletTransactionService.UpdateWalletTransactionStatus(request.WalletTransactionId, request.Status, request.ShopId, request.UserId);
+            return await _walletTransactionService.UpdateWalletTransactionStatus(
+                request.WalletTransactionId,
+                request.Status,
+                request.ShopId,
+                request.UserId,
+                request.PaymentTransactionId); 
         }
     }
 }

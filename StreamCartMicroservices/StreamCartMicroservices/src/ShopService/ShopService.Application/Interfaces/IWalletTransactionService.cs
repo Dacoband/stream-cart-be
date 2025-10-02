@@ -15,7 +15,7 @@ namespace ShopService.Application.Interfaces
         public Task<ApiResponse<WalletTransaction>> CreateWalletTransaction(CreateWalletTransactionDTO request, string? shopId, string userId);
         public Task<ApiResponse<WalletTransaction>> GetWalletTransactionById(string id);
         public Task<ApiResponse<ListWalletransationDTO>> GetWalletTransactionList(FilterWalletTransactionDTO filterWalletTransactionDTO, string? shopId);
-        public Task<ApiResponse<WalletTransaction>> UpdateWalletTransactionStatus(string id, WalletTransactionStatus status, string? shopId, string userid);
+        public Task<ApiResponse<WalletTransaction>> UpdateWalletTransactionStatus(string id, WalletTransactionStatus status, string? shopId, string userid, string? paymentTransactionId = null);
         public Task<ApiResponse<ListWalletransationDTO>> GetUserWalletTransactionList(FilterWalletTransactionDTO filter, Guid userId);
 
     }

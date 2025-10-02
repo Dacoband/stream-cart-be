@@ -15,5 +15,7 @@ namespace ShopService.Application.Commands.WalletTransaction
         public WalletTransactionStatus Status { get; set; }
         public string? ShopId { get; set; }
         public string UserId { get; set; }
+        public string? PaymentTransactionId { get; set; }
+        public string? ModifiedBy { get; set; }
     }
 }

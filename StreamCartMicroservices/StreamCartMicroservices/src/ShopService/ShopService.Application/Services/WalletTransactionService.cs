@@ -330,7 +330,8 @@ namespace ShopService.Application.Services
         public async Task<ApiResponse<WalletTransaction>> UpdateWalletTransactionStatus(
     string id,
     WalletTransactionStatus status,
-    string? shopid, string userid)
+    string? shopid, string userid,string? paymentTransactionId = null) 
+
         {
             var tx = await _walletTransactionRepository.GetByIdAsync(id);
             if (tx == null)
@@ -359,6 +360,10 @@ namespace ShopService.Application.Services
             }
             tx.Status = status.ToString();
             tx.SetModifier(userid);
+            if (!string.IsNullOrEmpty(paymentTransactionId))
+            {
+                tx.TransactionId = paymentTransactionId;
+            }
             try
             {
                 await _walletTransactionRepository.ReplaceAsync(tx.Id.ToString(),tx);

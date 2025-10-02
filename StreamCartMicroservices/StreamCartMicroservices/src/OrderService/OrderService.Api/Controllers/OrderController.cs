@@ -806,7 +806,7 @@ namespace OrderService.Api.Controllers
         /// <param name="toDate">Ngày kết thúc (tùy chọn)</param>
         /// <returns>Thống kê đơn hàng livestream</returns>
         [HttpGet("shop/{shopId}/livestream-orders")]
-        [Authorize(Roles = "Seller,Admin,OperationManager")]
+        [Authorize(Roles = "Seller,Admin,OperationManager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<LivestreamOrdersDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetLivestreamOrders(
