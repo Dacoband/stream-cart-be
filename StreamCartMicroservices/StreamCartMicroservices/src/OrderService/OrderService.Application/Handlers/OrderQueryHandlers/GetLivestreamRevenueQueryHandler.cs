@@ -61,7 +61,7 @@ namespace OrderService.Application.Handlers.OrderQueryHandlers
                 }
 
                 // 2. Tính tổng doanh thu và số đơn hàng
-                var totalRevenue = ordersList.Sum(o => o.FinalAmount);
+                var totalRevenue = ordersList.Sum(o => o.FinalAmount - o.ShippingFee); 
                 var totalOrders = ordersList.Count;
 
                 // 3. ✅ Lấy danh sách sản phẩm có đơn hàng từ API

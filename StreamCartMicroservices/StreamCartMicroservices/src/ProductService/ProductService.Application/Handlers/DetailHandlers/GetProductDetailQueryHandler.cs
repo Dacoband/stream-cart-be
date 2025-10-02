@@ -190,7 +190,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                     Stock = variant.Stock,
                     Price = variant.Price,
                     FinalPrice = finalPrice,
-                    FlashSalePrice = discountPercent,   // % giảm giá
+                    FlashSalePrice = discountPercent,  
                     VariantImage = variantImageDto,
                     Length = variant.Length,
                     Weight = variant.Weight,
@@ -238,7 +238,7 @@ namespace ProductService.Application.Handlers.DetailHandlers
                 CategoryId = product.CategoryId,
                 CategoryName = GetCategoryNamePlaceholder(product.CategoryId),
                 BasePrice = product.BasePrice,
-                DiscountPrice = (product.BasePrice - finalPrice) / 100,
+                DiscountPrice = (product.BasePrice - finalPrice) * 100 / product.BasePrice,
                 FinalPrice = finalPrice,
                 StockQuantity = product.StockQuantity,
                 QuantitySold = product.QuantitySold,

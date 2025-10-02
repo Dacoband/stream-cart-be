@@ -127,7 +127,6 @@ namespace ShopService.Infrastructure.Repositories
                 _logger.LogInformation("🎫 Getting valid vouchers for order amount: {OrderAmount}đ, ShopId: {ShopId}, VoucherType: {VoucherType}",
                     orderAmount, shopId?.ToString() ?? "ALL_SHOPS", voucherType?.ToString() ?? "ALL_TYPES");
 
-                // ✅ THÊM DEBUG: Lấy tất cả vouchers trước khi filter
                 var allVouchersDebug = await _context.Set<ShopVoucher>()
                     .Include(v => v.Shop)
                     .Where(v => !v.IsDeleted)
@@ -135,16 +134,14 @@ namespace ShopService.Infrastructure.Repositories
 
                 _logger.LogInformation("🔍 DEBUG: Total vouchers in database: {Count}", allVouchersDebug.Count);
 
-                foreach (var v in allVouchersDebug.Take(5)) // Log 5 vouchers đầu tiên
+                foreach (var v in allVouchersDebug.Take(5)) 
                 {
                     _logger.LogInformation("🔍 DEBUG Voucher: Code={Code}, Type={Type}, MinOrder={MinOrder}, IsActive={IsActive}, Start={Start}, End={End}, Used={Used}/{Available}",
                         v.Code, v.Type, v.MinOrderAmount, v.IsActive, v.StartDate, v.EndDate, v.UsedQuantity, v.AvailableQuantity);
                 }
-
-                // Tạo query cơ bản
                 var query = _context.Set<ShopVoucher>()
                     .Include(v => v.Shop)
-                    .Where(v => v.IsActive &&
+                    .Where(v => 
                                !v.IsDeleted &&
                                v.StartDate <= now &&
                                v.EndDate >= now &&

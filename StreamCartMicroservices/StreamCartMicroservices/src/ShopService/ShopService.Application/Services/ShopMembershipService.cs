@@ -2,7 +2,6 @@
 using Appwrite.Models;
 using Appwrite.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Shared.Common.Extensions;
 using Shared.Common.Models;
@@ -139,10 +138,8 @@ namespace ShopService.Application.Services
 
                 // Bắt đầu transaction
                 await _shopUnitOfWork.BeginTransactionAsync();
-
                 await _shopMembershipRepository.InsertAsync(shopMembership);
-                if(existingShopMembership != null) { await _shopMembershipRepository.ReplaceAsync(existingShopMembership?.Id.ToString(), existingShopMembership); }
-                    
+                if (existingShopMembership != null) { await _shopMembershipRepository.ReplaceAsync(existingShopMembership?.Id.ToString(), existingShopMembership); }
                 await _walletRepository.ReplaceAsync(wallet.Id.ToString(), wallet);
                 await _walletTransactionRepository.InsertAsync(transaction);
 

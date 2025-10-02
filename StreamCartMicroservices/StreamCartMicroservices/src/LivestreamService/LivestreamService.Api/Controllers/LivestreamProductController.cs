@@ -281,14 +281,13 @@ namespace LivestreamService.Api.Controllers
         /// <summary>
         /// Cập nhật số lượng tồn kho sản phẩm
         /// </summary>
-        [HttpPatch("livestream/{livestreamId}/product/{productId}/variant/{variantId}/stock")]
-       // [Authorize(Roles = "Seller")]
-        [ProducesResponseType(typeof(ApiResponse<LivestreamProductDTO>), 200)]
+        [HttpPatch("livestream/{livestreamId}/product/{productId}/stock")]
         public async Task<IActionResult> UpdateStock(
-            Guid livestreamId,
-            string productId,
-            string? variantId,
-            [FromBody] UpdateStockDTO request)
+    Guid livestreamId,
+    string productId,
+    [FromQuery] string? variantId,
+    [FromBody] UpdateStockDTO request)
+
         {
             try
             {
