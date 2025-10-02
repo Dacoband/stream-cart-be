@@ -128,7 +128,7 @@ namespace AccountService.Api.Controllers
         }
 
         [HttpGet("by-role/{role}")]
-        [Authorize(Roles = "ITAdmin")]
+        [Authorize(Roles = "ITAdmin,OperationManager")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<AccountDto>>), 200)]
         public async Task<IActionResult> GetAccountsByRole(RoleType role)
         {
