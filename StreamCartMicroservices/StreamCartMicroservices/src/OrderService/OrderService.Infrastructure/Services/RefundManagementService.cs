@@ -222,6 +222,7 @@ namespace OrderService.Infrastructure.Services
                 CreatedBy = refundRequest.CreatedBy,
                 LastModifiedAt = refundRequest.LastModifiedAt,
                 LastModifiedBy = refundRequest.LastModifiedBy,
+                TransactionId = refundRequest.TransactionId,
                 RefundDetails = refundRequest.RefundDetails.Select(rd => new RefundDetailDto
                 {
                     Id = rd.Id,

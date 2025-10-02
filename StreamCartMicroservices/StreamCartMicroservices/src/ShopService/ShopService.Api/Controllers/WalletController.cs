@@ -80,7 +80,8 @@ namespace ShopService.Api.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+               string userId = User.FindFirst("id")?.Value;
+
 
                 // Tìm ví theo shopId
                 var wallet = await _walletService.GetWalletByShopIdAsync(shopId);
