@@ -31,7 +31,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 201)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateFlashSale([FromBody] CreateFlashSaleDTO request)
@@ -81,7 +81,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpGet("shop")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 200)]
         public async Task<IActionResult> GetFlashSalesByShopAndDate(
             [FromQuery] DateTime? date = null,
@@ -103,7 +103,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPut("{id}/products")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         public async Task<IActionResult> UpdateFlashSaleProducts(
             string id,
@@ -129,7 +129,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpGet("products/available")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<List<ProductWithoutFlashSaleDTO>>), 200)]
         public async Task<IActionResult> GetProductsWithoutFlashSale(
     [FromQuery] DateTime date,
@@ -169,7 +169,7 @@ namespace ProductService.Api.Controllers
         /// API này đã được fix để xử lý pagination đúng cách
         /// </summary>
         [HttpGet("my-shop")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<List<DetailFlashSaleDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetMyShopFlashSales([FromQuery] FilterFlashSaleDTO filter)
@@ -201,7 +201,7 @@ namespace ProductService.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateFlashSale([FromBody] UpdateFlashSaleDTO request, [FromRoute] string id)
