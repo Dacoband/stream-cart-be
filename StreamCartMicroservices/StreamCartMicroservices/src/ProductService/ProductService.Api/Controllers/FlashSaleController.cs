@@ -404,7 +404,7 @@ namespace ProductService.Api.Controllers
             }
         }
         [HttpGet("shop/overview-simple")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<List<FlashSaleSlotSimpleDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> GetShopFlashSaleSimple()
@@ -455,7 +455,7 @@ namespace ProductService.Api.Controllers
             }
         }
         [HttpPatch("{id}/price-quantity")]
-        [Authorize(Roles = "Seller")]
+        [Authorize(Roles = "Seller,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<DetailFlashSaleDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UpdateFlashSalePriceQuantity([FromBody] UpdateFlashSalePriceQuantityDTO request, [FromRoute] string id)
